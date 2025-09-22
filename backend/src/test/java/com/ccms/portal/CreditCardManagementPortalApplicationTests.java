@@ -1,4 +1,4 @@
-package tech.zeta.credit.card.management.portal;
+package com.ccms.portal;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
