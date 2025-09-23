@@ -20,10 +20,14 @@ public class CreditCardController {
     private CardService cardService;
 
     @GetMapping("/{userId}")
-    public ResponseEntity<?> getCards(@PathVariable Long userId){
+    public ResponseEntity<?> getCards(@PathVariable Long userId)    {
         List<CreditCardResponse> userCards = cardService.getAllCardsByUserId(userId);
+        if (userCards.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
         return ResponseEntity.ok(userCards);
     }
+
 
     @PostMapping
     public ResponseEntity<?> createCard(@RequestBody CreateCardRequest request) {
