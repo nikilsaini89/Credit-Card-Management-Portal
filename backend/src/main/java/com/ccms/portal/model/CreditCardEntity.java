@@ -1,14 +1,18 @@
 package com.ccms.portal.model;
 
 import com.ccms.portal.enums.CardStatus;
-import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
 import java.sql.Date;
 
+
+@Builder
 @Entity
 @Table(name = "credit_card")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class CreditCardEntity {
 
     @Id
@@ -23,7 +27,7 @@ public class CreditCardEntity {
     private CardStatus cardStatus;
 
     @Column(nullable = false)
-    private Double maximumLimit;
+    private Double creditLimit;
 
     @Column(nullable = false)
     private Double availableLimit;
@@ -39,3 +43,4 @@ public class CreditCardEntity {
     @JoinColumn(name = "card_type_id", nullable = false)
     private CardTypeEntity cardType;
 }
+
