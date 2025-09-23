@@ -1,6 +1,5 @@
 package com.ccms.portal.service;
 
-import com.ccms.portal.dto.response.CreditCardResponse;
 import com.ccms.portal.repository.CardRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
