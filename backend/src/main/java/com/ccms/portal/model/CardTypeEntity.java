@@ -2,6 +2,7 @@ package com.ccms.portal.model;
 
 import com.ccms.portal.enums.NetworkType;
 import jakarta.persistence.*;
+import lombok.Getter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "card_type")
+@Getter
 public class CardTypeEntity {
 
     @Id
@@ -23,9 +25,9 @@ public class CardTypeEntity {
     @Enumerated(EnumType.STRING)
     private NetworkType networkType;
 
-    private Double minLimit;
+    private Double minCardLimit;
 
-    private Double maxLimit;
+    private Double maxCardLimit;
 
     private String description;
 

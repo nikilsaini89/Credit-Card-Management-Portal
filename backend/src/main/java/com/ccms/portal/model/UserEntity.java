@@ -1,13 +1,17 @@
 package com.ccms.portal.model;
 
+import com.ccms.portal.enums.UserRole;
 import jakarta.persistence.*;
+import lombok.Getter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Getter
 @Table(name = "users")
 public class UserEntity {
     @Id
@@ -22,17 +26,16 @@ public class UserEntity {
 
     @Column(nullable = false, length = 15)
     private String phoneNumber;
+
     private String passwordHash;
-    private String address;
-    private Double annualIncome;
-    private boolean isEligibleBnpl;
+
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
 
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CreditCardEntity> creditCards = new ArrayList<>();
-
-
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }
