@@ -9,10 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 @Repository
-public interface CardRepository extends JpaRepository<CreditCardEntity, Long>{
+public interface CreditCardRepository extends JpaRepository<CreditCardEntity, Long>{
 
     @Query("SELECT c FROM CreditCardEntity c JOIN FETCH c.cardType WHERE c.user.id = :userId")
     List<CreditCardEntity> findAllByUserIdWithCardType(@Param("userId") Long userId);
-
-
 }
