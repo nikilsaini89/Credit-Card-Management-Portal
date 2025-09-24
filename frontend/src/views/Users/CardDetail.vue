@@ -37,7 +37,8 @@
             <p class="muted">Manage your card settings and limits</p>
 
             <div class="action-controls">
-              <button class="update-btn">↗ Update Credit Limit</button>
+              <!-- OPEN modal on click -->
+              <button class="update-btn" @click="openLimitModal">↗ Update Credit Limit</button>
               <button class="block-btn" @click="toggleBlock(card)">
                 {{ card && card.status === 'BLOCKED' ? 'Unblock Card' : 'Block Card' }}
               </button>
@@ -102,6 +103,24 @@
 
       </section>
     </main>
+
+    <!-- Update Credit Limit Modal (renders when showLimitModal is true) -->
+    <UpdateCreditLimitModal
+      v-if="card"
+      v-model="showLimitModal"
+      :currentLimit="card?.totalLimit"
+      :outstanding="cardOutstanding"
+      @next="handleLimitNext"
+    />
+
+    <!-- Confirm Identity Modal (new) -->
+    <ConfirmIdentityModal
+      v-if="card"
+      v-model="showConfirmModal"
+      :amount="pendingNewLimit"
+      :serverError="confirmServerError"
+      @verified="onVerifiedPassword"
+    />
   </div>
 </template>
 
@@ -111,10 +130,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NavigationBar from '../../components/NavigationBar.vue'
 import Card from '../../components/Card.vue'
+import UpdateCreditLimitModal from '../../components/UpdateCreditLimitModal.vue'
+import ConfirmIdentityModal from '../../components/ConfirmIdentityModal.vue'
 
 export default {
   name: 'CardDetail',
-  components: { NavigationBar, Card },
+  components: { NavigationBar, Card, UpdateCreditLimitModal, ConfirmIdentityModal },
   setup() {
     const route = useRoute()
     const router = useRouter()
@@ -128,6 +149,12 @@ export default {
     const dataAvailableCredit = ref(0)
     const dataOutstanding = ref(0)
     const allTransactions = ref([])
+
+    // Modal controls
+    const showLimitModal = ref(false)
+    const showConfirmModal = ref(false)
+    const pendingNewLimit = ref(0) // amount selected from UpdateCreditLimitModal
+    const confirmServerError = ref(null) // server-side error message to pass into confirm modal
 
     const cardLast4 = computed(() => {
       if (!card.value || !card.value.number) return '1234'
@@ -182,7 +209,6 @@ export default {
       c.status = c.status === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED'
     }
 
-    // Menu actions for the Card component (computed to include current card id)
     const cardMenu = computed(() => {
       const id = card.value?.id || ''
       return [
@@ -192,26 +218,77 @@ export default {
       ]
     })
 
-    // Called when Card component emits @action
     function onCardAction({ action }) {
       if (!action) return
       if (action.to) {
         router.push(action.to)
       } else if (action.value?.type === 'toggle-block') {
-        // delegate to toggleBlock
         toggleBlock(card.value)
       } else {
-        // other custom action
         console.log('card action', action)
       }
     }
 
-    // Called when Card component emits @block (if you use that event)
     function onCardBlock(payload) {
-      // payload: { card, newStatus } — either call API or mutate local object
       if (!payload?.card) return
-      // naive toggle locally:
       payload.card.status = payload.newStatus
+    }
+
+    // when user selects new limit in UpdateCreditLimitModal
+    function handleLimitNext(payload) {
+      const newLimit = Number(payload?.newLimit || 0)
+      if (!newLimit) return
+      pendingNewLimit.value = newLimit
+      // close the first modal and open confirm modal
+      showLimitModal.value = false
+      confirmServerError.value = null
+      setTimeout(() => showConfirmModal.value = true, 160)
+    }
+
+    // when ConfirmIdentityModal emits verified (with password), verify and persist
+    async function onVerifiedPassword({ password }) {
+      confirmServerError.value = null
+      try {
+        // Example API flow:
+        // 1) verify password
+        // const verifyResp = await axios.post('/api/auth/verify-password', { password })
+        // if (!verifyResp.data.ok) throw new Error('Invalid password')
+
+        // 2) update limit
+        // await axios.post('/api/cards/update-limit', { cardId: card.value?.id, newLimit: pendingNewLimit.value })
+
+        // For demo (no backend), we'll simulate success:
+        await new Promise(r => setTimeout(r, 600))
+
+        // Update local card on success
+        if (card.value) {
+          card.value.totalLimit = Number(pendingNewLimit.value)
+        }
+
+        // close confirm modal
+        showConfirmModal.value = false
+
+        // optionally show toast / message
+        console.log('Limit successfully updated to', pendingNewLimit.value)
+      } catch (err) {
+        // surface server error to modal via confirmServerError prop
+        console.error('verification/update failed', err)
+        const msg = err?.response?.data?.message || (err.message || 'Verification failed')
+        confirmServerError.value = String(msg)
+        // keep modal open so user can retry
+      }
+    }
+
+    // helpers to open/close initial modal
+    function openLimitModal() {
+      if (!card.value) {
+        console.warn('No card selected to update limit for.')
+        return
+      }
+      showLimitModal.value = true
+    }
+    function closeLimitModal() {
+      showLimitModal.value = false
     }
 
     const load = async () => {
@@ -243,7 +320,11 @@ export default {
       formatNumber, formatAmount, formatDate,
       utilizationPercent, recentTransactions,
       cardOutstanding, dataTotalLimit, dataAvailableCredit,
-      toggleMask, toggleBlock, cardMenu, onCardAction, onCardBlock
+      toggleMask, toggleBlock, cardMenu, onCardAction, onCardBlock,
+      // modal bindings returned to template
+      showLimitModal, handleLimitNext, openLimitModal, closeLimitModal,
+      // confirm modal
+      showConfirmModal, pendingNewLimit, confirmServerError, onVerifiedPassword
     }
   }
 }
@@ -285,7 +366,7 @@ export default {
 .back{ color:var(--muted); text-decoration:none; padding:6px 8px; white-space:nowrap; }
 .title-block{ display:flex; flex-direction:column; min-width:0; } /* min-width:0 avoids overflow inside flex */
 .page-title{ margin:0; font-size:28px; font-weight:800; word-break:break-word; }
-.page-sub{ color:var(--muted); margin-top:6px; font-size:14px; }
+.page-sub{ color:var(--muted); margin-top:6px; font-size:14px }
 
 /* GRID
    Use a fluid right column (clamped) instead of fixed 420px which caused overflow.
