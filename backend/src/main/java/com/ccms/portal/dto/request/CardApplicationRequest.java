@@ -5,8 +5,6 @@ import lombok.Data;
 
 @Data
 public class CardApplicationRequest {
-    @NotNull(message = "UserId is required")
-    private Long userId;
     @NotNull(message = "cardTypeId is required")
     private Long cardTypeId;
 
