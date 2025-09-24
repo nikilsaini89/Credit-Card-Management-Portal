@@ -2,6 +2,7 @@ package com.ccms.portal.controller;
 
 import com.ccms.portal.dto.request.CardApplicationRequest;
 import com.ccms.portal.dto.request.UpdateStatusRequest;
+import com.ccms.portal.dto.response.CardApplicationResponse;
 import com.ccms.portal.model.CardApplicationEntity;
 import com.ccms.portal.service.CardApplicationService;
 import jakarta.validation.Valid;
@@ -19,8 +20,8 @@ public class CardApplicationController {
     @Autowired
     private CardApplicationService cardApplicationService;
     @PostMapping
-    public ResponseEntity<CardApplicationEntity> applyForCard(@Valid @RequestBody CardApplicationRequest application){
-        CardApplicationEntity savedApplication = cardApplicationService.apply(application);
+    public ResponseEntity<?> applyForCard(@Valid @RequestBody CardApplicationRequest application){
+        CardApplicationResponse savedApplication = cardApplicationService.apply(application);
         return new ResponseEntity<>(savedApplication,HttpStatus.CREATED);
     }
 
@@ -31,8 +32,8 @@ public class CardApplicationController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<CardApplicationEntity> updateApplication(@PathVariable Long id, @RequestBody UpdateStatusRequest request){
-        CardApplicationEntity updatedApplication = cardApplicationService.updateStatus(id,request.getStatus());
+    public ResponseEntity<?> updateApplication(@PathVariable Long id, @RequestBody UpdateStatusRequest request){
+        CardApplicationResponse updatedApplication = cardApplicationService.updateStatus(id,request.getStatus());
         return ResponseEntity.ok(updatedApplication);
     }
 
