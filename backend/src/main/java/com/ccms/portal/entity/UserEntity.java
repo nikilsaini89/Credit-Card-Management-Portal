@@ -1,8 +1,11 @@
-package com.ccms.portal.model;
+package com.ccms.portal.entity;
 
 import com.ccms.portal.enums.UserRole;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -13,6 +16,9 @@ import java.util.List;
 @Entity
 @Getter
 @Table(name = "users")
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class UserEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,7 +32,6 @@ public class UserEntity {
 
     @Column(nullable = false, length = 15)
     private String phoneNumber;
-
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
