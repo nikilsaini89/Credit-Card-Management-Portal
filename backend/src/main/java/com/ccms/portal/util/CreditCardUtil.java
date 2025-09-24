@@ -1,8 +1,8 @@
-package com.ccms.portal.helper;
+package com.ccms.portal.util;
 
 import com.ccms.portal.dto.response.CreditCardResponse;
-import com.ccms.portal.model.CardTypeEntity;
-import com.ccms.portal.model.CreditCardEntity;
+import com.ccms.portal.entity.CardTypeEntity;
+import com.ccms.portal.entity.CreditCardEntity;
 import org.springframework.stereotype.Component;
 
 import java.sql.Date;
@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.Random;
 
 @Component
-public class CreditCardHelper {
+public class CreditCardUtil {
 
     private static final int CARD_NUMBER_LENGTH = 16;
 
