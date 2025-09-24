@@ -25,7 +25,7 @@ public class Transaction {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "card_id", nullable = false)
-  private Card card;
+  private CreditCardEntity card;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "merchant_account_id")
