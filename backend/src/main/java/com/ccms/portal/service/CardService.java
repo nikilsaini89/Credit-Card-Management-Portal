@@ -7,10 +7,10 @@ import com.ccms.portal.enums.CardStatus;
 import com.ccms.portal.exception.CardTypeNotFoundException;
 import com.ccms.portal.exception.CreditCardNotFoundException;
 import com.ccms.portal.exception.UserNotFoundException;
-import com.ccms.portal.helper.CreditCardHelper;
-import com.ccms.portal.model.CardTypeEntity;
-import com.ccms.portal.model.CreditCardEntity;
-import com.ccms.portal.model.UserEntity;
+import com.ccms.portal.util.CreditCardUtil;
+import com.ccms.portal.entity.CardTypeEntity;
+import com.ccms.portal.entity.CreditCardEntity;
+import com.ccms.portal.entity.UserEntity;
 import com.ccms.portal.repository.CreditCardRepository;
 import com.ccms.portal.repository.CardTypeRepository;
 import com.ccms.portal.repository.UserRepository;
@@ -32,7 +32,7 @@ public class CardService {
     CardTypeRepository cardTypeRepository;
 
     @Autowired
-    CreditCardHelper cardHelper;
+    CreditCardUtil cardHelper;
 
     public List<CreditCardResponse> getAllCardsByUserId(Long userId){
         UserEntity user = userRepository.findById(userId)

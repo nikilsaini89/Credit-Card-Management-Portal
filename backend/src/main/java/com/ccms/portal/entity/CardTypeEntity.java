@@ -1,4 +1,4 @@
-package com.ccms.portal.model;
+package com.ccms.portal.entity;
 
 import com.ccms.portal.enums.NetworkType;
 import jakarta.persistence.*;
