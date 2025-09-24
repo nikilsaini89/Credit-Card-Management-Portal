@@ -28,21 +28,18 @@ public class AuthService {
             throw new RuntimeException("Email already registered");
         }
 
-        // Save UserEntity
         UserEntity user = UserEntity.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getPhoneNumber())
-                .role(UserRole.USER) // or request.getRole() if you add it to DTO
+                .role(UserRole.USER)
                 .build();
 
         userRepository.save(user);
 
-        // Compute BNPL eligibility
         boolean isEligible = request.getAnnualIncome() != null && request.getAnnualIncome() > 100000;
 
-        // Save UserProfileEntity
         UserProfileEntity profile = UserProfileEntity.builder()
                 .user(user)
                 .address(request.getAddress())
