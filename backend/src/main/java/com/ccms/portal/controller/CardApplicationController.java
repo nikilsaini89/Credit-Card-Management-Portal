@@ -21,13 +21,13 @@ public class CardApplicationController {
     @PostMapping
     public ResponseEntity<CardApplicationEntity> applyForCard(@Valid @RequestBody CardApplicationRequest application){
         CardApplicationEntity savedApplication = cardApplicationService.apply(application);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedApplication);
+        return new ResponseEntity<>(savedApplication,HttpStatus.CREATED);
     }
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<List<CardApplicationEntity>> getApplications(@PathVariable Long userId){
-        List<CardApplicationEntity> savedApplications = cardApplicationService.getApplications(userId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedApplications);
+    @GetMapping
+    public ResponseEntity<List<CardApplicationEntity>> getApplications(){
+        List<CardApplicationEntity> savedApplications = cardApplicationService.getApplications();
+        return new ResponseEntity<>(savedApplications,HttpStatus.CREATED);
     }
 
     @PatchMapping("/{id}")
@@ -38,10 +38,6 @@ public class CardApplicationController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteApplication(@PathVariable Long id){
-        Optional<CardApplicationEntity> deletedApplication = cardApplicationService.getApplicationById(id);
-        if(deletedApplication.isEmpty()){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Card with id"+id+" not found");
-        }
         cardApplicationService.deleteApplication(id);
         return ResponseEntity.ok("Card application deleted successfully");
     }
