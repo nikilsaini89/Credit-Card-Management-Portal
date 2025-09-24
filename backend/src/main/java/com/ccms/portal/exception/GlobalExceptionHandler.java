@@ -1,5 +1,4 @@
 package com.ccms.portal.exception;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +13,27 @@ import java.util.Map;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+  
+   @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleUserNotFound(UserNotFoundException exception){
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(CreditCardNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleCardTypeNotFound(CreditCardNotFoundException exception){
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(CardTypeNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleCardTypeNotFound(CardTypeNotFoundException exception){
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", exception.getMessage()));
+    }
 
   @ExceptionHandler(CardNotFoundException.class)
   public ResponseEntity<Map<String, Object>> handleCardNotFoundException(CardNotFoundException ex) {
