@@ -3,6 +3,7 @@ package com.ccms.portal.service;
 
 import com.ccms.portal.dto.request.CardApplicationRequest;
 import com.ccms.portal.dto.request.CreateCardRequest;
+import com.ccms.portal.dto.response.CardApplicationResponse;
 import com.ccms.portal.enums.CardApplicationStatus;
 import com.ccms.portal.model.CardApplicationEntity;
 import com.ccms.portal.repository.CardApplicationRepository;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,7 +30,7 @@ public class CardApplicationService {
         this.cardService = cardService;
     }
 
-    public CardApplicationEntity apply(CardApplicationRequest application){
+    public CardApplicationResponse apply(CardApplicationRequest application){
         JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
                 .getContext()
                 .getAuthentication()
@@ -40,7 +42,8 @@ public class CardApplicationService {
         applicationEntity.setCardTypeId(application.getCardTypeId());
         applicationEntity.setRequestedLimit(application.getRequestLimit());
         applicationEntity.setUserId(userId);
-        return repository.save(applicationEntity);
+        CardApplicationEntity  cardApplicationEntity= repository.save(applicationEntity);
+        return  new CardApplicationResponse(cardApplicationEntity.getId(),cardApplicationEntity.getUserId(),cardApplicationEntity.getCardTypeId(),cardApplicationEntity.getRequestedLimit(),cardApplicationEntity.getApplicationDate(),cardApplicationEntity.getStatus());
     }
 
     public List<CardApplicationEntity> getApplications(){
@@ -57,7 +60,7 @@ public class CardApplicationService {
         return repository.findById(id);
     }
 
-    public CardApplicationEntity updateStatus(Long id, CardApplicationStatus request){
+    public CardApplicationResponse updateStatus(Long id, CardApplicationStatus request){
         JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
                 .getContext()
                 .getAuthentication()
@@ -72,8 +75,14 @@ public class CardApplicationService {
         createCardRequest.setUserId(application.getUserId());
         createCardRequest.setCreditLimit(application.getRequestedLimit()*1.0);
         cardService.createCard(createCardRequest);
+        application.setReviewDate(LocalDateTime.now());
+        application.setReviewerId(userId);
         application.setStatus(request);
-        return repository.save(application);
+        CardApplicationEntity cardApplicationEntity =  repository.save(application);
+        CardApplicationResponse cardApplicationResponse = new CardApplicationResponse(cardApplicationEntity.getId(),cardApplicationEntity.getUserId(),cardApplicationEntity.getCardTypeId(),cardApplicationEntity.getRequestedLimit(),cardApplicationEntity.getApplicationDate(),cardApplicationEntity.getStatus());
+        cardApplicationResponse.setReviewDate(cardApplicationEntity.getReviewDate());
+        cardApplicationResponse.setReviewerId(cardApplicationEntity.getReviewerId());
+        return cardApplicationResponse;
     }
 
     public void deleteApplication(Long id) {
