@@ -2,12 +2,19 @@ import { createRouter, createWebHistory } from "vue-router";
 
 // Lazy load Dashboard
 const Dashboard = () => import("../views/Users/Dashboard.vue");
-
+const CardDetail = () => import("../views/Users/CardDetail.vue");
 const routes = [
   {
     path: "/",
     name: "Dashboard",
     component: Dashboard,
+  },
+  {
+    path: "/card/:id",
+    name: "CardDetail",
+    component: CardDetail,
+    props: true,
+    alias: "/card/:id"
   },
   // {
   //   path: "/my-cards",
