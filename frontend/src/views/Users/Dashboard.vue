@@ -1,7 +1,5 @@
 <template>
   <div class="dashboard">
-    <!-- Topbar replaced by NavigationBar component -->
-
     <main class="container">
       <section class="hero">
         <h1>Welcome back, {{ user.name }}!</h1>
@@ -42,14 +40,13 @@
           </div>
 
           <div class="card-list">
-            <!-- render cards dynamically using reusable Card component -->
             <Card
-              v-for="card in cards"
-              :key="card.id"
-              :card="card"
+              v-for="cardItem in cards"
+              :key="cardItem.id"
+              :card="cardItem"
               :userName="user.name"
               :showMenu="true"
-              :actions="cardActions(card)"
+              :actions="cardActions(cardItem)"
               @action="onCardAction"
               @block="onToggleBlock"
             />
@@ -99,7 +96,7 @@ export default {
   components: { Card },
   data() {
     return {
-      user: { name: "User" }, // updated from JSON
+      user: { name: "User" },
       summary: {
         activeCards: 0,
         totalCards: 0,
@@ -109,13 +106,12 @@ export default {
       },
       cards: [],
       transactions: [],
-      showFull: {}, // map cardId => boolean (kept for parity with original code)
-      openMenu: null, // id of card with open menu (kept for parity)
+      showFull: {},
+      openMenu: null,
     };
   },
   created() {
     this.loadDashboard();
-    // click outside to close dropdowns (kept as original)
     document.addEventListener("click", this.globalClick);
   },
   beforeUnmount() {
@@ -124,60 +120,51 @@ export default {
   methods: {
     async loadDashboard() {
       try {
-        // mock JSON placed in public/data/dashboard.json
-        const res = await axios.get("/data/dashboard.json");
-        const d = res.data;
+        const response = await axios.get("/data/dashboard.json");
+        const data = response.data;
 
-        // user summary
-        this.user = d.user || this.user;
+        this.user = data.user || this.user;
 
-        this.summary.activeCards = d.activeCards ?? (d.cards ? d.cards.length : 0);
-        this.summary.totalCards = d.totalCards ?? (d.cards ? d.cards.length : 0);
-        this.summary.totalLimit = d.totalLimit ?? this.sum(d.cards, "totalLimit");
-        this.summary.availableCredit = d.availableCredit ?? this.sum(d.cards, "availableLimit");
-        this.summary.outstanding = d.outstanding ?? 0;
+        this.summary.activeCards = data.activeCards ?? (data.cards ? data.cards.length : 0);
+        this.summary.totalCards = data.totalCards ?? (data.cards ? data.cards.length : 0);
+        this.summary.totalLimit = data.totalLimit ?? this.sum(data.cards, "totalLimit");
+        this.summary.availableCredit = data.availableCredit ?? this.sum(data.cards, "availableLimit");
+        this.summary.outstanding = data.outstanding ?? 0;
 
-        // cards and transactions
-        this.cards = d.cards || [];
-        this.transactions = d.transactions || [];
+        this.cards = data.cards || [];
+        this.transactions = data.transactions || [];
 
-        // initialize showFull map
-        this.cards.forEach((c) => {
-          this.$set(this.showFull, c.id, false);
+        this.cards.forEach((cardItem) => {
+          this.$set(this.showFull, cardItem.id, false);
         });
       } catch (err) {
-        // fallback: console error and keep hardcoded defaults as last resort
-        // (you may replace this with a friendly UI message)
-        // eslint-disable-next-line no-console
         console.error("Failed to load dashboard JSON:", err);
       }
     },
 
-    // helpers (kept exactly as before)
-    maskNumber(num) {
-      if (!num) return "";
-      const only = num.toString();
-      const last = only.slice(-4);
-      return "**** **** **** " + last;
+    maskNumber(cardNumber) {
+      if (!cardNumber) return "";
+      const onlyDigits = cardNumber.toString();
+      const lastFour = onlyDigits.slice(-4);
+      return "**** **** **** " + lastFour;
     },
-    formatNumber(n) {
-      if (n == null) return "0";
-      return n.toLocaleString("en-IN");
+    formatNumber(value) {
+      if (value == null) return "0";
+      return value.toLocaleString("en-IN");
     },
     sum(list = [], key) {
-      return list.reduce((acc, it) => acc + (Number(it[key]) || 0), 0);
+      return list.reduce((accumulator, item) => accumulator + (Number(item[key]) || 0), 0);
     },
-    formatDate(iso) {
+    formatDate(isoString) {
       try {
-        const d = new Date(iso);
-        const opt = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
-        return d.toLocaleString("en-US", opt);
+        const dateObj = new Date(isoString);
+        const options = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
+        return dateObj.toLocaleString("en-US", options);
       } catch {
-        return iso;
+        return isoString;
       }
     },
 
-    // interactions (kept original behavior where appropriate)
     toggleCardNumber(cardId) {
       this.$set(this.showFull, cardId, !this.showFull[cardId]);
     },
@@ -185,22 +172,18 @@ export default {
       this.openMenu = this.openMenu === cardId ? null : cardId;
     },
     onToggleBlock(card) {
-      // placeholder: flip local status (real action should call backend)
       card.status = card.status === "BLOCKED" ? "ACTIVE" : "BLOCKED";
       this.openMenu = null;
     },
-    globalClick(e) {
-      // close dropdown if clicked outside
-      const close = !e.target.closest(".card-menu");
-      if (close) this.openMenu = null;
+    globalClick(event) {
+      const clickedOutside = !event.target.closest(".card-menu");
+      if (clickedOutside) this.openMenu = null;
     },
-    isImageString(s) {
-      return typeof s === "string" && /\.(png|jpe?g|svg|webp)$/.test(s);
+    isImageString(source) {
+      return typeof source === "string" && /\.(png|jpe?g|svg|webp)$/.test(source);
     },
 
-    // --- New glue for Card component actions (keeps your handlers) ---
     cardActions(card) {
-      // returns the same actions you previously provided in the dropdown
       return [
         { label: "View Details", to: { name: "CardDetail", params: { id: card.id } } },
         { label: card.status === "BLOCKED" ? "Unblock" : "Block", value: { type: "toggle-block" } }
@@ -208,19 +191,15 @@ export default {
     },
 
     onCardAction({ action }) {
-      // action is either { to } or { value: { type: 'toggle-block' } }
       if (!action) return;
-      const router = useRouter ? useRouter() : null; // guard in case composition not available
-      // If action.to is a route object, navigate; otherwise handle value.
       if (action.to) {
-        // either route object or path
         if (this.$router) this.$router.push(action.to);
-        else if (router) router.push(action.to);
-        else console.warn("Router not available to navigate to", action.to);
+        else {
+          const router = useRouter ? useRouter() : null;
+          if (router) router.push(action.to);
+          else console.warn("Router not available to navigate to", action.to);
+        }
       } else if (action.value?.type === "toggle-block") {
-        // find card from action (we didn't pass card, so assume current context — toggle by id matched in cards)
-        // For simplicity toggle the first matching card by id included in the action (not present), so we'll not
-        // attempt to find and instead log. In practice you can pass card id in action.value to toggle specific.
         console.log("toggle-block action received; update your onCardAction to include card id if needed", action);
       } else {
         console.log("Unhandled card action", action);
@@ -231,7 +210,6 @@ export default {
 </script>
 
 <style scoped>
-/* (all CSS kept exactly as you provided earlier) */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap");
 :root {
   --bg: #f7f7f9;
@@ -281,14 +259,13 @@ export default {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #0b2540; 
+  background: #0b2540;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
 }
-
 
 .container {
   max-width: 1180px;
@@ -303,16 +280,12 @@ export default {
   color: var(--muted);
   margin-bottom: 22px;
 }
-
-/* wrapper to keep number + eye on the same line */
 .card-number-row {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-top: 18px;
 }
-
-/* number style (slightly bigger, keep clickable look) */
 .card-number {
   font-size: 22px;
   letter-spacing: 4px;
@@ -320,8 +293,6 @@ export default {
   line-height: 1;
   margin: 0;
 }
-
-/* eye as small button right of number */
 .card-eye {
   display: inline-flex;
   align-items: center;
@@ -337,12 +308,9 @@ export default {
   font-size: 16px;
   line-height: 1;
 }
-
-/* subtle hover for eye */
 .card-eye:hover {
   background: rgba(255,255,255,0.12);
 }
-
 .kpis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -373,7 +341,6 @@ export default {
 .kpi .danger {
   color: #ff4d4f;
 }
-
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 420px;
@@ -490,7 +457,6 @@ export default {
 .amount.success {
   color: #25c36a;
 }
-
 .right-col .activity {
   background: var(--card);
   padding: 18px;
@@ -540,7 +506,6 @@ export default {
   font-size: 12px;
   color: #333;
 }
-
 .quick-actions {
   margin-top: 20px;
 }
@@ -563,8 +528,6 @@ export default {
   align-items: center;
   justify-content: center;
 }
-
-/* dropdown */
 .dropdown {
   position: absolute;
   right: 0;
@@ -587,8 +550,6 @@ export default {
   text-align: left;
   cursor: pointer;
 }
-
-/* Responsive */
 @media (max-width: 980px) {
   .content-grid {
     grid-template-columns: 1fr;
@@ -599,24 +560,18 @@ export default {
   .card {
     width: 100%;
   }
-  /* Prevent horizontal scrolling globally */
-html, body {
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-/* Card width fix */
-.card {
-  width: 100%; /* override 560px */
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* Container safe for small screens */
-.container {
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .container {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
 }
 </style>
