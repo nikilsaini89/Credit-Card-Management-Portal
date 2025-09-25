@@ -3,7 +3,7 @@ import { User } from '../types/User';
 import { RootState } from '../store'; 
 import { getUserProfile, updateUserProfile } from '../services/userService';
 
-// Define the shape of the user state
+
 export interface UserState {
   profile: User | null;
 }

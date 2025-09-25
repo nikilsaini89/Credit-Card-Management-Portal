@@ -48,8 +48,8 @@
       <!-- <div class="info-row">
         <label>User ID</label>
         <span>#{{ user.id }}</span>
-      </div> -->
-      <!-- <div class="info-row">
+      </div>
+      <div class="info-row">
         <label>Account Type</label>
         <span>{{ user.role }}</span>
       </div> -->
