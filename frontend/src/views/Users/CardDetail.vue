@@ -1,8 +1,6 @@
 <template>
   <div class="page-root">
     <!-- Topbar -->
-    <NavigationBar/>
-
     <!-- Main -->
     <main class="container">
       <div class="page-header">
@@ -128,14 +126,13 @@
 import axios from 'axios'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import NavigationBar from '../../components/NavigationBar.vue'
 import Card from '../../components/Card.vue'
 import UpdateCreditLimitModal from '../../components/UpdateCreditLimitModal.vue'
 import ConfirmIdentityModal from '../../components/ConfirmIdentityModal.vue'
 
 export default {
   name: 'CardDetail',
-  components: { NavigationBar, Card, UpdateCreditLimitModal, ConfirmIdentityModal },
+  components: { Card, UpdateCreditLimitModal, ConfirmIdentityModal },
   setup() {
     const route = useRoute()
     const router = useRouter()

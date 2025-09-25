@@ -3,7 +3,7 @@
     <div class="topbar-inner">
       <!-- Brand -->
       <div class="brand">
-        <div class="brand-logo">
+        <div class="brand-logo" aria-hidden="true">
           <!-- Clean SVG Credit Card Icon -->
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -15,7 +15,6 @@
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
-            aria-hidden="true"
           >
             <rect x="2" y="5" width="20" height="14" rx="2" ry="2" />
             <line x1="2" y1="10" x2="22" y2="10" />
@@ -28,11 +27,15 @@
 
       <!-- Navigation Links -->
       <nav class="topnav">
-        <RouterLink to="/">Dashboard</RouterLink>
-        <RouterLink to="/cards">My Cards</RouterLink>
-        <RouterLink to="/apply-card">Apply Card</RouterLink>
-        <RouterLink to="/transactions">Transactions</RouterLink>
-        <RouterLink to="/profile">Profile</RouterLink>
+        <RouterLink
+          v-for="link in links"
+          :key="link.to"
+          :to="link.to"
+          class="nav-item"
+          :class="{ active: isActive(link.to) }"
+        >
+          {{ link.label }}
+        </RouterLink>
       </nav>
 
       <!-- Avatar -->
@@ -45,14 +48,30 @@
 
 <script setup>
 import { computed } from "vue"
+import { useRoute } from "vue-router"
 
-// Example static user (replace later with real store/api)
 const userName = "Abhay Dhek"
 
 const userInitials = computed(() => {
   const parts = userName.split(" ")
   return parts.map(p => p[0]).join("").toUpperCase()
 })
+
+const links = [
+  { to: "/", label: "Dashboard" },
+  { to: "/cards", label: "My Cards" },
+  { to: "/apply-card", label: "Apply Card" },
+  { to: "/transactions", label: "Transactions" },
+  { to: "/profile", label: "Profile" }
+]
+
+const route = useRoute()
+
+const isActive = (path) => {
+  if (!route || !route.path) return false
+  if (path === "/") return route.path === "/"
+  return route.path.startsWith(path)
+}
 </script>
 
 <style scoped>
@@ -103,17 +122,28 @@ const userInitials = computed(() => {
   align-items: center;
   color: var(--muted, #6b7280);
 }
-.topnav a {
+
+.topnav .nav-item {
   text-decoration: none;
   color: inherit;
   padding: 6px 10px;
   border-radius: 8px;
   font-weight: 600;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s, transform 0.06s;
 }
-.topnav a:hover {
-  background: #f3f4f6;
-  color: var(--accent, #0b2540);
+
+/* Hover → Yellow */
+.topnav .nav-item:hover {
+  background: #ffd60a; /* Bright Yellow */
+  color: #0b2540; /* Dark text for readability */
+  transform: translateY(-1px);
+}
+
+/* Active → Yellow */
+.topnav .nav-item.active {
+  background: #ffd60a;
+  color: #0b2540;
+  box-shadow: 0 4px 12px rgba(255, 214, 10, 0.4);
 }
 
 /* AVATAR */
