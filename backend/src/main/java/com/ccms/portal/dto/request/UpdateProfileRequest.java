@@ -11,7 +11,6 @@ import lombok.Setter;
 @Builder
 public class UpdateProfileRequest {
     private String name;
-    private String email;
     private String phoneNumber;
     private String address;
     private Double annualIncome;
