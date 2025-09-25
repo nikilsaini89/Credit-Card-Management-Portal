@@ -2,13 +2,11 @@
   <article class="card-visual-wrap">
     <div v-if="activeCard" class="credit-card" :class="{ blocked: activeCard.status === 'BLOCKED' }">
 
-      <!-- bank logo (top-left) - dynamic from backend/card data -->
       <div class="bank-brand">
         <div class="bank-logo">{{ bankLabel }}</div>
         <div class="bank-sub" v-if="bankLabel !== ' BANK'">{{ bankLabelSub }}</div>
       </div>
 
-            <!-- menu (vertical 3-dots) top-right — always visible -->
       <div v-if="showMenu" class="card-menu" ref="menuRoot">
 
         <button
@@ -36,10 +34,8 @@
         </div>
       </div>
 
-      <!-- status badge -->
       <div class="status-badge">{{ activeCard.status }}</div>
 
-      <!-- network logo (top-right) -->
       <div class="network-wrap" aria-hidden="true">
         <div class="network-logo mastercard" v-if="!activeCard.network">
           <span class="mc-left"></span><span class="mc-right"></span>
@@ -51,14 +47,12 @@
         <div class="logo-badge" v-if="activeCard.badge">{{ activeCard.badge }}</div>
       </div>
 
-      <!-- eye toggle -->
       <button
         class="eye"
         @click="toggleMask"
         :title="masked ? 'Show number' : 'Hide number'"
         :aria-pressed="String(!masked)"
       >
-        <!-- svg icons unchanged -->
         <svg v-if="!masked" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
           <circle cx="12" cy="12" r="3.2"/>
@@ -70,12 +64,10 @@
         </svg>
       </button>
 
-      <!-- number row -->
       <div class="number-row" role="group" aria-label="Card number">
         <span class="mask">{{ masked ? maskedNumber(activeCard.number) : fullNumber(activeCard.number) }}</span>
       </div>
 
-      <!-- single horizontal row: left = cardholder name, right = valid-thru -->
       <div class="meta-row">
         <div class="cardholder-name">{{ activeCard.holder || userName || 'RAHUL VERMA' }}</div>
 
@@ -89,10 +81,8 @@
 
       <div class="card-divider" aria-hidden="true"></div>
 
-
       <div class="card-limits">
         <div class="limit-left">
-         
           <div class="label small">AVAILABLE LIMIT</div>
           <div class="amt success">₹{{ formatNumber(activeCard.availableLimit) }}</div>
         </div>
@@ -100,9 +90,7 @@
           <div class="label small">TOTAL LIMIT</div>
           <div class="amt">₹{{ formatNumber(activeCard.totalLimit) }}</div>
         </div>
-        <!-- network type text bottom-right -->
         <div class="network-type" :class="activeCard.network?.toLowerCase()">{{ activeCard.network  }}</div>
-
       </div>
     </div>
 
@@ -111,7 +99,6 @@
 </template>
 
 <script setup>
-/* Props + emits */
 import { ref, computed, watch, onMounted } from 'vue'
 
 const props = defineProps({
@@ -122,36 +109,29 @@ const props = defineProps({
 })
 const emit = defineEmits(['action', 'block'])
 
-/* Local reactive state */
 const masked = ref(true)
 const menuOpen = ref(false)
 const menuRoot = ref(null)
 
-/* localCard: fallback source loaded from JSON when parent hasn't passed a card prop yet */
 const localCard = ref(null)
 
-/* activeCard: prefer prop.card, fallback to localCard (useful for testing with /data/card.json) */
 const activeCard = computed(() => props.card || localCard.value)
 
-/* computed bank label derived from backend fields (bank, bankName, issuer) */
 const bankLabel = computed(() => {
   const c = activeCard.value
   if (!c) return 'BANK'
   return (c.bank || c.bankName || c.issuer || ' HDFC BANK').toUpperCase().slice(0, 18)
 })
 const bankLabelSub = computed(() => {
-  // optional shorter sublabel (like 'Bank' or empty). keep small 'Bank' if bankLabel is recognizable
   return (activeCard.value && activeCard.value.bank && activeCard.value.bank.length > 6) ? 'Bank' : ''
 })
 
-/* Computeds */
 const cardLast4 = computed(() => {
   const c = activeCard.value
   if (!c || !c.number) return '1234'
   return String(c.number).replace(/\s+/g, '').slice(-4)
 })
 
-/* Utility functions (copied/adjusted) */
 function maskedNumber(n) {
   if (!n) return '**** **** **** 1234'
   const s = String(n).replace(/\s+/g, '')
@@ -175,7 +155,6 @@ function formatDate(ts) {
   return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-/* Actions: toggle mask, toggle block (emit) */
 function toggleMask() { masked.value = !masked.value }
 
 function toggleBlock(c) {
@@ -183,13 +162,11 @@ function toggleBlock(c) {
   emit('block', { card: c, newStatus: c.status === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED' })
 }
 
-/* Menu action selection */
 function selectAction(action, idx) {
   menuOpen.value = false
   emit('action', { action, idx })
 }
 
-/* click-outside for menu */
 function onDocClick(e) {
   if (!menuRoot.value) return
   if (!menuRoot.value.contains(e.target)) menuOpen.value = false
@@ -198,21 +175,17 @@ watch(menuOpen, (open) => {
   if (open) document.addEventListener('click', onDocClick)
   else document.removeEventListener('click', onDocClick)
 })
-// sanitize any user/backend strings to remove stray '<' or other accidental markup
 function sanitizeText(v) {
   if (v === undefined || v === null) return ''
-  return String(v).replace(/</g, '') // remove any '<' characters
+  return String(v).replace(/</g, '') 
 }
 
-// safe computed label + holder + network (used only for display)
 const safeBankLabel = computed(() => sanitizeText( (activeCard.value && (activeCard.value.bank || activeCard.value.bankName || activeCard.value.issuer)) || 'BANK' ).toUpperCase().slice(0,18))
 const safeBankLabelSub = computed(() => sanitizeText(activeCard.value?.bank && activeCard.value.bank.length > 6 ? 'Bank' : ''))
 const safeHolder = computed(() => sanitizeText(activeCard.value?.holder || props.userName || 'RAHUL VERMA'))
 const safeNetwork = computed(() => sanitizeText(activeCard.value?.network || 'VISA'))
 
-
 onMounted(async () => {
-  // Build base-safe URL (works with Vite / different BASE_URLs)
   const url = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL)
     ? new URL('/data/card.json', import.meta.env.BASE_URL).href
     : '/data/card.json';
@@ -230,8 +203,6 @@ onMounted(async () => {
     const data = await resp.json();
     console.info('[Card] mock JSON loaded:', data);
 
-    // Only assign to localCard when parent DID NOT pass a card prop.
-    // If parent passed a card, we keep using it (no override).
     if (!props.card) {
       localCard.value = data;
       console.info('[Card] active card set from local mock (props.card absent).');
@@ -243,13 +214,10 @@ onMounted(async () => {
   }
 });
 
-
 defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, formatAmount, formatDate, cardLast4, activeCard })
 </script>
 
 <style scoped>
-/* HDFC-like pro card visual — color palette tuned for deep blue with subtle red accent */
-/* Card container */
 .credit-card {
   position: relative;
   border-radius: 14px;
@@ -266,7 +234,6 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
-/* subtle left vignette */
 .credit-card::before {
   content: '';
   position: absolute;
@@ -278,7 +245,6 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   pointer-events:none;
 }
 
-/* bank brand centered at top */
 .bank-brand {
   position: absolute;
   left: 50%;
@@ -287,7 +253,7 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   display:flex;
   align-items: baseline;
   gap: 6px;
-  z-index: 40; /* ensure it sits above other elements */
+  z-index: 40; 
 }
 .bank-logo {
   font-weight: 900;
@@ -306,8 +272,6 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   margin-top: 2px;
 }
 
-
-/* menu (3-dots) top-right (always visible) */
 .card-menu {
   position: absolute;
   right: 18px;
@@ -326,11 +290,10 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   line-height: 1;
 }
 
-/* status badge top-left */
 .status-badge {
   position: absolute;
   left: 16px;
-  top: 10px;       /* move up to top */
+  top: 10px;   
   background: rgba(0,0,0,0.44);
   padding: 6px 10px;
   border-radius: 8px;
@@ -338,11 +301,9 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   font-size: 12px;
   color: #fff;
   box-shadow: 0 6px 18px rgba(0,0,0,0.25);
-  z-index: 50;     /* keeps it above background vignette */
+  z-index: 50;   
 }
 
-
-/* menu (vertical dots) */
 .card-menu {
   position: absolute;
   right: 16px;
@@ -365,11 +326,10 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
 }
 .menu-btn:hover { background: rgba(255,255,255,0.04); }
 
-/* menu pop as small panel (card-like) */
 .menu-pop {
   position: absolute;
   right: 0;
-  top: 44px; /* sits under the 3-dots button */
+  top: 44px; 
   min-width: 180px;
   display: block;
   z-index: 80;
@@ -397,7 +357,6 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   background: rgba(2,6,23,0.06);
 }
 
-/* meta-row: keeps name and valid-thru aligned on same horizontal line */
 .meta-row {
   display: flex;
   justify-content: space-between;
@@ -407,7 +366,6 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   margin-top: 12px;
 }
 
-/* cardholder name styling (no label) */
 .cardholder-name {
   font-size: 14px;
   font-weight: 800;
@@ -416,10 +374,9 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 58%; /* leaves room for VALID THRU on the right */
+  max-width: 58%; 
 }
 
-/* adjust existing card-meta to sit on right */
 .card-meta {
   margin: 0;
   display:flex;
@@ -436,7 +393,6 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   font-weight: 800;
 }
 
-/* Responsive tweaks so the meta-row stacks on small screens */
 @media (max-width: 420px) {
   .meta-row {
     flex-direction: column;
@@ -445,20 +401,17 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   }
   .cardholder-name { max-width: 100%; }
   .card-meta { align-self: flex-end; }
-  .menu-pop { right: -8px; } /* keep popover visible on small screens */
+  .menu-pop { right: -8px; } 
 }
 
-
-/* VISA style — clean, blueish font */
 .network-type.visa {
   font-family: "Segoe UI", Tahoma, sans-serif;
   font-weight: 900;
   font-size: 18px;
-  color: #7376a3; /* VISA blue */
+  color: #7376a3; 
   letter-spacing: 2px;
 }
 
-/* MasterCard style — bold, red/orange tone */
 .network-type.mastercard {
   font-family: "Arial Black", Gadget, sans-serif;
   font-weight: 800;
@@ -466,16 +419,13 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   color: #eb001b;
 }
 
-/* RuPay style — italic with accent */
 .network-type.rupay {
   font-family: "Verdana", sans-serif;
   font-style: italic;
   font-size: 15px;
-  color: #005baa; /* RuPay blue */
+  color: #005baa; 
 }
 
-
-/* eye toggle: positioned near top-right but inside card */
 .eye {
   position: absolute;
   right: 76px;
@@ -495,9 +445,8 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
 .eye:hover { transform: translateY(-2px); }
 .eye svg { width:18px; height:18px; stroke: currentColor; }
 
-/* card number row */
 .number-row {
-  margin-top: 40px;   /* was 60px, reduced */
+  margin-top: 40px;   
   margin-left: 18px;
   margin-right: 18px;
   white-space: nowrap;
@@ -512,20 +461,18 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   line-height: 1;
   display:block;
 }
-/* bottom-right network type text */
+
 .network-type {
   position: absolute;
   bottom: 14px;
   right: 50px;
 }
-/* divider */
 .card-divider {
   height: 1px;
   background: rgba(255,255,255,0.06);
   margin: 12px -26px 0;
 }
 
-/* limits area */
 .card-limits {
   display:flex;
   justify-content: space-between;
@@ -553,13 +500,11 @@ defineExpose({ toggleMask, toggleBlock, maskedNumber, fullNumber, formatNumber, 
   color: #b7f5c9;
 }
 
-/* blocked state */
 .credit-card.blocked {
   opacity: 0.8;
   filter: grayscale(0.15);
 }
 
-/* responsive */
 @media (max-width: 520px) {
   .credit-card { width: 320px; padding: 18px; min-height: 200px; }
   .number-row .mask { font-size: 18px; letter-spacing: 3px; }
