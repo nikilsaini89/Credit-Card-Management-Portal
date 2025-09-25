@@ -7,6 +7,9 @@ import com.ccms.portal.dto.response.UserResponse;
 import com.ccms.portal.entity.UserEntity;
 import com.ccms.portal.enums.UserRole;
 import com.ccms.portal.entity.UserProfileEntity;
+import com.ccms.portal.exception.EmailAlreadyExistsException;
+import com.ccms.portal.exception.InvalidCredentialsException;
+import com.ccms.portal.exception.UserNotFoundException;
 import com.ccms.portal.repository.UserProfileRepository;
 import com.ccms.portal.repository.UserRepository;
 import com.ccms.portal.util.JwtUtil;
@@ -25,7 +28,7 @@ public class AuthService {
 
     public UserResponse register(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already registered");
+            throw new EmailAlreadyExistsException("Email already registered");
         }
 
         UserEntity user = UserEntity.builder()
@@ -54,16 +57,16 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         UserEntity user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new InvalidCredentialsException("Invalid credentials");
         }
 
         UserProfileEntity profile = userProfileRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("User profile not found"));
+                .orElseThrow(() -> new UserNotFoundException("User profile not found"));
 
-        String token = jwtUtil.generateToken(user.getEmail(),user.getRole().toString(),user.getId());
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().toString(), user.getId());
         return new AuthResponse(token, buildUserResponse(user, profile));
     }
 
