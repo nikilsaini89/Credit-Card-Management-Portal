@@ -43,10 +43,10 @@ public class JwtUtil {
         return getClaims(token).getSubject();
     }
 
-    public Long extractUserId(String token){ return getClaims(token).get("userId",Long.class); }
+    public Long extractUserId(String token){ return getClaims(token).get(TokenVariable.USER_ID.getValue(),Long.class); }
 
     public String extractRole(String token) {
-        return getClaims(token).get("role", String.class);
+        return getClaims(token).get(TokenVariable.USER_ROLE.getValue(), String.class);
     }
 
     public boolean validateToken(String token, String email) {
