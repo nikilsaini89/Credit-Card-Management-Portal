@@ -3,7 +3,7 @@ package com.ccms.portal.controller;
 import com.ccms.portal.dto.request.CardApplicationRequest;
 import com.ccms.portal.dto.request.UpdateStatusRequest;
 import com.ccms.portal.dto.response.CardApplicationResponse;
-import com.ccms.portal.model.CardApplicationEntity;
+import com.ccms.portal.entity.CardApplicationEntity;
 import com.ccms.portal.service.CardApplicationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("card/application")
@@ -39,7 +38,7 @@ public class CardApplicationController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteApplication(@PathVariable Long id){
-        cardApplicationService.deleteApplication(id);
-        return ResponseEntity.ok("Card application deleted successfully");
+        CardApplicationResponse cardApplicationResponse = cardApplicationService.deleteApplication(id);
+        return ResponseEntity.ok(cardApplicationResponse);
     }
 }

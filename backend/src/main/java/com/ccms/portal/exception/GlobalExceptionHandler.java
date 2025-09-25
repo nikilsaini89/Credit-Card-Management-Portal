@@ -82,6 +82,19 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR, null);
     }
 
+    @ExceptionHandler(CardApplicationNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleCardApplicationNotFound(CardApplicationNotFoundException ex) {
+        log.error("Card application not found: {}", ex.getMessage());
+        return buildErrorResponse("Card Application Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
+    }
+
+    @ExceptionHandler(UnauthorizedApplicationActionException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnauthorizedApplicationAction(UnauthorizedApplicationActionException ex) {
+        log.error("Unauthorized application action: {}", ex.getMessage());
+        return buildErrorResponse("Unauthorized Action", ex.getMessage(), HttpStatus.FORBIDDEN, null);
+    }
+
+
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(
             String error, String message, HttpStatus status, Map<String, String> fieldErrors) {
 
