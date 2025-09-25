@@ -267,11 +267,6 @@ export default {
   font-weight: 700;
 }
 
-.container {
-  max-width: 1180px;
-  margin: 28px auto;
-  padding: 0 20px;
-}
 .hero h1 {
   font-size: 32px;
   margin: 8px 0;

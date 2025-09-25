@@ -2,7 +2,9 @@
 <template>
   <div id="app">
     <NavigationBar />
-    <router-view />
+    <div class="main-container">
+      <router-view />
+    </div>
   </div>
 </template>
 
@@ -18,10 +20,13 @@ export default {
 </script>
 
 <style>
-/* You can add global styles here */
-html, body, #app {
-  margin: 0;
-  padding: 0;
-  height: 100%;
+NavigationBar{
+  font-family: "Inter", system-ui, Arial;
+}
+.main-container {
+  max-width: 1180px;
+  margin: 28px auto;
+  padding: 0 12px;
+  font-family: "Inter", system-ui, Arial;
 }
 </style>
