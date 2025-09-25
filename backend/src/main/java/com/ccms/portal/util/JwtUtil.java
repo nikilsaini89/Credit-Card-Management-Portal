@@ -1,5 +1,5 @@
 package com.ccms.portal.util;
-
+import com.ccms.portal.enums.TokenVariable;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -31,8 +31,8 @@ public class JwtUtil {
     public String generateToken(String email, String role,Long id) {
         return Jwts.builder()
                 .setSubject(email)
-                .claim("role", role)
-                .claim("userId",id)
+                .claim(TokenVariable.USER_ROLE.getValue(), role)
+                .claim(TokenVariable.USER_ID.getValue(),id)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -43,10 +43,10 @@ public class JwtUtil {
         return getClaims(token).getSubject();
     }
 
-    public Long extractUserId(String token){ return getClaims(token).get("userId",Long.class); }
+    public Long extractUserId(String token){ return getClaims(token).get(TokenVariable.USER_ID.getValue(),Long.class); }
 
     public String extractRole(String token) {
-        return getClaims(token).get("role", String.class);
+        return getClaims(token).get(TokenVariable.USER_ROLE.getValue(), String.class);
     }
 
     public boolean validateToken(String token, String email) {
