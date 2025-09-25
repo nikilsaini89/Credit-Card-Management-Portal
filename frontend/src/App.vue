@@ -1,14 +1,19 @@
 <!-- src/App.vue -->
 <template>
   <div id="app">
-    <!-- This is where pages from router (Dashboard, Profile, etc.) will render -->
+    <NavigationBar v-if="!['/', '/register'].includes($route.path)" />
     <router-view />
   </div>
 </template>
 
 <script lang="ts">
+import NavigationBar from './components/NavigationBar.vue';
+
 export default {
-  name: 'App'
+  name: 'App',
+  components:{
+    NavigationBar
+  }
 }
 </script>
 

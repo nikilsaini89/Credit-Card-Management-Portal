@@ -1,5 +1,5 @@
 package com.ccms.portal.util;
-
+import com.ccms.portal.enums.TokenVariable;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -15,7 +15,7 @@ public class JwtUtil {
     @Value("${jwt.secret.key}")
     private String secret;
 
-    @Value("${security.jwt.expiration-time:3600000}") // Default: 1 hour
+    @Value("${security.jwt.expiration-time:3600000}")
     private long expiration;
 
     private Key key;
@@ -28,28 +28,27 @@ public class JwtUtil {
         this.key = Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    // Generate token with email and role
-    public String generateToken(String email, String role) {
+    public String generateToken(String email, String role,Long id) {
         return Jwts.builder()
                 .setSubject(email)
-                .claim("role", role)
+                .claim(TokenVariable.USER_ROLE.getValue(), role)
+                .claim(TokenVariable.USER_ID.getValue(),id)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // Extract email from token
     public String extractEmail(String token) {
         return getClaims(token).getSubject();
     }
 
-    // Extract role from token
+    public Long extractUserId(String token){ return getClaims(token).get(TokenVariable.USER_ID.getValue(),Long.class); }
+
     public String extractRole(String token) {
-        return getClaims(token).get("role", String.class);
+        return getClaims(token).get(TokenVariable.USER_ROLE.getValue(), String.class);
     }
 
-    // Validate token against email and expiration
     public boolean validateToken(String token, String email) {
         try {
             return extractEmail(token).equals(email) && !isTokenExpired(token);
@@ -58,12 +57,10 @@ public class JwtUtil {
         }
     }
 
-    // Check if token is expired
     private boolean isTokenExpired(String token) {
         return getClaims(token).getExpiration().before(new Date());
     }
 
-    // Centralized claim parser
     private Claims getClaims(String token) {
         return Jwts.parser()
                 .setSigningKey(key)
