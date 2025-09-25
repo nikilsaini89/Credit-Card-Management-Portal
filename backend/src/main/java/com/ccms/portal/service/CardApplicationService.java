@@ -6,6 +6,8 @@ import com.ccms.portal.dto.request.CreateCardRequest;
 import com.ccms.portal.dto.response.CardApplicationResponse;
 import com.ccms.portal.enums.CardApplicationStatus;
 import com.ccms.portal.entity.CardApplicationEntity;
+import com.ccms.portal.exception.CardApplicationNotFoundException;
+import com.ccms.portal.exception.UnauthorizedApplicationActionException;
 import com.ccms.portal.repository.CardApplicationRepository;
 import com.ccms.portal.util.JwtUserDetails;
 import com.ccms.portal.util.JwtUtil;
@@ -65,9 +67,9 @@ public class CardApplicationService {
                 .getAuthentication()
                 .getPrincipal();
         Long userId = currentUser.getUserId();
-        CardApplicationEntity application = repository.findById(id).orElseThrow(()-> new RuntimeException("Application not found"));
+        CardApplicationEntity application = repository.findById(id).orElseThrow(()->new CardApplicationNotFoundException("Application with id " + id + " not found"));
         if(!application.getUserId().equals(userId)){
-            throw new RuntimeException("You are not authorized to update this application");
+            throw new UnauthorizedApplicationActionException("You are not authorized to update this application");
         }
         CreateCardRequest createCardRequest = new CreateCardRequest();
         createCardRequest.setCardTypeId(application.getCardTypeId());
@@ -89,10 +91,10 @@ public class CardApplicationService {
                 .getPrincipal();
         Long userId = currentUser.getUserId();
         CardApplicationEntity application  = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Card application with id " + id + " not found"));
+                .orElseThrow(() -> new CardApplicationNotFoundException("Card application with id " + id + " not found"));
         CardApplicationResponse cardApplicationResponse = new CardApplicationResponse(application);
         if (!application.getUserId().equals(userId)) {
-            throw new RuntimeException("You are not authorized to delete this application");
+            throw new UnauthorizedApplicationActionException("You are not authorized to delete this application");
         }
         repository.deleteById(id);
         return cardApplicationResponse;
