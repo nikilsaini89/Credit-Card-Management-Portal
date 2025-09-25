@@ -29,12 +29,6 @@ public class CreditCardController {
     }
 
 
-    @PostMapping
-    public ResponseEntity<?> createCard(@RequestBody CreateCardRequest request) {
-        CreditCardResponse createdCard = cardService.createCard(request);
-        return new ResponseEntity<>(createdCard,HttpStatus.CREATED);
-    }
-
     @PutMapping("/{cardId}/status")
     public ResponseEntity<?> updateCardStatus(@RequestBody UpdateCardStatusRequest cardStatusRequest, @PathVariable Long cardId){
         CreditCardResponse updatedCard = cardService.updateCardStatus(cardStatusRequest, cardId);
