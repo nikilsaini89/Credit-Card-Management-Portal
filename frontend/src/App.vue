@@ -1,7 +1,7 @@
 <!-- src/App.vue -->
 <template>
   <div id="app">
-    <NavigationBar />
+    <NavigationBar v-if="!['/', '/register'].includes($route.path)" />
     <router-view />
   </div>
 </template>
