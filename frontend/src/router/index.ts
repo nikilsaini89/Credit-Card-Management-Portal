@@ -13,6 +13,11 @@ const routes = [
     name: "Login",
     component: Login,
   },
+    {
+    path: "/register",
+    name: "Register",
+    component: Login,
+  },
   {
     path: "/dashboard",
     name: "Dashboard",
