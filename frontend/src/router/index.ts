@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
+import AuthView from "../views/Users/AuthView.vue";
+import ProfileView from "../views/Users/ProfileView.vue";
 
 // Lazy load Dashboard
 const Dashboard = () => import("../views/Users/Dashboard.vue");
@@ -6,6 +8,11 @@ const CardDetail = () => import("../views/Users/CardDetail.vue");
 const routes = [
   {
     path: "/",
+    name: "Login",
+    component: AuthView,
+  },
+  {
+    path: "/dashboard",
     name: "Dashboard",
     component: Dashboard,
   },
@@ -14,7 +21,11 @@ const routes = [
     name: "CardDetail",
     component: CardDetail,
     props: true,
-    alias: "/card/:id"
+  },
+  {
+    path: "/profile",
+    name: "Profile",
+    component: ProfileView,
   },
   // {
   //   path: "/my-cards",
