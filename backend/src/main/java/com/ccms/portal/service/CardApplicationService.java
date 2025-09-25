@@ -11,6 +11,7 @@ import com.ccms.portal.exception.UnauthorizedApplicationActionException;
 import com.ccms.portal.repository.CardApplicationRepository;
 import com.ccms.portal.util.JwtUserDetails;
 import com.ccms.portal.util.JwtUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -20,15 +21,12 @@ import java.util.Optional;
 
 @Service
 public class CardApplicationService {
-    private final JwtUtil jwtUtil;
-    private final CardApplicationRepository repository;
-    private final CardService cardService;
-
-    public CardApplicationService(CardApplicationRepository repository, JwtUtil jwtUtil, CardService cardService){
-        this.jwtUtil = jwtUtil;
-        this.repository = repository;
-        this.cardService = cardService;
-    }
+    @Autowired
+    private JwtUtil jwtUtil;
+    @Autowired
+    private  CardApplicationRepository repository;
+    @Autowired
+    private  CardService cardService;
 
     public CardApplicationResponse apply(CardApplicationRequest application){
         JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
@@ -37,7 +35,6 @@ public class CardApplicationService {
                 .getPrincipal();
 
         Long userId = currentUser.getUserId();
-        System.out.println("userId -> " +userId);
         CardApplicationEntity applicationEntity = new CardApplicationEntity();
         applicationEntity.setStatus(CardApplicationStatus.PENDING);
         applicationEntity.setCardTypeId(application.getCardTypeId());
