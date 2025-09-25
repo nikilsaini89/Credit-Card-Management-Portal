@@ -33,10 +33,12 @@ public class ProfileService {
         UserProfileEntity profile = userProfileRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("Profile not found for user ID: " + userId));
 
+        boolean isEligible = request.getAnnualIncome() != null && request.getAnnualIncome() > 100000;
+
         // Update UserEntity fields
         if (request.getName() != null) user.setName(request.getName());
-        if (request.getEmail() != null) user.setEmail(request.getEmail());
         if (request.getPhoneNumber() != null) user.setPhoneNumber(request.getPhoneNumber());
+        profile.setEligibleBnpl(isEligible);
 
         // Update UserProfileEntity fields
         if (request.getAddress() != null) profile.setAddress(request.getAddress());
