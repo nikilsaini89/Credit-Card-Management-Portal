@@ -5,12 +5,10 @@ import com.ccms.portal.dto.request.CardApplicationRequest;
 import com.ccms.portal.dto.request.CreateCardRequest;
 import com.ccms.portal.dto.response.CardApplicationResponse;
 import com.ccms.portal.enums.CardApplicationStatus;
-import com.ccms.portal.model.CardApplicationEntity;
+import com.ccms.portal.entity.CardApplicationEntity;
 import com.ccms.portal.repository.CardApplicationRepository;
 import com.ccms.portal.util.JwtUserDetails;
 import com.ccms.portal.util.JwtUtil;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -37,13 +35,14 @@ public class CardApplicationService {
                 .getPrincipal();
 
         Long userId = currentUser.getUserId();
+        System.out.println("userId -> " +userId);
         CardApplicationEntity applicationEntity = new CardApplicationEntity();
-        applicationEntity.setStatus(CardApplicationStatus.Pending);
+        applicationEntity.setStatus(CardApplicationStatus.PENDING);
         applicationEntity.setCardTypeId(application.getCardTypeId());
         applicationEntity.setRequestedLimit(application.getRequestLimit());
         applicationEntity.setUserId(userId);
         CardApplicationEntity  cardApplicationEntity= repository.save(applicationEntity);
-        return  new CardApplicationResponse(cardApplicationEntity.getId(),cardApplicationEntity.getUserId(),cardApplicationEntity.getCardTypeId(),cardApplicationEntity.getRequestedLimit(),cardApplicationEntity.getApplicationDate(),cardApplicationEntity.getStatus());
+        return  new CardApplicationResponse(cardApplicationEntity);
     }
 
     public List<CardApplicationEntity> getApplications(){
@@ -79,13 +78,11 @@ public class CardApplicationService {
         application.setReviewerId(userId);
         application.setStatus(request);
         CardApplicationEntity cardApplicationEntity =  repository.save(application);
-        CardApplicationResponse cardApplicationResponse = new CardApplicationResponse(cardApplicationEntity.getId(),cardApplicationEntity.getUserId(),cardApplicationEntity.getCardTypeId(),cardApplicationEntity.getRequestedLimit(),cardApplicationEntity.getApplicationDate(),cardApplicationEntity.getStatus());
-        cardApplicationResponse.setReviewDate(cardApplicationEntity.getReviewDate());
-        cardApplicationResponse.setReviewerId(cardApplicationEntity.getReviewerId());
+        CardApplicationResponse cardApplicationResponse = new CardApplicationResponse(cardApplicationEntity);
         return cardApplicationResponse;
     }
 
-    public void deleteApplication(Long id) {
+    public CardApplicationResponse deleteApplication(Long id) {
         JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
                 .getContext()
                 .getAuthentication()
@@ -93,9 +90,11 @@ public class CardApplicationService {
         Long userId = currentUser.getUserId();
         CardApplicationEntity application  = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Card application with id " + id + " not found"));
+        CardApplicationResponse cardApplicationResponse = new CardApplicationResponse(application);
         if (!application.getUserId().equals(userId)) {
             throw new RuntimeException("You are not authorized to delete this application");
         }
         repository.deleteById(id);
+        return cardApplicationResponse;
     }
 }
