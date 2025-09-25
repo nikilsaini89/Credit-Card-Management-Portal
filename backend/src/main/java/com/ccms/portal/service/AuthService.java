@@ -63,7 +63,7 @@ public class AuthService {
         UserProfileEntity profile = userProfileRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("User profile not found"));
 
-        String token = jwtUtil.generateToken(user.getEmail(),user.getRole().toString());
+        String token = jwtUtil.generateToken(user.getEmail(),user.getRole().toString(),user.getId());
         return new AuthResponse(token, buildUserResponse(user, profile));
     }
 
