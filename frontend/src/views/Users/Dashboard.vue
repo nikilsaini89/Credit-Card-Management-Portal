@@ -1,20 +1,5 @@
 <template>
   <div class="dashboard">
-    <header class="topbar">
-      <div class="brand">
-        <div class="logo">💳</div>
-        <div class="title">CreditCard Portal</div>
-      </div>
-      <nav class="nav">
-        <RouterLink to="/">Dashboard</RouterLink>
-        <RouterLink to="/my-cards">My Cards</RouterLink>
-        <RouterLink to="/apply-card">Apply Card</RouterLink>
-        <RouterLink to="/transactions">Transactions</RouterLink>
-        <RouterLink to="/profile">Profile</RouterLink>
-      </nav>
-      <div class="avatar">RV</div>
-    </header>
-
     <main class="container">
       <section class="hero">
         <h1>Welcome back, {{ user.name }}!</h1>
@@ -55,68 +40,16 @@
           </div>
 
           <div class="card-list">
-            <!-- render cards dynamically -->
-            <article
-              v-for="card in cards"
-              :key="card.id"
-              class="card card-gradient"
-              :class="{ blocked: card.status === 'BLOCKED' }"
-            >
-              <div class="card-badge">{{ card.status }}</div>
-
-              <!-- network chip -->
-              <div class="card-chip">{{ card.network }}</div>
-
-              <!-- three-dot menu -->
-              <div class="card-menu" @click.stop="toggleMenu(card.id)">
-                ⋮
-                <div v-if="openMenu === card.id" class="dropdown">
-                  <RouterLink :to="`/my-cards/${card.id}`">View Details</RouterLink>
-                  <button @click="onToggleBlock(card)">{{ card.status === 'BLOCKED' ? 'Unblock' : 'Block' }}</button>
-                </div>
-              </div>
-
-              <!-- number + eye inline -->
-              <div class="card-number-row">
-                <div
-                  class="card-number"
-                  @click="toggleCardNumber(card.id)"
-                  :title="showFull[card.id] ? 'Hide number' : 'Show number'"
-                >
-                  {{ showFull[card.id] ? card.number : maskNumber(card.number) }}
-                </div>
-
-                <!-- eye sits to the right of the number -->
-                <button
-                  class="card-eye"
-                  @click.stop="toggleCardNumber(card.id)"
-                  :aria-label="showFull[card.id] ? 'Hide card number' : 'Show card number'"
-                >👁️</button>
-              </div>
-
-
-              <div class="card-row">
-                <div>
-                  <div class="small">CARDHOLDER</div>
-                  <div class="bold">{{ user.name }}</div>
-                </div>
-                <div>
-                  <div class="small">EXPIRES</div>
-                  <div class="bold">{{ card.expiry }}</div>
-                </div>
-              </div>
-
-              <div class="card-footer">
-                <div>
-                  <div class="small">AVAILABLE LIMIT</div>
-                  <div class="amount success">₹{{ formatNumber(card.availableLimit) }}</div>
-                </div>
-                <div>
-                  <div class="small">TOTAL LIMIT</div>
-                  <div class="amount">₹{{ formatNumber(card.totalLimit) }}</div>
-                </div>
-              </div>
-            </article>
+            <Card
+              v-for="cardItem in cards"
+              :key="cardItem.id"
+              :card="cardItem"
+              :userName="user.name"
+              :showMenu="true"
+              :actions="cardActions(cardItem)"
+              @action="onCardAction"
+              @block="onToggleBlock"
+            />
           </div>
         </div>
 
@@ -155,12 +88,15 @@
 
 <script>
 import axios from "axios";
+import Card from "../../components/Card.vue";
+import { useRouter } from "vue-router";
 
 export default {
   name: "DashboardView",
+  components: { Card },
   data() {
     return {
-      user: { name: "User" }, // updated from JSON
+      user: { name: "User" },
       summary: {
         activeCards: 0,
         totalCards: 0,
@@ -170,13 +106,12 @@ export default {
       },
       cards: [],
       transactions: [],
-      showFull: {}, // map cardId => boolean
-      openMenu: null, // id of card with open menu
+      showFull: {},
+      openMenu: null,
     };
   },
   created() {
     this.loadDashboard();
-    // click outside to close dropdowns
     document.addEventListener("click", this.globalClick);
   },
   beforeUnmount() {
@@ -185,61 +120,51 @@ export default {
   methods: {
     async loadDashboard() {
       try {
-        // mock JSON placed in public/data/dashboard.json
-        const res = await axios.get("/data/dashboard.json");
-        const d = res.data;
+        const response = await axios.get("/data/dashboard.json");
+        const data = response.data;
 
-        // user summary
-        this.user = d.user || this.user;
+        this.user = data.user || this.user;
 
-        this.summary.activeCards = d.activeCards ?? (d.cards ? d.cards.length : 0);
-        this.summary.totalCards = d.totalCards ?? (d.cards ? d.cards.length : 0);
-        this.summary.totalLimit = d.totalLimit ?? this.sum(d.cards, "totalLimit");
-        this.summary.availableCredit = d.availableCredit ?? this.sum(d.cards, "availableLimit");
-        this.summary.outstanding = d.outstanding ?? 0;
+        this.summary.activeCards = data.activeCards ?? (data.cards ? data.cards.length : 0);
+        this.summary.totalCards = data.totalCards ?? (data.cards ? data.cards.length : 0);
+        this.summary.totalLimit = data.totalLimit ?? this.sum(data.cards, "totalLimit");
+        this.summary.availableCredit = data.availableCredit ?? this.sum(data.cards, "availableLimit");
+        this.summary.outstanding = data.outstanding ?? 0;
 
-        // cards and transactions
-        this.cards = d.cards || [];
-        this.transactions = d.transactions || [];
+        this.cards = data.cards || [];
+        this.transactions = data.transactions || [];
 
-        // initialize showFull map
-        this.cards.forEach((c) => {
-          this.$set(this.showFull, c.id, false);
+        this.cards.forEach((cardItem) => {
+          this.$set(this.showFull, cardItem.id, false);
         });
       } catch (err) {
-        // fallback: console error and keep hardcoded defaults as last resort
-        // (you may replace this with a friendly UI message)
-        // eslint-disable-next-line no-console
         console.error("Failed to load dashboard JSON:", err);
       }
     },
 
-    // helpers
-    maskNumber(num) {
-      if (!num) return "";
-      // if formatted with spaces, take last 4
-      const only = num.toString();
-      const last = only.slice(-4);
-      return "**** **** **** " + last;
+    maskNumber(cardNumber) {
+      if (!cardNumber) return "";
+      const onlyDigits = cardNumber.toString();
+      const lastFour = onlyDigits.slice(-4);
+      return "**** **** **** " + lastFour;
     },
-    formatNumber(n) {
-      if (n == null) return "0";
-      return n.toLocaleString("en-IN");
+    formatNumber(value) {
+      if (value == null) return "0";
+      return value.toLocaleString("en-IN");
     },
     sum(list = [], key) {
-      return list.reduce((acc, it) => acc + (Number(it[key]) || 0), 0);
+      return list.reduce((accumulator, item) => accumulator + (Number(item[key]) || 0), 0);
     },
-    formatDate(iso) {
+    formatDate(isoString) {
       try {
-        const d = new Date(iso);
-        const opt = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
-        return d.toLocaleString("en-US", opt);
+        const dateObj = new Date(isoString);
+        const options = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
+        return dateObj.toLocaleString("en-US", options);
       } catch {
-        return iso;
+        return isoString;
       }
     },
 
-    // interactions
     toggleCardNumber(cardId) {
       this.$set(this.showFull, cardId, !this.showFull[cardId]);
     },
@@ -247,19 +172,40 @@ export default {
       this.openMenu = this.openMenu === cardId ? null : cardId;
     },
     onToggleBlock(card) {
-      // placeholder: flip local status (real action should call backend)
       card.status = card.status === "BLOCKED" ? "ACTIVE" : "BLOCKED";
       this.openMenu = null;
     },
-    globalClick(e) {
-      // close dropdown if clicked outside
-      const close = !e.target.closest(".card-menu");
-      if (close) this.openMenu = null;
+    globalClick(event) {
+      const clickedOutside = !event.target.closest(".card-menu");
+      if (clickedOutside) this.openMenu = null;
     },
-    isImageString(s) {
-      return typeof s === "string" && /\.(png|jpe?g|svg|webp)$/.test(s);
+    isImageString(source) {
+      return typeof source === "string" && /\.(png|jpe?g|svg|webp)$/.test(source);
     },
-  },
+
+    cardActions(card) {
+      return [
+        { label: "View Details", to: { name: "CardDetail", params: { id: card.id } } },
+        { label: card.status === "BLOCKED" ? "Unblock" : "Block", value: { type: "toggle-block" } }
+      ];
+    },
+
+    onCardAction({ action }) {
+      if (!action) return;
+      if (action.to) {
+        if (this.$router) this.$router.push(action.to);
+        else {
+          const router = useRouter ? useRouter() : null;
+          if (router) router.push(action.to);
+          else console.warn("Router not available to navigate to", action.to);
+        }
+      } else if (action.value?.type === "toggle-block") {
+        console.log("toggle-block action received; update your onCardAction to include card id if needed", action);
+      } else {
+        console.log("Unhandled card action", action);
+      }
+    }
+  }
 };
 </script>
 
@@ -320,6 +266,7 @@ export default {
   justify-content: center;
   font-weight: 700;
 }
+
 .container {
   max-width: 1180px;
   margin: 28px auto;
@@ -333,25 +280,19 @@ export default {
   color: var(--muted);
   margin-bottom: 22px;
 }
-
-/* wrapper to keep number + eye on the same line */
 .card-number-row {
   display: flex;
-  align-items: center;      /* vertically center number and eye */
-  gap: 12px;                /* horizontal space between number and eye */
-  margin-top: 18px;         /* increase spacing from content above */
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
 }
-
-/* number style (slightly bigger, keep clickable look) */
 .card-number {
   font-size: 22px;
   letter-spacing: 4px;
   cursor: pointer;
-  line-height: 1;           /* control vertical spacing */
-  margin: 0;                /* no extra margin because wrapper handles spacing */
+  line-height: 1;
+  margin: 0;
 }
-
-/* eye as small button right of number */
 .card-eye {
   display: inline-flex;
   align-items: center;
@@ -367,16 +308,9 @@ export default {
   font-size: 16px;
   line-height: 1;
 }
-
-/* subtle hover for eye */
 .card-eye:hover {
   background: rgba(255,255,255,0.12);
 }
-
-/* if you need the card-number to be slightly lower from the top content 
-   (you can tweak the margin-top value above) */
-
-   
 .kpis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -407,7 +341,6 @@ export default {
 .kpi .danger {
   color: #ff4d4f;
 }
-
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 420px;
@@ -436,7 +369,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  /* if you want horizontal scroll, switch to row flex and overflow-x */
 }
 .card {
   background: #0f2b4a;
@@ -446,7 +378,7 @@ export default {
   min-height: 220px;
   position: relative;
   overflow: hidden;
-  width: 560px; /* increased width to match screenshot proportions */
+  width: 560px;
 }
 .card.card-gradient {
   background: linear-gradient(135deg, #07112b 0%, #1a3a8a 40%, #1e6bf0 100%);
@@ -465,7 +397,7 @@ export default {
 }
 .card-chip {
   position: absolute;
-  right: 48px; /* slightly moved left to make space for menu */
+  right: 48px;
   top: 18px;
   background: rgba(255, 255, 255, 0.12);
   padding: 8px 12px;
@@ -525,7 +457,6 @@ export default {
 .amount.success {
   color: #25c36a;
 }
-
 .right-col .activity {
   background: var(--card);
   padding: 18px;
@@ -575,7 +506,6 @@ export default {
   font-size: 12px;
   color: #333;
 }
-
 .quick-actions {
   margin-top: 20px;
 }
@@ -598,8 +528,6 @@ export default {
   align-items: center;
   justify-content: center;
 }
-
-/* dropdown */
 .dropdown {
   position: absolute;
   right: 0;
@@ -622,8 +550,6 @@ export default {
   text-align: left;
   cursor: pointer;
 }
-
-/* Responsive */
 @media (max-width: 980px) {
   .content-grid {
     grid-template-columns: 1fr;
@@ -633,6 +559,19 @@ export default {
   }
   .card {
     width: 100%;
+  }
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .container {
+    max-width: 100%;
+    overflow-x: hidden;
   }
 }
 </style>

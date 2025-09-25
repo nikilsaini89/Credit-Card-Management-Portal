@@ -1,14 +1,15 @@
-import { createStore } from "vuex"
-import type { AuthState } from '../types/auth'
-import auth from './modules/auth'
+import { createStore } from 'vuex';
+import auth, { AuthState } from './auth';
+import user,{ UserState } from './user';
 
 export interface RootState {
-  auth: AuthState
+  auth: AuthState;
+  user: UserState;
 }
 
 export default createStore<RootState>({
   modules: {
-    auth
-  },
-  strict: process.env.NODE_ENV !== 'production'
-})
+    auth,
+    user
+  }
+});
