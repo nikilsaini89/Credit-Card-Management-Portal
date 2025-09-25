@@ -4,6 +4,7 @@ import com.ccms.portal.dto.request.UpdateProfileRequest;
 import com.ccms.portal.dto.response.UserResponse;
 import com.ccms.portal.entity.UserEntity;
 import com.ccms.portal.entity.UserProfileEntity;
+import com.ccms.portal.exception.UserNotFoundException;
 import com.ccms.portal.repository.UserProfileRepository;
 import com.ccms.portal.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,20 +19,20 @@ public class ProfileService {
 
     public UserResponse getUserProfile(Long userId) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
 
         UserProfileEntity profile = userProfileRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Profile not found for user ID: " + userId));
+                .orElseThrow(() -> new UserNotFoundException("Profile not found for user ID: " + userId));
 
         return buildUserResponse(user, profile);
     }
 
     public UserResponse updateUserProfile(Long userId, UpdateProfileRequest request) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
 
         UserProfileEntity profile = userProfileRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Profile not found for user ID: " + userId));
+                .orElseThrow(() -> new UserNotFoundException("Profile not found for user ID: " + userId));
 
         boolean isEligible = request.getAnnualIncome() != null && request.getAnnualIncome() > 100000;
 
@@ -50,7 +51,6 @@ public class ProfileService {
         return buildUserResponse(user, profile);
     }
 
-    // Mapping method
     private UserResponse buildUserResponse(UserEntity user, UserProfileEntity profile) {
         return UserResponse.builder()
                 .id(user.getId())
