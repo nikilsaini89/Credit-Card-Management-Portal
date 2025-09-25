@@ -16,11 +16,11 @@ const routes = [
     props: true,
     alias: "/card/:id"
   },
-  // {
-  //   path: "/my-cards",
-  //   name: "MyCards",
-  //   component: () => import("../views/Users/MyCards.vue"), 
-  // },
+  {
+    path: "/cards",
+    name: "MyCards",
+    component: () => import("../views/Users/MyCards.vue"), 
+  },
   // {
   //   path: "/transactions",
   //   name: "Transactions",
