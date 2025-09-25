@@ -1,7 +1,6 @@
 <template>
   <div class="dashboard">
     <!-- Topbar replaced by NavigationBar component -->
-    <NavigationBar />
 
     <main class="container">
       <section class="hero">
@@ -92,13 +91,12 @@
 
 <script>
 import axios from "axios";
-import NavigationBar from "../../components/NavigationBar.vue";
 import Card from "../../components/Card.vue";
 import { useRouter } from "vue-router";
 
 export default {
   name: "DashboardView",
-  components: { NavigationBar, Card },
+  components: { Card },
   data() {
     return {
       user: { name: "User" }, // updated from JSON
@@ -601,5 +599,24 @@ export default {
   .card {
     width: 100%;
   }
+  /* Prevent horizontal scrolling globally */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Card width fix */
+.card {
+  width: 100%; /* override 560px */
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Container safe for small screens */
+.container {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 }
 </style>
