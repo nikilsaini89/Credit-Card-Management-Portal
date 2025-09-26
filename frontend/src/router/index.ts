@@ -37,6 +37,12 @@ const routes = [
     component: ProfileView,
     meta: { requiresAuth: true }
   },
+  {
+    path: "/logout",
+    name: "Logout",
+    component: Login,
+    meta: { requiresAuth: true }
+  },
   // {
   //   path: "/my-cards",
   //   name: "MyCards",
