@@ -2,7 +2,10 @@
 <template>
   <div id="app">
     <NavigationBar v-if="!['/', '/register'].includes($route.path)" />
-    <router-view />
+    <div class="main-container">
+      <router-view />
+
+    </div>
   </div>
 </template>
 
