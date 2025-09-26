@@ -4,7 +4,8 @@ import type { User } from '../types/User';
 
 export function getUserProfile(userId: number) {
   const token = localStorage.getItem('token');
-  return axios.get(`/api/profile/${userId}`, {
+  const user=localStorage.getItem('user');
+  return axios.get(`${BASE_URL}/profile/${userId}`, {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -13,7 +14,7 @@ export function getUserProfile(userId: number) {
 
 export const updateUserProfile = async (
   userId: number,
-  payload: Omit<User, 'id' | 'email' | 'password'>
+  payload: Omit<User, 'id'|'email' | 'password'>
 ) => {
   const token = localStorage.getItem('token');
 
