@@ -1,27 +1,33 @@
 <!-- src/App.vue -->
 <template>
   <div id="app">
-    <NavigationBar v-if="!['/', '/register'].includes($route.path)" />
-    <router-view />
+    <NavigationBar v-if="showLayout" />
+
+    <div v-if="showLayout" class="main-container">
+      <router-view />
+    </div>
+
+    <router-view v-else />
   </div>
 </template>
 
-<script lang="ts">
-import NavigationBar from './components/NavigationBar.vue';
+<script lang="ts" setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import NavigationBar from './components/NavigationBar.vue'
 
-export default {
-  name: 'App',
-  components:{
-    NavigationBar
-  }
-}
+const route = useRoute()
+
+const showLayout = computed(() => {
+  return !['/', '/register'].includes(route.path)
+})
 </script>
 
 <style>
-/* You can add global styles here */
-html, body, #app {
-  margin: 0;
-  padding: 0;
-  height: 100%;
+.main-container {
+  max-width: 1180px;
+  margin: 28px auto;
+  padding: 0 12px;
+  font-family: "Inter", system-ui, Arial;
 }
 </style>
