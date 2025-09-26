@@ -289,3 +289,62 @@
   .eye { right: 78px; top: 12px; }
   .bank-logo { font-size: 16px; }
 }
+
+
+
+.toggle-checkbox {
+  appearance: none;
+  width: 40px;
+  height: 24px;
+  background: linear-gradient(135deg, #6a1292 0%, #0d3b72 55%, #b71c2e 100%);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.12s;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.95);
+}
+
+.toggle-checkbox:hover {
+  transform: translateY(-2px);
+}
+
+.toggle-checkbox:checked {
+  background: linear-gradient(135deg, #2463ea 0%, #0d3b72 55%, #6a1292 100%);
+}
+
+.toggle-checkbox::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s ease;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+}
+
+.toggle-checkbox:checked::before {
+  transform: translateX(16px);
+}
+
+@media (max-width: 520px) {
+  .toggle-checkbox {
+    width: 36px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.95);
+  }
+
+  .toggle-checkbox::before {
+    width: 16px;
+    height: 16px;
+    top: 2px;
+    left: 2px;
+  }
+
+  .toggle-checkbox:checked::before {
+    transform: translateX(14px);
+  }
+}
