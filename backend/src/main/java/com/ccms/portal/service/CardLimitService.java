@@ -10,8 +10,6 @@ import com.ccms.portal.repository.CreditCardRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-
 @Service
 public class CardLimitService {
     private final CreditCardRepository creditCardRepository;
@@ -26,34 +24,35 @@ public class CardLimitService {
             throw new CardLimitException("Request or new credit limit must not be null");
         }
 
-        BigDecimal requested = safe(request.getNewCreditLimit());
+        double requested = request.getNewCreditLimit();
 
-        CreditCardEntity card = creditCardRepository.findById(cardId).orElseThrow(() -> new CreditCardNotFoundException("Card not found for id: " + cardId));
+        CreditCardEntity card = creditCardRepository.findById(cardId)
+                .orElseThrow(() -> new CreditCardNotFoundException("Card not found for id: " + cardId));
 
         if (!isOwner(card, callerUsername)) {
             throw new UnauthorizedApplicationActionException("You are not allowed to update this card");
         }
 
-        BigDecimal minCardLimit = safe(BigDecimal.valueOf(card.getCardType().getMinCardLimit()));
-        BigDecimal maxCardLimit = safe(BigDecimal.valueOf(card.getCardType().getMaxCardLimit()));
+        double minCardLimit = card.getCardType() != null ? card.getCardType().getMinCardLimit() : 0.0;
+        double maxCardLimit = card.getCardType() != null ? card.getCardType().getMaxCardLimit() : Double.MAX_VALUE;
 
-        if (requested.compareTo(minCardLimit) < 0 || requested.compareTo(maxCardLimit) > 0) {
+        if (requested < minCardLimit || requested > maxCardLimit) {
             throw new CardLimitException("Requested limit must be between " + minCardLimit + " and " + maxCardLimit);
         }
 
-        BigDecimal oldLimit = safe(BigDecimal.valueOf(card.getCreditLimit()));
-        BigDecimal available = safe(BigDecimal.valueOf(card.getAvailableLimit()));
+        double oldLimit = card.getCreditLimit();
+        double available = card.getAvailableLimit();
 
-        BigDecimal outstanding = oldLimit.subtract(available);
+        double outstanding = oldLimit - available;
 
-        if (requested.compareTo(outstanding) < 0) {
+        if (requested < outstanding) {
             throw new CardLimitException("New limit cannot be lower than outstanding balance (" + outstanding + ")");
         }
 
-        BigDecimal newAvailable = requested.subtract(outstanding);
+        double newAvailable = requested - outstanding;
 
-        card.setCreditLimit(requested.doubleValue());
-        card.setAvailableLimit(newAvailable.doubleValue());
+        card.setCreditLimit(requested);
+        card.setAvailableLimit(newAvailable);
         creditCardRepository.save(card);
 
         return CardLimitResponse.builder()
@@ -63,13 +62,10 @@ public class CardLimitService {
                 .availableLimit(newAvailable)
                 .build();
     }
+
     private boolean isOwner(CreditCardEntity card, String callerUsername) {
         if (callerUsername == null || card.getUser() == null) return false;
         String ownerEmail = card.getUser().getEmail();
         return ownerEmail != null && ownerEmail.equalsIgnoreCase(callerUsername);
-    }
-
-    private BigDecimal safe(BigDecimal v) {
-        return v == null ? BigDecimal.ZERO : v;
     }
 }

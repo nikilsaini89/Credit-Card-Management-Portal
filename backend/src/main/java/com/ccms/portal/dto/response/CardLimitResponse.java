@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Builder
 public class CardLimitResponse {
     private Long cardId;
-    private BigDecimal oldLimit;
-    private BigDecimal newLimit;
-    private BigDecimal availableLimit;
+    private Double oldLimit;
+    private Double newLimit;
+    private Double availableLimit;
 }
