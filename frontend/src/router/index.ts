@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import AuthView from "../views/Users/AuthView.vue";
-import ProfileView from "../views/Users/ProfileView.vue";
+import UserProfile from "../components/UserProfile.vue";
 import store from "../store";
 import Login from "../views/Login.vue";
 
@@ -31,7 +31,7 @@ const routes = [
   {
     path: "/profile",
     name: "Profile",
-    component: ProfileView,
+    component: UserProfile,
     meta: { requiresAuth: true }
   },
   {
@@ -53,17 +53,7 @@ const routes = [
     path: "/apply-card",
     name: "ApplyCard",
     component: { template: "<div class='p-8 text-center'><h1 class='text-2xl font-bold text-gray-900'>Apply Card</h1><p class='text-gray-600 mt-2'>This feature is coming soon!</p></div>" },
-  },
-  {
-    path: "/profile",
-    name: "Profile",
-    component: { template: "<div class='p-8 text-center'><h1 class='text-2xl font-bold text-gray-900'>Profile</h1><p class='text-gray-600 mt-2'>This feature is coming soon!</p></div>" },
-  },
-  {
-    path: "/logout",
-    name: "Logout",
-    component: { template: "<div class='p-8 text-center'><h1 class='text-2xl font-bold text-gray-900'>Logout</h1><p class='text-gray-600 mt-2'>You have been logged out.</p></div>" },
-  },
+  }
   // {
   //   path: "/my-cards",
   //   name: "MyCards",
