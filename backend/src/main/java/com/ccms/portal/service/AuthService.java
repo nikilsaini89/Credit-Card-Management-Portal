@@ -7,7 +7,6 @@ import com.ccms.portal.dto.response.UserResponse;
 import com.ccms.portal.entity.UserEntity;
 import com.ccms.portal.enums.UserRole;
 import com.ccms.portal.entity.UserProfileEntity;
-import com.ccms.portal.exception.UnauthorizedApplicationActionException;
 import com.ccms.portal.exception.EmailAlreadyExistsException;
 import com.ccms.portal.exception.InvalidCredentialsException;
 import com.ccms.portal.exception.UserNotFoundException;
@@ -80,16 +79,5 @@ public class AuthService {
                 .address(profile.getAddress())
                 .isEligibleForBNPL(profile.isEligibleBnpl())
                 .build();
-    }
-
-    public void verifyPasswordForEmail(String email, String rawPassword) {
-        if (email == null || rawPassword == null) {
-            throw new UnauthorizedApplicationActionException("Authentication required");
-        }
-        UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UnauthorizedApplicationActionException("User not found"));
-        if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
-            throw new UnauthorizedApplicationActionException("Invalid password");
-        }
     }
 }
