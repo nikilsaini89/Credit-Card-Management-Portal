@@ -1,6 +1,6 @@
 import { Module } from 'vuex';
 import { User } from '../types/User';
-import { RootState } from '../store'; 
+import { RootState } from '../store/index'; 
 import { getUserProfile, updateUserProfile } from '../services/userService';
 
 
@@ -25,6 +25,7 @@ const user: Module<UserState, RootState> = {
     async fetchProfile({ commit }, userId: number) {
       const res = await getUserProfile(userId);
       commit('setProfile', res.data);
+      return res.data;
     },
 
     async updateProfile({ commit }, { userId, payload }: {
@@ -33,7 +34,9 @@ const user: Module<UserState, RootState> = {
     }) {
       const res = await updateUserProfile(userId, payload);
       commit('setProfile', res.data);
+      return res.data;
     }
+    
   },
 
   getters: {

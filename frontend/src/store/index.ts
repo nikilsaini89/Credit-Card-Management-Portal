@@ -7,6 +7,12 @@ import merchants from "./modules/merchants";
 import bnpl from "./modules/bnpl";
 import analytics from "./modules/analytics";
 
+
+export interface RootState {
+  auth: AuthState;
+  user: UserState;
+}
+
 export default createStore({
   modules: {
     auth,
