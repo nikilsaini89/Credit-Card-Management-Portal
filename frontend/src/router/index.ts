@@ -3,6 +3,8 @@ import AuthView from "../views/Users/AuthView.vue";
 import ProfileView from "../views/Users/ProfileView.vue";
 import store from "../store";
 import Login from "../views/Login.vue";
+import CardApplicationPage from "../views/Users/CardApplicationPage.vue";
+import CardApplicationHistoryPage from "../views/Users/CardApplicationHistoryPage.vue";
 
 // Lazy load Dashboard
 const Dashboard = () => import("../views/Users/Dashboard.vue");
@@ -35,18 +37,23 @@ const routes = [
   // {
   //   path: "/my-cards",
   //   name: "MyCards",
-  //   component: () => import("../views/Users/MyCards.vue"), 
+  //   component: ApplyCard,
   // },
   // {
   //   path: "/transactions",
   //   name: "Transactions",
   //   component: () => import("../views/Users/Transactions.vue"), 
   // },
-  // {
-  //   path: "/apply-card",
-  //   name: "ApplyCard",
-  //   component: { template: "<div>Apply Card Page (placeholder)</div>" },
-  // },
+  {
+    path: "/apply-card",
+    name: "ApplyCard",
+    component: CardApplicationPage,
+  },
+  {
+    path : "/my-applications",
+    name : "MyApplications",
+    component : CardApplicationHistoryPage
+  }
   // {
   //   path: "/new-transaction",
   //   name: "NewTransaction",
