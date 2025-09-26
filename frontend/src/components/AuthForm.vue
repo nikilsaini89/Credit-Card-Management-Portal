@@ -83,12 +83,14 @@ export default defineComponent({
   border-radius: 8px;
   background: #fff;
 }
+
 input {
   display: block;
   width: 100%;
   margin: 0.5rem 0;
   padding: 0.5rem;
 }
+
 button {
   width: 100%;
   padding: 0.7rem;
@@ -97,15 +99,18 @@ button {
   border: none;
   margin-top: 1rem;
 }
+
 .toggle {
   margin-top: 1rem;
   text-align: center;
 }
+
 .toggle span {
   color: #007bff;
   cursor: pointer;
   font-weight: bold;
 }
+
 .error {
   color: red;
   font-size: 0.9rem;
