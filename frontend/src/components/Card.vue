@@ -1,13 +1,6 @@
 <template>
   <article class="card-visual-wrap">
     <div v-if="activeCard" class="credit-card" :class="{ blocked: activeCard.cardStatus === 'BLOCKED' }">
-
-      <!-- Bank Brand -->
-      <div class="bank-brand">
-        <div class="bank-logo">{{ bankLabel }}</div>
-        <div class="bank-sub" v-if="bankLabel !== 'BANK'">{{ bankLabelSub }}</div>
-      </div>
-
       <!-- Card Menu -->
       <div v-if="showMenu" class="card-menu" ref="menuRoot">
         <button
