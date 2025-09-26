@@ -1,5 +1,6 @@
 package com.ccms.portal.controller;
 
+
 import com.ccms.portal.dto.request.LoginRequest;
 import com.ccms.portal.dto.request.RegisterRequest;
 import com.ccms.portal.dto.response.AuthResponse;
@@ -41,10 +42,8 @@ public class AuthController {
     }
 
     @GetMapping("/home")
-    public String home(Authentication authentication) {
-        if (authentication == null) {
-            return "Not authenticated";
-        }
-        return "Welcome to home page, " + authentication.getName();
+    public String home() {
+
+        return "Welcome to home page, ";
     }
 }

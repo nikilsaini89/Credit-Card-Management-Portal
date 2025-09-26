@@ -70,7 +70,7 @@
 
       <!-- Card Meta -->
       <div class="meta-row">
-        <div class="cardholder-name">{{ activeCard.cardHolderName || userName || 'RAHUL VERMA' }}</div>
+        <div class="cardholder-name">{{ activeCard.cardHolderName || 'RAHUL VERMA' }}</div>
         <div class="card-meta">
           <div class="expires">
             <div class="label">VALID THRU</div>
@@ -109,7 +109,6 @@ import { ref, computed, watch, onMounted } from 'vue'
 /* ------------------ Props & Emits ------------------ */
 const props = defineProps({
   card: { type: Object, required: false },
-  userName: { type: String, default: '' },
   showMenu: { type: Boolean, default: false },
   actions: { type: Array, default: () => [] }
 })
@@ -129,9 +128,9 @@ const REGEX_GROUP_CARD_DIGITS = /(\d{4})(?=\d)/g
 const activeCard = computed(() => props.card || localCard.value)
 
 const bankLabel = computed(() => {
-  const card = activeCard.value
-  if (!card) return 'BANK'
-  return (card.bank || card.bankName || card.issuer || 'BANK').toUpperCase().slice(0, 18)
+    const card = activeCard.value
+    if (!card) return 'BANK'
+    return (card.bank || card.bankName || card.issuer || 'BANK').toUpperCase().slice(0, 18)
 })
 
 const bankLabelSub = computed(() => {
@@ -192,19 +191,19 @@ watch(menuOpen, (open) => {
 })
 
 /* ------------------ Data Loading ------------------ */
-onMounted(async () => {
-  const url = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL)
-    ? new URL('/data/card.json', import.meta.env.BASE_URL).href
-    : '/data/card.json'
+// onMounted(async () => {
+//   const url = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL)
+//     ? new URL('/data/card.json', import.meta.env.BASE_URL).href
+//     : '/data/card.json'
 
-  try {
-    const resp = await fetch(url, { cache: 'no-store' })
-    if (!resp.ok) return
+//   try {
+//     const resp = await fetch(url, { cache: 'no-store' })
+//     if (!resp.ok) return
 
-    const data = await resp.json()
-    if (!props.card) localCard.value = data
-  } catch (err) {}
-})
+//     const data = await resp.json()
+//     if (!props.card) localCard.value = data
+//   } catch (err) {}
+// })
 
 /* ------------------ Expose ------------------ */
 defineExpose({
