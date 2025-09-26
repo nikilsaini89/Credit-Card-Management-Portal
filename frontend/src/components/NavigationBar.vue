@@ -105,7 +105,7 @@ const userInitials = computed(() => {
 });
 
 const navLinks = [
-  { to: "/", label: "Dashboard" },
+  { to: "/dashboard", label: "Dashboard" },
   { to: "/cards", label: "My Cards" },
   { to: "/apply-card", label: "Apply Card" },
   { to: "/transactions", label: "Transactions" },
