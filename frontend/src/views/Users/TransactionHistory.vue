@@ -467,7 +467,6 @@ import BnplSection from '../../components/BnplSection.vue'
 import PaymentFlow from '../../components/PaymentFlow.vue'
 import { Chart, registerables } from 'chart.js'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
 
 // Register Chart.js components
 Chart.register(...registerables)
