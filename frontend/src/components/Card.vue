@@ -128,9 +128,9 @@ const REGEX_GROUP_CARD_DIGITS = /(\d{4})(?=\d)/g
 const activeCard = computed(() => props.card || localCard.value)
 
 const bankLabel = computed(() => {
-  const card = activeCard.value
-  if (!card) return 'BANK'
-  return (card.bank || card.bankName || card.issuer || 'BANK').toUpperCase().slice(0, 18)
+    const card = activeCard.value
+    if (!card) return 'BANK'
+    return (card.bank || card.bankName || card.issuer || 'BANK').toUpperCase().slice(0, 18)
 })
 
 const bankLabelSub = computed(() => {

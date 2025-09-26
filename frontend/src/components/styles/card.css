@@ -193,27 +193,13 @@
   .menu-pop { right: -8px; }
 }
 
-
-.network-type.visa {
-  font-family: "Segoe UI", Tahoma, sans-serif;
-  font-weight: 900;
-  font-size: 18px;
-  color: #7376a3;
-  letter-spacing: 2px;
-}
-
-.network-type.mastercard {
-  font-family: "Arial Black", Gadget, sans-serif;
+.network-type {
+  position: absolute;
+  bottom: 10px;
+  right: 32px;
   font-weight: 800;
-  font-size: 15px;
-  color: #eb001b;
-}
-
-.network-type.rupay {
-  font-family: "Verdana", sans-serif;
-  font-style: italic;
-  font-size: 15px;
-  color: #005baa;
+  font-size: 18px;
+  color: #878488;
 }
 
 
@@ -251,12 +237,6 @@
   font-family: ui-monospace, "Roboto Mono", Menlo, monospace;
   line-height: 1;
   display:block;
-}
-
-.network-type {
-  position: absolute;
-  bottom: 14px;
-  right: 50px;
 }
 
 .card-divider {

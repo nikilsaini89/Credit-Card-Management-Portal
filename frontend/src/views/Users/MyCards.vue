@@ -13,9 +13,11 @@
         Apply for New Card
       </button>
     </div>
-    <div class="gap-2 items-center font-weight-700">
-      <img class="icon-green" src="../../assets/active-card.svg" alt="active card">
-      <div class="font-600 font-bold text-lg">Active Cards ({{ activeCardsCount }})</div>
+    <div class="items-center font-weight-700">
+      <div class="flex gap-2 mb-8">
+        <img class="icon-green" src="../../assets/active-card.svg" alt="active card">
+        <div class="font-600 font-bold text-lg">Active Cards ({{ activeCardsCount }})</div>
+      </div>
       <div class="flex flex-wrap gap-4 mt-4">
         <div v-for="card in activeCards" :key="card.id" 
         >
@@ -26,9 +28,20 @@
         </div>
       </div>
     </div> 
-     <div class="gap-2 flex items-center font-weight-700 mt-6" v-if="blockedCardsCount">
-      <img class="icon-red" src="../../assets/blocked-card.svg" alt="active card">
-      <div class="font-600 font-bold text-lg">Blocked Cards ({{ blockedCardsCount }})</div>
+     <div class= "items-center font-weight-700 mt-6" v-if="blockedCardsCount">
+      <div class="flex gap-2 mb-8">
+        <img class="icon-red" src="../../assets/blocked-card.svg" alt="active card">
+        <div class="font-600 font-bold text-lg">Blocked Cards ({{ blockedCardsCount }})</div>
+      </div>
+      <div class="flex flex-wrap gap-4 mt-4">
+        <div v-for="card in blockedCards" :key="card.id" 
+        >
+          <Card 
+            :card="card"
+            :showMenu="true"
+          />
+        </div>
+      </div>
     </div> 
   </div>
 </template>
