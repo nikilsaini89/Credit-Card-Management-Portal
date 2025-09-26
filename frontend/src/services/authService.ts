@@ -18,7 +18,9 @@ export const logout = async (): Promise<void> => {
         Authorization: `Bearer ${token}`
       }
     });
+ 
   } catch (error) {
+    
     console.warn('Logout request failed:', error);
     
   } finally {

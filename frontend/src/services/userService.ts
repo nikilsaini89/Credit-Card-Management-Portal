@@ -2,6 +2,7 @@ import { BASE_URL } from '../constants/constants';
 import axios from 'axios';
 import type { User } from '../types/User';
 
+
 export function getUserProfile(userId: number) {
   const token = localStorage.getItem('token');
   const user=localStorage.getItem('user');
@@ -22,5 +23,7 @@ export const updateUserProfile = async (
      headers: {
       Authorization: `Bearer ${token}`
     }
+        
+    
   });
 };

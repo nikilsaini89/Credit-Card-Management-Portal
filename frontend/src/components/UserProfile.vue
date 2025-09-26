@@ -1,54 +1,61 @@
 <template>
-  <div class="profile-page">
-    <div class="container">
-      <h1>My Profile</h1>
-      <p class="subtitle">Manage your personal information and preferences.</p>
+  <div class="bg-gray-50 min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto">
+      <h1 class="text-3xl font-bold text-gray-900 text-center mb-2">My Profile</h1>
+      <p class="text-base text-gray-600 text-center mb-8">Manage your personal information and preferences.</p>
 
-      <!-- Personal Information -->
-      <div class="card">
-        <h2>Personal Information</h2>
-        <p class="section-subtitle">Your basic personal details and contact information.</p>
-        <form @submit.prevent="handleUpdate" class="form">
-          <div class="form-group">
-            <label for="name">Full Name</label>
-            <input id="name" v-model="form.name" placeholder="Enter full name" required />
+      <div class="bg-white rounded-lg p-6 mb-6 shadow-sm">
+        <h2 class="text-xl font-semibold text-gray-900 mb-2">Personal Information</h2>
+        <p class="text-sm text-gray-500 mb-4">Your basic personal details and contact information.</p>
+        <form @submit.prevent="handleUpdate" class="space-y-4">
+          <div class="space-y-1">
+            <label for="name" class="font-medium text-gray-700">Full Name</label>
+            <input id="name" v-model="form.name" placeholder="Enter full name" required 
+                   class="w-full p-2.5 border border-gray-300 rounded-md text-base focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" />
           </div>
-          <div class="form-group">
-            <label for="phone">Phone Number</label>
-            <input id="phone" v-model="form.phoneNumber" placeholder="Enter phone number" required />
+          <div class="space-y-1">
+            <label for="phone" class="font-medium text-gray-700">Phone Number</label>
+            <input id="phone" v-model="form.phoneNumber" placeholder="Enter phone number" required 
+                   class="w-full p-2.5 border border-gray-300 rounded-md text-base focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" />
           </div>
-          <div class="form-group">
-            <label for="address">Address</label>
-            <input id="address" v-model="form.address" placeholder="Enter address" required />
+          <div class="space-y-1">
+            <label for="address" class="font-medium text-gray-700">Address</label>
+            <input id="address" v-model="form.address" placeholder="Enter address" required 
+                   class="w-full p-2.5 border border-gray-300 rounded-md text-base focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" />
           </div>
-          <button type="submit">Update Profile</button>
+          <button type="submit" 
+                  class="w-full py-3 bg-yellow-400 text-gray-900 font-medium rounded-md hover:bg-gray-800 hover:text-yellow-400 transition-colors">
+            Update Profile
+          </button>
         </form>
       </div>
 
-      <!-- Financial Information -->
-      <div class="card">
-        <h2>Financial Information</h2>
-        <p class="section-subtitle">Your income details for credit assessment.</p>
-        <div class="info-row">
-          <label for="income">Annual Income</label>
-          <input id="income" type="number" v-model.number="form.annualIncome" placeholder="Enter annual income" required />
+      <div class="bg-white rounded-lg p-6 mb-6 shadow-sm">
+        <h2 class="text-xl font-semibold text-gray-900 mb-2">Financial Information</h2>
+        <p class="text-sm text-gray-500 mb-4">Your income details for credit assessment.</p>
+        <div class="flex justify-between items-center py-2 border-b border-gray-200">
+          <label for="income" class="font-medium text-gray-700">Annual Income</label>
+          <input id="income" type="number" v-model.number="form.annualIncome" placeholder="Enter annual income" required 
+                 class="w-1/2 p-2.5 border border-gray-300 rounded-md text-base focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" />
         </div>
-        <div class="info-row">
-          <label>BNPL Eligibility</label>
-          <span class="eligibility" :class="{ eligible: isEligible }">
+        <div class="flex justify-between items-center py-2 border-b border-gray-200">
+          <label class="font-medium text-gray-700">BNPL Eligibility</label>
+          <span :class="{ 'bg-green-500 text-white': isEligible, 'bg-gray-200 text-gray-700': !isEligible }" 
+                class="px-3 py-1 rounded-full text-sm font-semibold">
             {{ isEligible ? 'Eligible' : 'Not Eligible' }}
           </span>
-          <p class="caption">You can use Buy Now, Pay Later services.</p>
         </div>
+        <p class="text-xs text-gray-500 mt-1">You can use Buy Now, Pay Later services.</p>
       </div>
 
-      <!-- Account Information -->
-      <div class="card">
-        <h2>Account Information</h2>
-        <p class="section-subtitle">Your account details and membership information.</p>
-        <div class="info-row" v-for="(value, label) in accountInfo" :key="label">
-          <label>{{ label }}</label>
-          <span>{{ value }}</span>
+   
+      <div class="bg-white rounded-lg p-6 shadow-sm">
+        <h2 class="text-xl font-semibold text-gray-900 mb-2">Account Information</h2>
+        <p class="text-sm text-gray-500 mb-4">Your account details and membership information.</p>
+        <div v-for="(value, label) in accountInfo" :key="label" 
+             class="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+          <label class="font-medium text-gray-700">{{ label }}</label>
+          <span class="text-gray-600">{{ value }}</span>
         </div>
       </div>
     </div>
@@ -59,6 +66,7 @@
 import { defineComponent, reactive, onMounted, computed } from 'vue';
 import { useStore } from 'vuex';
 import type { User } from '../types/User';
+import { toast } from "vue3-toastify"; 
 
 function decodeToken(token: string): { id: number; email: string; role: string } | null {
   try {
@@ -125,10 +133,10 @@ export default defineComponent({
           userId: decoded.id,
           payload: form
         });
-        alert('Profile updated successfully!');
+        toast.success("Profile updated successfully!🎉");
       } catch (error) {
         console.error('Update failed:', error);
-        alert('Something went wrong while updating your profile.');
+        toast.error("Error updating profile");
       }
     };
 
@@ -139,7 +147,6 @@ export default defineComponent({
       return {
         Email: user?.email || '-',
         'User ID': user?.id ? `#${user.id}` : '-',
-       
       };
     });
 
@@ -147,159 +154,3 @@ export default defineComponent({
   }
 });
 </script>
-
-
-
-
-<style scoped>
-.profile-page {
-  background-color: #f9fafb;
-  min-height: 100vh;
-  padding: 2rem 1rem;
-  font-family: 'Segoe UI', Arial, sans-serif;
-}
-
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  text-align: center;
-  color: #1f2937;
-  margin-bottom: 0.5rem;
-}
-
-.subtitle {
-  font-size: 1rem;
-  text-align: center;
-  color: #4b5563;
-  margin-bottom: 2rem;
-}
-
-.card {
-  background-color: #ffffff;
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
-h2 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 0.5rem;
-}
-
-.section-subtitle {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-bottom: 1rem;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-}
-
-label {
-  font-weight: 500;
-  margin-bottom: 0.25rem;
-  color: #374151;
-}
-
-input {
-  padding: 0.625rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  font-size: 1rem;
-  transition: border-color 0.2s ease;
-}
-
-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
-button {
-  padding: 0.75rem;
-  background: #ffd60a;
-  color: #0b2540;
-  border: none;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-}
-
-button:hover {
-  background:  #0b2540;
-  color: #ffd60a;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.eligibility {
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  background-color: #e5e7eb;
-  color: #374151;
-}
-
-.eligible {
-  background-color: #10b981;
-  color: #ffffff;
-}
-
-.caption {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-top: 0.25rem;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .info-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-  }
-  button {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .profile-page {
-    padding: 1rem 0.5rem;
-  }
-  h1 {
-    font-size: 1.5rem;
-  }
-  .subtitle {
-    font-size: 0.875rem;
-  }
-}
-</style>

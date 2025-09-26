@@ -91,6 +91,8 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute } from "vue-router";
 import router from "../router";
 import { logout } from "../services/authService";
+import { toast } from "vue3-toastify"; 
+
 
 
 const userName = "Abhay Dhek";
@@ -120,9 +122,12 @@ const toggleMobileNav = () => {
 const handleLogout = async () => {
   try {
     await logout();
+    toast.success("Logged out successfully! 🎉");
     router.push('/');
   } catch (err) {
     console.error('Logout failed:', err);
+    toast.err("Error logging out. 🎉");
+
     alert('logout ')
   }
 };
