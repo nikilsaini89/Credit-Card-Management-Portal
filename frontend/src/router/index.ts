@@ -67,17 +67,7 @@ const routes = [
     path: "/apply-card",
     name: "ApplyCard",
     component: { template: "<div class='p-8 text-center'><h1 class='text-2xl font-bold text-gray-900'>Apply Card</h1><p class='text-gray-600 mt-2'>This feature is coming soon!</p></div>" },
-  }
-  // {
-  //   path: "/my-cards",
-  //   name: "MyCards",
-  //   component: ApplyCard,
-  // },
-  // {
-  //   path: "/transactions",
-  //   name: "Transactions",
-  //   component: () => import("../views/Users/Transactions.vue"), 
-  // },
+  },
   {
     path: "/apply-card",
     name: "ApplyCard",
@@ -88,21 +78,6 @@ const routes = [
     name : "MyApplications",
     component : CardApplicationHistoryPage
   }
-  // {
-  //   path: "/new-transaction",
-  //   name: "NewTransaction",
-  //   component: { template: "<div>New Transaction Page (placeholder)</div>" },
-  // },
-  // {
-  //   path: "/profile",
-  //   name: "Profile",
-  //   component: { template: "<div>Profile Page (placeholder)</div>" },
-  // },
-  // {
-  //   path: "/my-cards/:id",
-  //   name: "CardDetail",
-  //   component: { template: "<div>Card Details Page (placeholder)</div>" },
-  // },
 ];
 
 const router = createRouter({

@@ -31,11 +31,19 @@
           <div class="card-body">
             <p><strong>Application ID:</strong> #{{ app.id }}</p>
             <p><strong>Requested Credit Limit:</strong> ₹{{ app.requestedLimit.toLocaleString() }}</p>
-            <p><strong>Status:</strong> <span class="status-pill">{{ app.status }}</span> {{ app.statusText }}</p>
+            <p>
+              <strong>Status:</strong>
+              <span class="status-pill">{{ app.status }}</span>
+              {{ app.statusText }}
+            </p>
 
             <div class="timeline">
               <p>• Application submitted on {{ app.appliedDate }}</p>
-              <p class="muted">• Under review – typically takes 2-3 business days</p>
+              <p class="muted">
+                • {{ app.statusText === 'Under Review'
+                    ? 'Under review – typically takes 2-3 business days'
+                    : 'Final decision reached' }}
+              </p>
             </div>
           </div>
         </div>
@@ -45,29 +53,60 @@
 </template>
 
 <script>
+import { fetchApplications } from "../../services/cardApplicationService";
+
+// CardTypeId → CardName map
+const CARD_TYPE_MAP = {
+  1: "AmEx Diamond",
+  2: "VISA Platinum",
+  3: "Mastercard Gold",
+};
+
+// Status → StatusText map
+const STATUS_TEXT_MAP = {
+  PENDING: "Under Review",
+  ACCEPTED: "Approved",
+  REJECTED: "Rejected",
+};
+
 export default {
   name: "MyApplicationsView",
   data() {
     return {
-      applications: [
-        {
-          id: 201,
-          cardName: "VISA Credit Card",
-          requestedLimit: 50000,
-          status: "PENDING",
-          statusText: "Under review",
-          appliedDate: "10 September 2025",
-        },
-        {
-          id: 3,
-          cardName: "AMEX Credit Card",
-          requestedLimit: 25028,
-          status: "PENDING",
-          statusText: "Under review",
-          appliedDate: "25 September 2025",
-        },
-      ],
+      applications: [],
     };
+  },
+
+  async created() {
+    try {
+      const fetched = await fetchApplications();
+      console.log("Fetched raw apps:", fetched);
+
+      // Transform backend format → frontend format
+      this.applications = fetched.map(app => ({
+        id: app.id,
+        cardName: CARD_TYPE_MAP[app.cardTypeId] || "Unknown Card",
+        requestedLimit: app.requestedLimit,
+        status: app.status,
+        statusText: STATUS_TEXT_MAP[app.status] || "Unknown",
+        appliedDate: this.formatDate(app.applicationDate),
+      }));
+
+      console.log("Mapped applications:", this.applications);
+    } catch (err) {
+      console.error("Error fetching applications:", err);
+    }
+  },
+
+  methods: {
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+    },
   },
 };
 </script>
@@ -109,7 +148,7 @@ export default {
   background: #fff;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 .card-header {
   display: flex;

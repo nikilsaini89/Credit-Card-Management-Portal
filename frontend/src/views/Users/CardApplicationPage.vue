@@ -1,7 +1,7 @@
 <template>
   <div class="apply-card">
     <main class="container">
-      <!-- Page Header -->
+
       <section class="hero">
         <div class="hero-header">
           <h1>Apply for Credit Card</h1>
@@ -11,7 +11,6 @@
         </div>
       </section>
 
-      <!-- Card Selection -->
       <section class="card-selection">
         <h2>Select Your Card</h2>
         <p class="muted">Choose the credit card that best fits your lifestyle</p>
@@ -72,8 +71,9 @@
 </template>
 
 <script>
-// import { useRouter } from 'vue-router';
-// const router = useRouter();      
+import { getCardTypes } from '../../services/cards-service';
+import { applyForCard } from "../../services/cardApplicationService";
+import { getUserIdFromToken } from '../../utils/getTokenData';
 
 export default {
   name: "ApplyCardView",
@@ -84,52 +84,49 @@ export default {
         email: "rahul@example.com",
         bnplEligible: true,
       },
-      cards: [
-        {
-          id: 1,
-          name: "Visa Platinum",
-          icon: "💳",
-          benefits: ["No annual fee for first year", "Worldwide acceptance", "24/7 customer support"],
-          limitRange: "10,000 – 1,00,000",
-          minLimit: 10000,
-          maxLimit: 100000,
-          tags: ["2% cashback on all purchases", "Travel insurance", "Airport lounge access"],
-        },
-        {
-          id: 2,
-          name: "Mastercard Gold",
-          icon: "🛡",
-          benefits: ["Premium rewards program", "Contactless payments", "Fraud protection"],
-          limitRange: "15,000 – 1,50,000",
-          minLimit: 15000,
-          maxLimit: 150000,
-          tags: ["3% cashback on dining", "Extended warranty", "Price protection"],
-        },
-        {
-          id: 3,
-          name: "American Express",
-          icon: "⭐",
-          benefits: ["Exclusive member events", "Concierge service", "Premium travel benefits"],
-          limitRange: "25,000 – 5,00,000",
-          minLimit: 25000,
-          maxLimit: 500000,
-          tags: ["5% cashback on travel", "Hotel elite status", "Global dining access"],
-        },
-      ],
+      cards: [],              // will be filled after fetching
       selectedCard: null,
       form: {
         creditLimit: "",
       },
     };
   },
+
+  async created() {
+    try {
+      const fetchedCards = await getCardTypes();
+
+      // 🔑 Map backend structure to the expected frontend structure
+      this.cards = fetchedCards.map(card => ({
+        id: card.id,
+        name: card.name,
+        icon: card.networkType === 'AMEX' ? '⭐' : '💳',   // pick icon by networkType
+        benefits: [card.description],                    // use description as benefit for now
+        limitRange: `${card.minCardLimit.toLocaleString()} – ${card.maxCardLimit.toLocaleString()}`,
+        minLimit: card.minCardLimit,
+        maxLimit: card.maxCardLimit,
+        tags: [card.networkType],                         // add tags based on network type
+      }));
+
+      console.log("Mapped cards for frontend:", this.cards);
+    } catch (err) {
+      console.error("Error fetching cards:", err);
+    }
+  },
+
   methods: {
     selectCard(card) {
       this.selectedCard = card;
       this.form.creditLimit = card.minLimit;
     },
     submitApplication() {
-      // router.push("/my-applications");
-      this.$router.push("/my-applications"); 
+      const cardApplication = {};
+      cardApplication.cardTypeId = this.selectedCard.id;
+      cardApplication.requestLimit = this.form.creditLimit;
+      cardApplication.userId = getUserIdFromToken();
+      console.log(cardApplication," = card application data");
+      applyForCard(cardApplication);
+      this.$router.push("/my-applications");
       alert(
         `Applied for ${this.selectedCard.name} with credit limit ₹${this.form.creditLimit}`
       );
@@ -137,6 +134,7 @@ export default {
   },
 };
 </script>
+
 
 <style scoped>
 .apply-card {
