@@ -50,16 +50,22 @@ const routes = [
     path: "/transactions",
     name: "TransactionHistory",
     component: TransactionHistory,
+    meta: { requiresAuth: true }
+
   },
   {
     path: "/create-transaction",
     name: "CreateTransaction",
     component: CreateTransaction,
+    meta: { requiresAuth: true }
+
   },
   {
     path: "/cards",
     name: "MyCards",
     component: () => import("../views/Users/MyCards.vue"),
+    meta: { requiresAuth: true }
+
   },
   {
     path: "/apply-card",
