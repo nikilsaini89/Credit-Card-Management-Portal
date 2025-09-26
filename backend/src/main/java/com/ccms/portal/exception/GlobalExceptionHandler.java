@@ -75,6 +75,12 @@ public class GlobalExceptionHandler {
         return buildErrorResponse("Validation Failed", "Invalid input data", HttpStatus.BAD_REQUEST, fieldErrors);
     }
 
+    @ExceptionHandler(CardLimitException.class)
+    public ResponseEntity<ApiErrorResponse> handleCardLimitException(CardLimitException ex) {
+        log.error("Card limit error: {}", ex.getMessage());
+        return buildErrorResponse("Card Limit Error", ex.getMessage(), HttpStatus.BAD_REQUEST, null);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGenericException(Exception ex) {
         log.error("Unexpected error: {}", ex.getMessage(), ex);
