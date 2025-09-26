@@ -13,5 +13,5 @@ import java.math.BigDecimal;
 @Setter
 public class UpdateCardLimitRequest {
     @NotNull @DecimalMin(value = "1.00" , message = "Limit must be greater than 0")
-    private BigDecimal newCreditLimit;
+    private Double newCreditLimit;
 }
