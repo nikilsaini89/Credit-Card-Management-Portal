@@ -24,7 +24,7 @@
         >
           <Card 
             :card="card"
-            :showMenu="true"
+            :showMenu="false"
           />
         </div>
       </div>
