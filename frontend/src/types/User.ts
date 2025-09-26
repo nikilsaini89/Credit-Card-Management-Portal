@@ -5,4 +5,7 @@ export interface User {
   phoneNumber: string;
   address: string;
   annualIncome: number;
+  role:string;
+  createdAt:string;
+  updatedAt:string;
 }
