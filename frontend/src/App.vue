@@ -1,29 +1,29 @@
 <!-- src/App.vue -->
 <template>
   <div id="app">
-    <NavigationBar v-if="!['/', '/register'].includes($route.path)" />
-    <div class="main-container">
-      <router-view />
+    <NavigationBar v-if="showLayout" />
 
+    <div v-if="showLayout" class="main-container">
+      <router-view />
     </div>
+
+    <router-view v-else />
   </div>
 </template>
 
-<script lang="ts">
-import NavigationBar from './components/NavigationBar.vue';
+<script lang="ts" setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import NavigationBar from './components/NavigationBar.vue'
 
-export default {
-  name: 'App',
-  components:{
-    NavigationBar
-  }
-}
+const route = useRoute()
+
+const showLayout = computed(() => {
+  return !['/', '/register'].includes(route.path)
+})
 </script>
 
 <style>
-NavigationBar{
-  font-family: "Inter", system-ui, Arial;
-}
 .main-container {
   max-width: 1180px;
   margin: 28px auto;
