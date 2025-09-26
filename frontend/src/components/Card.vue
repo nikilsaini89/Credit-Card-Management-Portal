@@ -28,6 +28,16 @@
         </div>
       </div>
 
+       <div class="absolute top-2 right-2 flex items-center gap-2">
+        <span class="text-sm font-medium">Blocked</span>
+        <input 
+          type="checkbox" 
+          class="toggle-checkbox"
+          :checked="activeCard.cardStatus === 'BLOCKED'"
+          @change="toggleBlock(activeCard)"
+        />
+      </div>
+
       <!-- Status -->
       <div class="status-badge">{{ activeCard.cardStatus }}</div>
 
@@ -183,20 +193,6 @@ watch(menuOpen, (open) => {
   else document.removeEventListener('click', onDocumentClick)
 })
 
-/* ------------------ Data Loading ------------------ */
-// onMounted(async () => {
-//   const url = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL)
-//     ? new URL('/data/card.json', import.meta.env.BASE_URL).href
-//     : '/data/card.json'
-
-//   try {
-//     const resp = await fetch(url, { cache: 'no-store' })
-//     if (!resp.ok) return
-
-//     const data = await resp.json()
-//     if (!props.card) localCard.value = data
-//   } catch (err) {}
-// })
 
 /* ------------------ Expose ------------------ */
 defineExpose({
