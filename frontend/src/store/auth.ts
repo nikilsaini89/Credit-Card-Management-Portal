@@ -1,20 +1,12 @@
 import { Module } from 'vuex';
 import { User } from '../types/User';
-import { login, register } from '../services/authService';
+import { login, register,logout } from '../services/authService';
 import { getUserProfile } from '../services/userService';
 import { RootState } from '../store';
 
 export interface AuthState {
   user: User | null;
   token: string | null;
-}
-interface DecodedToken {
-  id: number;
-  name: string;
-  email: string;
-  phoneNumber: string;
-  address: string;
-  annualIncome: number;
 }
 
 
@@ -68,10 +60,11 @@ const auth: Module<AuthState, RootState> = {
       localStorage.setItem('user', JSON.stringify(user));
     },
     logout(state) {
-      state.token = null;
-      state.user = null;
+     
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+       state.token = null;
+      state.user = null;
     }
   },
 
@@ -80,13 +73,17 @@ const auth: Module<AuthState, RootState> = {
       const res = await login(credentials.email, credentials.password);
       commit('setToken', res.data.token);
       await dispatch('getUserProfile');
-    },
+    },  
 
     async register({ commit, dispatch }, userData: Omit<User, 'id'> & { password: string }) {
       const res = await register(userData);
       commit('setToken', res.data.token);
       await dispatch('getUserProfile');
     },
+    async logout({ commit }) {
+    await logout(); 
+    commit('clearUser'); 
+  },
 
     async getUserProfile({ state, commit }) {
       if (!state.token) return;

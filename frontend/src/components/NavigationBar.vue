@@ -68,18 +68,14 @@
         </div>
 
         <nav class="mobile-links">
-          <RouterLink
-            v-for="navLink in navLinks"
-            :key="navLink.to + '-mobile'"
-            :to="navLink.to"
-            class="mobile-link"
-            :class="{ active: isRouteActive(navLink.to) }"
-            @click="closeMobileNav"
-            role="menuitem"
-          >
-            {{ navLink.label }}
-          </RouterLink>
-        </nav>
+    <ul>
+      <li v-for="link in navLinks" :key="link.label">
+        <RouterLink class="mobile-link" v-if="link.to" :to="link.to">{{ link.label }}</RouterLink>
+        <a class="mobile-link" v-else-if="link.action === 'logout'" @click.prevent="handleLogout">{{ link.label }}</a>
+      </li>
+    </ul>
+  </nav>
+
 
         <footer class="mobile-footer">
           <div class="avatar mobile-avatar">{{ userInitials }}</div>
@@ -96,6 +92,9 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute } from "vue-router";
+import router from "../router";
+import { logout } from "../services/authService";
+
 
 const userName = "Abhay Dhek";
 
@@ -105,11 +104,13 @@ const userInitials = computed(() => {
 });
 
 const navLinks = [
-  { to: "/", label: "Dashboard" },
+  { to: "/dashboard", label: "Dashboard" },
   { to: "/cards", label: "My Cards" },
   { to: "/apply-card", label: "Apply Card" },
   { to: "/transactions", label: "Transactions" },
   { to: "/profile", label: "Profile" },
+  { action: "logout", label: "Logout" }
+
 ];
 
 const route = useRoute();
@@ -118,6 +119,15 @@ const isMobileNavOpen = ref(false);
 const toggleMobileNav = () => {
   isMobileNavOpen.value = !isMobileNavOpen.value;
   setBodyScrollLocked(isMobileNavOpen.value);
+};
+const handleLogout = async () => {
+  try {
+    await logout();
+    router.push('/');
+  } catch (err) {
+    console.error('Logout failed:', err);
+    alert('logout ')
+  }
 };
 
 const closeMobileNav = () => {
