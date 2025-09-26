@@ -249,7 +249,7 @@ const handleRegister = async () => {
 }
 
 .btn-primary {
-  width: 100%;
+  width: 95%;
   padding: 0.9rem;
   font-weight: 600;
   border: none;

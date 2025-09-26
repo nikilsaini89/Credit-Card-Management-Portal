@@ -13,17 +13,14 @@
         <div class="brand-title">CreditCard Portal</div>
       </div>
 
-      <nav class="topnav desktop-nav" role="navigation" aria-label="Primary">
-        <RouterLink
-          v-for="navLink in navLinks"
-          :key="navLink.to"
-          :to="navLink.to"
-          class="nav-item"
-          :class="{ active: isRouteActive(navLink.to) }"
-        >
-          {{ navLink.label }}
-        </RouterLink>
+      <nav class="topnav desktop-nav" role="navigation" aria-label="Primary" v-for="link in navLinks" :key="link.label">
+                <RouterLink class="nav-item" v-if="link.to" :to="link.to">{{ link.label }}</RouterLink>
+
+        <a class="nav-item" v-else-if="link.action === 'logout'" @click.prevent="handleLogout">{{ link.label }}</a>
+
+        
       </nav>
+       
 
       <button
         class="hamburger"
@@ -39,7 +36,7 @@
       </button>
 
       <div class="avatar desktop-avatar">
-        <RouterLink to="/logout">{{ userInitials }}</RouterLink>
+        <RouterLink>{{ userInitials }}</RouterLink>
       </div>
     </div>
 

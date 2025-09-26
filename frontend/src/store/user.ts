@@ -1,6 +1,6 @@
 import { Module } from 'vuex';
 import { User } from '../types/User';
-import { RootState } from '../store'; 
+import { RootState } from '../store/index'; 
 import { getUserProfile, updateUserProfile } from '../services/userService';
 
 
