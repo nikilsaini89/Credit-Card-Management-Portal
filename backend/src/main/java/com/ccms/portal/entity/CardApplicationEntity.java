@@ -32,4 +32,5 @@ public class CardApplicationEntity {
 
     private Long reviewerId;
     private LocalDateTime reviewDate;
+
 }
