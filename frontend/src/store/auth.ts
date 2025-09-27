@@ -97,7 +97,17 @@ const auth: Module<AuthState, RootState> = {
 
   getters: {
     isAuthenticated: (state): boolean => !!state.token,
-    token: (state): string | null => state.token
+    token: (state): string | null => state.token,
+    userRole: (state): string | null => {
+      if (!state.token) return null;
+      const decoded = decodeToken(state.token);
+      return decoded?.role || null;
+    },
+    isAdmin: (state): boolean => {
+      if (!state.token) return false;
+      const decoded = decodeToken(state.token);
+      return decoded?.role === 'ADMIN';
+    }
   }
 };
 

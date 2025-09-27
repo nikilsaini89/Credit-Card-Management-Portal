@@ -20,7 +20,8 @@
           <div class="card-header">
             <div class="title">
               <span class="icon">💳</span>
-              <h3>{{ app.cardName }}</h3>
+              <!-- use backend cardTypeName -->
+              <h3>{{ app.cardTypeName }}</h3>
               <span class="status-pill">{{ app.status }}</span>
             </div>
             <div class="applied-date">
@@ -30,7 +31,9 @@
 
           <div class="card-body">
             <p><strong>Application ID:</strong> #{{ app.id }}</p>
+            <p><strong>Card Network:</strong> {{ app.cardNetworkType }}</p>
             <p><strong>Requested Credit Limit:</strong> ₹{{ app.requestedLimit.toLocaleString() }}</p>
+
             <p>
               <strong>Status:</strong>
               <span class="status-pill">{{ app.status }}</span>
@@ -39,6 +42,10 @@
 
             <div class="timeline">
               <p>• Application submitted on {{ app.appliedDate }}</p>
+              <p v-if="app.reviewerName">
+                • Reviewed by <strong>{{ app.reviewerName }}</strong>
+                on {{ app.reviewDate }}
+              </p>
               <p class="muted">
                 • {{ app.statusText === 'Under Review'
                     ? 'Under review – typically takes 2-3 business days'
@@ -55,14 +62,7 @@
 <script>
 import { fetchApplications } from "../../services/cardApplicationService";
 
-// CardTypeId → CardName map
-const CARD_TYPE_MAP = {
-  1: "AmEx Diamond",
-  2: "VISA Platinum",
-  3: "Mastercard Gold",
-};
-
-// Status → StatusText map
+// Map backend status → user-friendly text
 const STATUS_TEXT_MAP = {
   PENDING: "Under Review",
   ACCEPTED: "Approved",
@@ -82,14 +82,17 @@ export default {
       const fetched = await fetchApplications();
       console.log("Fetched raw apps:", fetched);
 
-      // Transform backend format → frontend format
+      // Map backend → frontend
       this.applications = fetched.map(app => ({
         id: app.id,
-        cardName: CARD_TYPE_MAP[app.cardTypeId] || "Unknown Card",
+        cardTypeName: app.cardTypeName,
+        cardNetworkType: app.cardNetworkType,
         requestedLimit: app.requestedLimit,
         status: app.status,
         statusText: STATUS_TEXT_MAP[app.status] || "Unknown",
         appliedDate: this.formatDate(app.applicationDate),
+        reviewerName: app.reviewerName || null,
+        reviewDate: app.reviewDate ? this.formatDate(app.reviewDate) : null,
       }));
 
       console.log("Mapped applications:", this.applications);
@@ -100,6 +103,7 @@ export default {
 
   methods: {
     formatDate(dateString) {
+      if (!dateString) return "";
       const date = new Date(dateString);
       return date.toLocaleDateString("en-GB", {
         day: "2-digit",
@@ -112,6 +116,7 @@ export default {
 </script>
 
 <style scoped>
+/* existing styles remain unchanged */
 .applications {
   font-family: "Inter", system-ui, Arial;
   background: #f7f7f9;
