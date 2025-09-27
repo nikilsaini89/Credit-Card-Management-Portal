@@ -32,6 +32,15 @@ public class MerchantAccount {
   @Column(name = "currency", length = 3)
   private String currency = "INR";
 
+  @Column(name = "name", length = 150)
+  private String name;
+
+  @Column(name = "bank_name", length = 100)
+  private String bankName;
+
+  @Column(name = "is_active")
+  private Boolean isActive = true;
+
   @Column(name = "created_at")
   private LocalDateTime createdAt;
 

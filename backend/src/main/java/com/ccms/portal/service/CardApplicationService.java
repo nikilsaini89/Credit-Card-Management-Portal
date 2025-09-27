@@ -69,7 +69,7 @@ public class CardApplicationService {
             throw new UnauthorizedApplicationActionException("You are not authorized to update this application");
         }
         CreateCardRequest createCardRequest = new CreateCardRequest();
-        createCardRequest.setCardTypeId(application.getCardTypeId());
+        createCardRequest.setBankId(1L); // Default bank ID
         createCardRequest.setUserId(application.getUserId());
         createCardRequest.setCreditLimit(application.getRequestedLimit()*1.0);
         cardService.createCard(createCardRequest);

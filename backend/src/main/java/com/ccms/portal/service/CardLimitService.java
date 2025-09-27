@@ -33,15 +33,15 @@ public class CardLimitService {
             throw new UnauthorizedApplicationActionException("You are not allowed to update this card");
         }
 
-        double minCardLimit = card.getCardType() != null ? card.getCardType().getMinCardLimit() : 0.0;
-        double maxCardLimit = card.getCardType() != null ? card.getCardType().getMaxCardLimit() : Double.MAX_VALUE;
+        double minCardLimit = 0.0; // Default minimum limit
+        double maxCardLimit = 1000000.0; // Default maximum limit
 
         if (requested < minCardLimit || requested > maxCardLimit) {
             throw new CardLimitException("Requested limit must be between " + minCardLimit + " and " + maxCardLimit);
         }
 
-        double oldLimit = card.getCreditLimit();
-        double available = card.getAvailableLimit();
+        double oldLimit = card.getCreditLimit().doubleValue();
+        double available = card.getAvailableLimit().doubleValue();
 
         double outstanding = oldLimit - available;
 
@@ -51,8 +51,8 @@ public class CardLimitService {
 
         double newAvailable = requested - outstanding;
 
-        card.setCreditLimit(requested);
-        card.setAvailableLimit(newAvailable);
+        card.setCreditLimit(java.math.BigDecimal.valueOf(requested));
+        card.setAvailableLimit(java.math.BigDecimal.valueOf(newAvailable));
         creditCardRepository.save(card);
 
         return CardLimitResponse.builder()

@@ -1,7 +1,6 @@
 package com.ccms.portal.util;
 
 import com.ccms.portal.dto.response.CreditCardResponse;
-import com.ccms.portal.entity.CardTypeEntity;
 import com.ccms.portal.entity.CreditCardEntity;
 import org.springframework.stereotype.Component;
 
@@ -23,30 +22,19 @@ public class CreditCardUtil {
         return cardNumber.toString();
     }
 
-    public Date generateExpiryDate(int yearsFromNow) {
-        LocalDate expiry = LocalDate.now().plusYears(yearsFromNow);
-        return Date.valueOf(expiry);
+    public LocalDate generateExpiryDate(int yearsFromNow) {
+        return LocalDate.now().plusYears(yearsFromNow);
     }
 
     public CreditCardResponse buildCreditCardResponse(CreditCardEntity cardEntity){
-
-        CardTypeEntity cardType = cardEntity.getCardType();
-
-        CreditCardResponse.CardTypeInfo cardTypeInfo = CreditCardResponse.CardTypeInfo.builder()
-                .name(cardType.getName())
-                .networkType(cardType.getNetworkType())
-                .description(cardType.getDescription())
-                .build();
-
-        CreditCardResponse cardResponse = CreditCardResponse.builder().
-                id(cardEntity.getId())
+        CreditCardResponse cardResponse = CreditCardResponse.builder()
+                .id(cardEntity.getId())
                 .cardHolderName(cardEntity.getUser().getName())
                 .cardNumber(cardEntity.getCardNumber())
                 .cardStatus(cardEntity.getCardStatus())
-                .creditLimit(cardEntity.getCreditLimit())
-                .availableLimit(cardEntity.getAvailableLimit())
+                .creditLimit(cardEntity.getCreditLimit().doubleValue())
+                .availableLimit(cardEntity.getAvailableLimit().doubleValue())
                 .expiryDate(cardEntity.getExpiryDate())
-                .cardType(cardTypeInfo)
                 .build();
 
         return cardResponse;

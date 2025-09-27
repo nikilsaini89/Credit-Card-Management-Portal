@@ -4,7 +4,8 @@ import com.ccms.portal.enums.CardStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.sql.Date;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 
 @Builder
@@ -27,20 +28,31 @@ public class CreditCardEntity {
     private CardStatus cardStatus;
 
     @Column(nullable = false)
-    private Double creditLimit;
+    private BigDecimal creditLimit;
 
     @Column(nullable = false)
-    private Double availableLimit;
+    private BigDecimal availableLimit;
 
     @Column(nullable = false)
-    private Date expiryDate;
+    private LocalDate expiryDate;
+
+    @Column(nullable = false)
+    private String status;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;
 
     @ManyToOne
-    @JoinColumn(name = "card_type_id", nullable = false)
-    private CardTypeEntity cardType;
+    @JoinColumn(name = "issuing_bank_id", nullable = false)
+    private Bank issuingBank;
+
+    @Column(name = "created_at")
+    private java.time.LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = java.time.LocalDateTime.now();
+    }
 }
 

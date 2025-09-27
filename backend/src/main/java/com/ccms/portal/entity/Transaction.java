@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "transactions")
@@ -17,8 +16,8 @@ import java.util.UUID;
 public class Transaction {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.UUID)
-  private UUID id;
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
   @Column(name = "serial_no")
   private Long serialNo;
@@ -44,7 +43,7 @@ public class Transaction {
   private Bank issuerBank;
 
   @Column(name = "network", length = 30)
-  private String network; 
+  private String network;
 
   @Column(name = "amount", nullable = false, precision = 12, scale = 2)
   private BigDecimal amount;
@@ -56,6 +55,18 @@ public class Transaction {
   @Column(name = "is_bnpl")
   private Boolean isBnpl = false;
 
+  @Column(name = "merchant", length = 100)
+  private String merchant;
+
+  @Column(name = "category", length = 50)
+  private String category;
+
+  @Column(name = "card_type", length = 50)
+  private String cardType;
+
+  @Column(name = "last_four", length = 4)
+  private String lastFour;
+
   @Column(name = "created_at")
   private LocalDateTime createdAt;
 
@@ -65,6 +76,6 @@ public class Transaction {
   }
 
   public enum TransactionStatus {
-    INITIATED, AUTHORIZED, CAPTURED, SETTLED, DECLINED, REFUNDED
+    INITIATED, AUTHORIZED, CAPTURED, SETTLED, DECLINED, REFUNDED, COMPLETED, PENDING, FAILED
   }
 }

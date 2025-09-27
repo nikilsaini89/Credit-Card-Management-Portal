@@ -6,7 +6,7 @@ import lombok.Setter;
 @Setter
 @Getter
 public class CreateCardRequest {
-    private Long cardTypeId;
+    private Long bankId;
     private Long userId;
     private Double creditLimit;
 }

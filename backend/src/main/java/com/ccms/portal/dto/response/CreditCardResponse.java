@@ -1,10 +1,9 @@
 package com.ccms.portal.dto.response;
 
 import com.ccms.portal.enums.CardStatus;
-import com.ccms.portal.enums.NetworkType;
 import lombok.Builder;
 import lombok.Getter;
-import java.sql.Date;
+import java.time.LocalDate;
 
 @Getter
 @Builder
@@ -15,14 +14,5 @@ public class CreditCardResponse {
     private CardStatus cardStatus;
     private Double creditLimit;
     private Double availableLimit;
-    private Date expiryDate;
-    private CardTypeInfo cardType;
-
-    @Getter
-    @Builder
-    public static class CardTypeInfo {
-        private String name;
-        private NetworkType networkType;
-        private String description;
-    }
+    private LocalDate expiryDate;
 }

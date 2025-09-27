@@ -27,6 +27,15 @@ public class Merchant {
   @Column(name = "category", length = 100)
   private String category;
 
+  @Column(name = "description", length = 500)
+  private String description;
+
+  @Column(name = "logo_url", length = 255)
+  private String logoUrl;
+
+  @Column(name = "is_active")
+  private Boolean isActive = true;
+
   @Column(name = "created_at")
   private LocalDateTime createdAt;
 
