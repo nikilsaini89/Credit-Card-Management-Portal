@@ -32,6 +32,7 @@
         </div>
       </div>
 
+      <!-- Toggle Box -->
        <div v-if="showToggle" class="absolute top-2 right-2 flex items-center gap-2">
         <span class="text-sm font-medium">Blocked</span>
         <input 
@@ -44,18 +45,6 @@
 
       <!-- Status -->
       <div class="status-badge">{{ activeCard.cardStatus }}</div>
-
-      <!-- Network Logos -->
-      <div class="network-wrap" aria-hidden="true">
-        <div class="network-logo mastercard" v-if="!activeCard.cardType?.networkType">
-          <span class="mc-left"></span><span class="mc-right"></span>
-        </div>
-        <div class="network-logo mastercard" v-else-if="activeCard.cardType.networkType.toLowerCase().includes('master')">
-          <span class="mc-left"></span><span class="mc-right"></span>
-        </div>
-        <img v-else-if="activeCard.cardType?.networkLogo" :src="activeCard.cardType.networkLogo" alt="network" class="network-img" />
-        <div class="logo-badge" v-if="activeCard.badge">{{ activeCard.badge }}</div>
-      </div>
 
       <!-- Eye Button -->
       <button
@@ -98,8 +87,20 @@
           <div class="label small">TOTAL LIMIT</div>
           <div class="amt">₹{{ formatNumber(activeCard.creditLimit) }}</div>
         </div>
-        <div class="network-type" :class="activeCard.cardType?.networkType?.toLowerCase()">
-          {{ activeCard.cardType?.networkType }}
+      </div>
+
+      <div class="card-divider" aria-hidden="true"></div>
+
+      <div class="card-limits">
+        <div v-if="activeCard?.cvv">
+          <div class="label small">CVV</div>
+          <div class="label small">{{ activeCard.cvv }}</div>
+        </div>
+        <div class="ml-auto text-right">
+          <div class="label small text-right">Network</div>
+          <div class="network-type" :class="activeCard.cardType?.networkType?.toLowerCase()">
+            {{ activeCard.cardType?.networkType }}
+          </div>
         </div>
       </div>
     </div>
@@ -193,7 +194,10 @@ function formatExpiry(dateStr) {
 }
 
 /* ------------------ Event Handlers ------------------ */
-function toggleMask() { isMasked.value = !isMasked.value }
+function toggleMask(event) { 
+  event.stopPropagation();
+  isMasked.value = !isMasked.value 
+}
 
 /** Instead of directly emitting, open modal */
 function toggleBlock(card) {

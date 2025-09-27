@@ -19,9 +19,9 @@ public class CreditCardController {
     @Autowired
     private CardService cardService;
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<?> getCards(@PathVariable Long userId)    {
-        List<CreditCardResponse> userCards = cardService.getAllCardsByUserId(userId);
+    @GetMapping
+    public ResponseEntity<?> getCards()    {
+        List<CreditCardResponse> userCards = cardService.getAllCardsByUserId();
         if (userCards.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
