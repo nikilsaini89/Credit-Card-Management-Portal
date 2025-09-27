@@ -14,7 +14,29 @@ export const getCards = async (): Promise<CreditCard[]> => {
     });
     return res.data;
   } catch (err) {
-    console.error('Error fetching cards:', err);
     return [];
+  }
+};
+
+
+export const updateCardStatus = async (
+  cardId: any,
+  newStatus: string
+): Promise<CreditCard | null> => {
+  try {
+    const res = await axios.put<CreditCard>(
+      `${BASE_URL}/cards/${cardId}/status`,
+      {
+        cardStatus: newStatus,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return res.data;
+  } catch (err) {
+    return null;
   }
 };
