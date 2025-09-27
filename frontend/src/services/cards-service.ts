@@ -9,14 +9,13 @@ const token = localStorage.getItem("token");
 export const getCards = async (): Promise<CreditCard[]> => {
   const userId = getUserIdFromToken();
   try {
-    const res = await axios.get<CreditCard[]>(`${BASE_URL}/cards/${userId}`, {
+    const res = await axios.get<CreditCard[]>(`${BASE_URL}/cards`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     return res.data;
   } catch (err) {
-    console.error('Error fetching cards:', err);
     return [];
   }
 };
@@ -33,5 +32,27 @@ export const getCardTypes = async (): Promise<CardType[]> => {
   } catch (err) {
     console.error('Error fetching cards:', err);
     return [];
+  }
+};
+
+export const updateCardStatus = async (
+  cardId: any,
+  newStatus: string
+): Promise<CreditCard | null> => {
+  try {
+    const res = await axios.put<CreditCard>(
+      `${BASE_URL}/cards/${cardId}/status`,
+      {
+        cardStatus: newStatus,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return res.data;
+  } catch (err) {
+    return null;
   }
 };
