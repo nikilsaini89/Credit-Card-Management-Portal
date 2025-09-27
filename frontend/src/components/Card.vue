@@ -49,18 +49,17 @@
       <!-- Eye Button -->
       <button
         class="eye"
-        @click="toggleMask"
-        :title="isMasked ? 'Show number' : 'Hide number'"
-        :aria-pressed="String(!isMasked)"
+        @click="toggleNumberMask"
+        :title="isNumberMasked ? 'Show number' : 'Hide number'"
+        :aria-pressed="String(!isNumberMasked)"
       >
-        <img :src="EyeOpenIcon" alt="show number" v-if="!isMasked" />
-        <img :src="EyeClosedIcon" alt="hide number" v-else />
+        <img :src="isNumberMasked ? EyeClosedIcon : EyeOpenIcon" alt="toggle number" />
       </button>
 
       <!-- Card Number -->
       <div class="number-row" role="group" aria-label="Card number">
         <span class="mask">
-          {{ isMasked ? getMaskedCardNumber(activeCard.cardNumber) : getFullCardNumber(activeCard.cardNumber) }}
+          {{ isNumberMasked ? getMaskedCardNumber(activeCard.cardNumber) : getFullCardNumber(activeCard.cardNumber) }}
         </span>
       </div>
 
@@ -92,16 +91,17 @@
       <div class="card-divider" aria-hidden="true"></div>
 
       <div class="card-limits">
-        <div v-if="activeCard?.cvv">
+       <div v-if="activeCard?.cvv" class="cvv-row flex items-center gap-2">
+        <div>
           <div class="label small">CVV</div>
-          <div class="label small">{{ activeCard.cvv }}</div>
-        </div>
-        <div class="ml-auto text-right">
-          <div class="label small text-right">Network</div>
-          <div class="network-type" :class="activeCard.cardType?.networkType?.toLowerCase()">
-            {{ activeCard.cardType?.networkType }}
+          <div class="label small">
+            {{ isCvvMasked ? '***' : activeCard.cvv }}
           </div>
         </div>
+        <button class="cvv-eye" @click="toggleCvvMask">
+          <img :src="isCvvMasked ? EyeClosedIcon : EyeOpenIcon" alt="toggle cvv" />
+        </button>
+      </div>
       </div>
     </div>
 
@@ -138,7 +138,10 @@ const props = defineProps({
 const emit = defineEmits(['action', 'block'])
 
 /* ------------------ State ------------------ */
-const isMasked = ref(true)
+const isNumberMasked = ref(true)
+const isCvvMasked = ref(true)
+let numberTimer = null
+let cvvTimer = null
 const menuOpen = ref(false)
 const menuRoot = ref(null)
 const localCard = ref(null)
@@ -193,11 +196,38 @@ function formatExpiry(dateStr) {
   return `${month}/${year.slice(-2)}`
 }
 
-/* ------------------ Event Handlers ------------------ */
-function toggleMask(event) { 
-  event.stopPropagation();
-  isMasked.value = !isMasked.value 
+
+function toggleNumberMask(event) {
+  event.stopPropagation()
+  isNumberMasked.value = !isNumberMasked.value
+
+  if (numberTimer) clearTimeout(numberTimer)
+
+  if (!isNumberMasked.value) {
+    numberTimer = setTimeout(() => {
+      isNumberMasked.value = true
+    }, 2000)
+  }
 }
+
+function toggleCvvMask(event) {
+  event.stopPropagation()
+  isCvvMasked.value = !isCvvMasked.value
+
+  if (cvvTimer) clearTimeout(cvvTimer)
+
+  if (!isCvvMasked.value) {
+    cvvTimer = setTimeout(() => {
+      isCvvMasked.value = true
+    }, 2000)
+  }
+}
+
+/* ------------------ Event Handlers ------------------ */
+// function toggleNumberMask(event) { 
+//   event.stopPropagation();
+//   isNumberMasked.value = !isNumberMasked.value 
+// }
 
 /** Instead of directly emitting, open modal */
 function toggleBlock(card) {
@@ -252,7 +282,7 @@ watch(menuOpen, (open) => {
 
 /* ------------------ Expose ------------------ */
 defineExpose({
-  toggleMask,
+  toggleNumberMask,
   toggleBlock,
   confirmStatusChange,
   cancelStatusChange,
