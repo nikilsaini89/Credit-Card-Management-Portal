@@ -9,7 +9,7 @@
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
-      <p class="loading-text">Loading applications...</p>
+      <p class="loading-text">{{ APPLICATION_MESSAGES.LOADING }}</p>
     </div>
 
     <!-- Card Applications Section -->
@@ -17,7 +17,7 @@
       <h2 class="section-title">Card Applications</h2>
       
       <div v-if="applications.length === 0" class="empty-state">
-        <p class="empty-text">No applications found</p>
+        <p class="empty-text">{{ APPLICATION_MESSAGES.NO_APPLICATIONS }}</p>
       </div>
       
       <div v-else class="applications-grid">
@@ -30,13 +30,9 @@
             <h3 class="card-title">{{ application.cardNetworkType }} Application #{{ application.id }}</h3>
             <span 
               class="status-badge"
-              :class="{
-                'status-pending': application.status === 'PENDING',
-                'status-approved': application.status === 'ACCEPTED',
-                'status-rejected': application.status === 'REJECTED'
-              }"
+              :class="getStatusBadgeClass(application.status)"
             >
-              {{ application.status }}
+              {{ APPLICATION_STATUS_LABELS[application.status] }}
             </span>
           </div>
           
@@ -60,7 +56,7 @@
           </div>
           
           <!-- Actions for pending applications -->
-          <div v-if="application.status === 'PENDING'" class="card-actions">
+          <div v-if="application.status === APPLICATION_STATUS.PENDING" class="card-actions">
             <button 
               class="action-btn approve-btn" 
               @click="handleApprove(application.id)"
@@ -86,7 +82,7 @@
           <!-- Reviewer info for processed applications -->
           <div v-else class="reviewer-info">
             <span class="reviewer-text">
-              {{ application.status === 'ACCEPTED' ? 'Approved' : 'Rejected' }} by {{ application.reviewerName }} on {{ formatDate(application.reviewDate!) }}
+              {{ getReviewerMessage(application) }}
             </span>
           </div>
         </div>
@@ -99,6 +95,14 @@
 import { ref, onMounted } from "vue"
 import { getCardApplications, updateApplicationStatus } from '../services/cards-service'
 import type { CardApplication } from '../types/cardApplication'
+import { 
+  APPLICATION_STATUS, 
+  APPLICATION_STATUS_LABELS, 
+  APPLICATION_ACTIONS, 
+  STATUS_COLORS, 
+  ACTION_BUTTON_COLORS, 
+  APPLICATION_MESSAGES 
+} from '../constants/constants'
 
 // Reactive data
 const applications = ref<CardApplication[]>([])
@@ -121,7 +125,7 @@ const loadApplications = async () => {
 const handleApprove = async (applicationId: number) => {
   try {
     processing.value = true
-    const result = await updateApplicationStatus(applicationId, 'ACCEPTED')
+    const result = await updateApplicationStatus(applicationId, APPLICATION_ACTIONS.APPROVE)
     if (result) {
       // Update the local state
       const index = applications.value.findIndex(app => app.id === applicationId)
@@ -139,7 +143,7 @@ const handleApprove = async (applicationId: number) => {
 const handleReject = async (applicationId: number) => {
   try {
     processing.value = true
-    const result = await updateApplicationStatus(applicationId, 'REJECTED')
+    const result = await updateApplicationStatus(applicationId, APPLICATION_ACTIONS.REJECT)
     if (result) {
       // Update the local state
       const index = applications.value.findIndex(app => app.id === applicationId)
@@ -161,6 +165,25 @@ const formatDate = (dateString: string) => {
     month: '2-digit',
     year: 'numeric'
   })
+}
+
+const getStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case APPLICATION_STATUS.PENDING:
+      return 'status-pending'
+    case APPLICATION_STATUS.ACCEPTED:
+      return 'status-approved'
+    case APPLICATION_STATUS.REJECTED:
+      return 'status-rejected'
+    default:
+      return 'status-pending'
+  }
+}
+
+const getReviewerMessage = (application: CardApplication) => {
+  const isApproved = application.status === APPLICATION_STATUS.ACCEPTED
+  const actionText = isApproved ? APPLICATION_MESSAGES.APPROVED_BY : APPLICATION_MESSAGES.REJECTED_BY
+  return `${actionText} ${application.reviewerName} ${APPLICATION_MESSAGES.ON} ${formatDate(application.reviewDate!)}`
 }
 
 // Load applications on component mount
