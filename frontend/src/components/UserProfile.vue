@@ -4,6 +4,7 @@
       <h1>My Profile</h1>
       <p class="subtitle">Manage your personal information and preferences.</p>
 
+      
       <!-- Personal Information -->
       <div class="card">
         <h2>Personal Information</h2>
