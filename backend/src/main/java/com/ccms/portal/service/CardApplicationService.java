@@ -69,8 +69,9 @@ public class CardApplicationService {
                 .getAuthentication()
                 .getPrincipal();
         Long userId = currentUser.getUserId();
+        String userRole = currentUser.getRole();
         CardApplicationEntity application = repository.findById(id).orElseThrow(()->new CardApplicationNotFoundException("Application with id " + id + " not found"));
-        if(!application.getUserId().equals(userId)){
+        if(!Objects.equals(userRole, "ADMIN")){
             throw new UnauthorizedApplicationActionException("You are not authorized to update this application");
         }
         CreateCardRequest createCardRequest = new CreateCardRequest();
