@@ -7,7 +7,7 @@ const token = localStorage.getItem("token");
 
 export const getCards = async (): Promise<CreditCard[]> => {
   try {
-    const res = await axios.get<CreditCard[]>(`${BASE_URL}/cards/1`, {
+    const res = await axios.get<CreditCard[]>(`${BASE_URL}/cards`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
