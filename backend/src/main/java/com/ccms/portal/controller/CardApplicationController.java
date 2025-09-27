@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+
 @RequestMapping("card/application")
 public class CardApplicationController {
     @Autowired
@@ -23,7 +24,6 @@ public class CardApplicationController {
         CardApplicationResponse savedApplication = cardApplicationService.apply(application);
         return new ResponseEntity<>(savedApplication,HttpStatus.CREATED);
     }
-
     @GetMapping
     public ResponseEntity<List<CardApplicationEntity>> getApplications(){
         List<CardApplicationEntity> savedApplications = cardApplicationService.getApplications();
