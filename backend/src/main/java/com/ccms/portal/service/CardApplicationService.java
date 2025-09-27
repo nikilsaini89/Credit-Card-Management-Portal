@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -52,6 +53,10 @@ public class CardApplicationService {
                 .getPrincipal();
 
         Long userId = currentUser.getUserId();
+        String userRole = currentUser.getRole();
+        if(Objects.equals(userRole, "ADMIN")){
+           return repository.findAll();
+        }
         return repository.findAllByUserId(userId);
     }
     public Optional<CardApplicationEntity> getApplicationById(Long id){
