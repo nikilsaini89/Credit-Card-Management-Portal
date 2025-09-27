@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Component
 public class CreditCardUtil {
@@ -21,6 +22,10 @@ public class CreditCardUtil {
             cardNumber.append(digit);
         }
         return cardNumber.toString();
+    }
+
+    public Integer generateCvv(){
+        return ThreadLocalRandom.current().nextInt(100, 1000);
     }
 
     public Date generateExpiryDate(int yearsFromNow) {
@@ -46,6 +51,7 @@ public class CreditCardUtil {
                 .creditLimit(cardEntity.getCreditLimit())
                 .availableLimit(cardEntity.getAvailableLimit())
                 .expiryDate(cardEntity.getExpiryDate())
+                .cvv(cardEntity.getCvv())
                 .cardType(cardTypeInfo)
                 .build();
 
