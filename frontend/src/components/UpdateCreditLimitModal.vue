@@ -3,9 +3,7 @@
     <div v-if="localVisible" class="backdrop-modal" @click.self="cancel">
       <div class="dialog-modal">
         <div class="dialog-header">
-          <div>
-            <h2 class="dialog-title">Update Credit Limit</h2>
-          </div>
+          <h2 class="dialog-title">Update Credit Limit</h2>
           <button class="close-button" @click="cancel">✕</button>
         </div>
 
@@ -26,20 +24,19 @@
               type="number"
               v-model.number="proposedLimit"
               :min="currentOutstanding"
+              :max="maxLimit"
               class="input-control"
             />
-            <div class="hint-text">Minimum: ₹{{ formatINR(currentOutstanding) }}</div>
-          </div>
-
-          <div class="info-note">
-            <strong>Note:</strong> Changes &gt; 20% require admin approval and may take 1–2 business days.
+            <div class="hint-text">
+              Range: ₹{{ formatINR(currentOutstanding) }} – ₹{{ formatINR(maxLimit) }}
+            </div>
           </div>
         </div>
 
         <div class="dialog-footer">
           <button class="button button-ghost" @click="cancel">Cancel</button>
-          <button class="button button-primary" :disabled="!isSubmittable" @click="proceedToVerify">
-            Verify Password
+          <button class="button button-primary" :disabled="!isSubmittable" @click="updateLimit">
+            Update Limit
           </button>
         </div>
       </div>
@@ -54,10 +51,12 @@ const props = withDefaults(defineProps<{
   modelValue?: boolean
   currentLimit?: number
   outstanding?: number
+  maxLimit?: number
 }>(), {
   modelValue: false,
   currentLimit: 0,
-  outstanding: 0
+  outstanding: 0,
+  maxLimit: 100000 // default max limit
 })
 
 const emit = defineEmits<{
@@ -68,21 +67,22 @@ const emit = defineEmits<{
 const localVisible = ref<boolean>(props.modelValue ?? false)
 const proposedLimit = ref<number>(props.currentLimit ?? 0)
 
-watch(() => props.modelValue, (newModelValue) => { localVisible.value = !!newModelValue })
-watch(localVisible, (newLocalVisible) => emit('update:modelValue', newLocalVisible))
+watch(() => props.modelValue, (newVal) => { localVisible.value = !!newVal })
+watch(localVisible, (newVal) => emit('update:modelValue', newVal))
 
 const displayCurrentLimit = props.currentLimit ?? 0
 const currentOutstanding = props.outstanding ?? 0
+const maxLimit = props.maxLimit ?? 100000
 
-const isSubmittable = computed(() => {
-  return !!proposedLimit.value && proposedLimit.value >= currentOutstanding
-})
+const isSubmittable = computed(() =>
+  proposedLimit.value >= currentOutstanding && proposedLimit.value <= maxLimit
+)
 
 function cancel() {
   localVisible.value = false
 }
 
-function proceedToVerify() {
+function updateLimit() {
   if (!isSubmittable.value) return
   emit('next', { newLimit: Number(proposedLimit.value) })
   localVisible.value = false

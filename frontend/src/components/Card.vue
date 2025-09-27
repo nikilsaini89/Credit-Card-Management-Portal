@@ -243,16 +243,19 @@ function toggleBlock(card) {
   showStatusDialog.value = true
 }
 
-/** Trigger "view-details" if showToggle is true */
 function onCardClick(e) {
   if (!props.showToggle) return
   const target = e.target
-  if (
-    target.closest('.menu-btn, .menu-pop, .eye, .toggle-checkbox, button')
-  ) {
+  if (target.closest('.menu-btn, .menu-pop, .eye, .toggle-checkbox, button')) {
     return
   }
-  emit('view-details', activeCard.value?.id)
+  // CHANGED: emit normalized action instead of legacy 'view-details'
+  const id = buildCardId()
+  if (id) {
+    emit('action', { to: `/cards/${id}` })
+  } else {
+    emit('view-details', activeCard.value?.id)
+  }
 }
 
 
@@ -270,10 +273,46 @@ function cancelStatusChange() {
   pendingCard.value = null
 }
 
+function buildCardId() {
+  const c = activeCard.value || props.card || localCard.value || {};
+  return c.id ?? c._id ?? c.cardId ?? null;
+}
+
+/**
+ * Normalized emit for actions so consumers always receive { to: string | object } or a fallback.
+ */
 function handleAction(action, idx) {
   menuOpen.value = false
-  emit('action', { action, idx })
+
+  // If action already has `to`, try to patch params.id when necessary
+  if (action && action.to) {
+    if (typeof action.to === 'object' && (!action.to.params || !action.to.params.id)) {
+      const idFromCard = buildCardId()
+      if (idFromCard) {
+        action.to = { ...(action.to || {}), params: { ...(action.to.params || {}), id: idFromCard } }
+      }
+    }
+    emit('action', action)
+    return
+  }
+
+  // If action is a plain string path
+  if (typeof action === 'string') {
+    emit('action', { to: action })
+    return
+  }
+
+  // If action has cardId or value.cardId, or fallback to discovered id
+  const cardId = action?.cardId ?? action?.value?.cardId ?? buildCardId()
+  if (cardId) {
+    emit('action', { to: `/cards/${cardId}` })
+    return
+  }
+
+  // final fallback: emit what we got
+  emit('action', action)
 }
+
 
 /* ------------------ Outside Click Watcher ------------------ */
 function onDocumentClick(e) {

@@ -40,16 +40,24 @@
           </div>
 
           <div class="card-list">
-            <Card
+            <!-- CHANGED: wrapper makes the entire card clickable as fallback -->
+            <div
               v-for="cardItem in cards"
-              :key="cardItem.id"
-              :card="cardItem"
-              :userName="user.name"
-              :showMenu="true"
-              :actions="cardActions(cardItem)"
-              @action="onCardAction"
-              @block="onToggleBlock"
-            />
+              :key="cardItem.id ?? cardItem._id ?? cardItem.cardId"
+              class="card-click-wrapper"
+              @click.stop="goToCard(cardItem)"
+              style="cursor: pointer;"
+            >
+              <Card
+                :card="cardItem"
+                :userName="user.name"
+                :showMenu="true"
+                :actions="cardActions(cardItem)"
+                @action.stop="onCardAction"
+                @block.stop="onToggleBlock"
+              />
+            </div>
+            <!-- END CHANGED -->
           </div>
         </div>
 
@@ -87,12 +95,12 @@
 </template>
 
 <script>
-import axios from "axios";
 import Card from "../../components/Card.vue";
 import { useRouter } from "vue-router";
+import { getDashboard } from "../../services/dashboardService";
 
 export default {
-  name: "DashboardView",
+  name: "Dashboard",
   components: { Card },
   data() {
     return {
@@ -108,6 +116,8 @@ export default {
       transactions: [],
       showFull: {},
       openMenu: null,
+      loading: false,
+      error: null,
     };
   },
   created() {
@@ -119,29 +129,51 @@ export default {
   },
   methods: {
     async loadDashboard() {
+      this.loading = true;
+      this.error = null;
       try {
-        const response = await axios.get("/data/dashboard.json");
-        const data = response.data;
+        const data = await getDashboard();
+        console.debug("[Dashboard] getDashboard response:", data);
 
-        this.user = data.user || this.user;
+        if (!data) {
+          this.error = "No dashboard data received";
+          return;
+        }
 
-        this.summary.activeCards = data.activeCards ?? (data.cards ? data.cards.length : 0);
-        this.summary.totalCards = data.totalCards ?? (data.cards ? data.cards.length : 0);
-        this.summary.totalLimit = data.totalLimit ?? this.sum(data.cards, "totalLimit");
-        this.summary.availableCredit = data.availableCredit ?? this.sum(data.cards, "availableLimit");
-        this.summary.outstanding = data.outstanding ?? 0;
+        // user
+        this.user.name = data.userName || (data.user && data.user.name) || this.user.name;
 
-        this.cards = data.cards || [];
-        this.transactions = data.transactions || [];
+        // summary
+        if (data.summary) {
+          this.summary.activeCards = data.summary.activeCards ?? this.summary.activeCards;
+          this.summary.totalCards = data.summary.totalCards ?? this.summary.totalCards;
+          this.summary.totalLimit = data.summary.totalLimit ?? this.summary.totalLimit;
+          this.summary.availableCredit = data.summary.availableCredit ?? this.summary.availableCredit;
+          this.summary.outstanding = data.summary.outstanding ?? this.summary.outstanding;
+        }
 
+        // cards & transactions
+        this.cards = Array.isArray(data.cards) ? data.cards : [];
+        this.transactions = Array.isArray(data.transactions) ? data.transactions : [];
+
+        // initialize showFull map for cards (Vue 3 friendly)
         this.cards.forEach((cardItem) => {
-          this.$set(this.showFull, cardItem.id, false);
+          const id = cardItem.id ?? cardItem._id ?? cardItem.cardId;
+          if (id) {
+            this.showFull[id] = false;
+          }
         });
+
+        console.debug("[Dashboard] loaded cards:", this.cards.length, "transactions:", this.transactions.length);
       } catch (err) {
-        console.error("Failed to load dashboard JSON:", err);
+        console.error("Failed to load dashboard from service:", err);
+        this.error = "Failed to load dashboard";
+      } finally {
+        this.loading = false;
       }
     },
 
+    // helpers (unchanged)
     maskNumber(cardNumber) {
       if (!cardNumber) return "";
       const onlyDigits = cardNumber.toString();
@@ -166,7 +198,8 @@ export default {
     },
 
     toggleCardNumber(cardId) {
-      this.$set(this.showFull, cardId, !this.showFull[cardId]);
+      // Vue 3: direct assignment is reactive for plain objects in data()
+      this.showFull[cardId] = !this.showFull[cardId];
     },
     toggleMenu(cardId) {
       this.openMenu = this.openMenu === cardId ? null : cardId;
@@ -184,30 +217,129 @@ export default {
     },
 
     cardActions(card) {
+      // Return a simple string path first — fewer surprises when emitted
+      const id = card.id ?? card._id ?? card.cardId ?? "";
+      const path = id ? `/cards/${id}` : "/cards";
       return [
-        { label: "View Details", to: { name: "CardDetail", params: { id: card.id } } },
-        { label: card.status === "BLOCKED" ? "Unblock" : "Block", value: { type: "toggle-block" } }
+        { label: "View Details", to: path },
+        { label: card.status === "BLOCKED" ? "Unblock" : "Block", value: { type: "toggle-block", cardId: id } }
       ];
     },
 
-    onCardAction({ action }) {
-      if (!action) return;
-      if (action.to) {
-        if (this.$router) this.$router.push(action.to);
-        else {
-          const router = useRouter ? useRouter() : null;
-          if (router) router.push(action.to);
-          else console.warn("Router not available to navigate to", action.to);
-        }
-      } else if (action.value?.type === "toggle-block") {
-        console.log("toggle-block action received; update your onCardAction to include card id if needed", action);
-      } else {
-        console.log("Unhandled card action", action);
+    // CHANGED: new helper to force navigation when needed
+    goToCard(card) {
+      const id = card?.id ?? card?._id ?? card?.cardId;
+      if (!id) {
+        console.warn("[Dashboard] goToCard: no id on card", card);
+        return;
       }
+      const path = `/cards/${id}`;
+      console.info("[Dashboard] goToCard -> navigating to", path);
+      if (this.$router && typeof this.$router.push === "function") {
+        this.$router.push(path).catch((e) => {
+          console.warn("[Dashboard] router.push error (fallback to hard redirect):", e);
+          window.location.href = path;
+        });
+      } else {
+        console.warn("[Dashboard] router not available, using window.location.href");
+        window.location.href = path;
+      }
+    },
+
+    // CHANGED: robust onCardAction with logging and fallback navigation
+    async onCardAction(payload) {
+      console.info("[Dashboard] onCardAction called with payload:", payload);
+
+      const raw = payload?.action ?? payload;
+      if (!raw) {
+        console.warn("[Dashboard] onCardAction: no action in payload", payload);
+        return;
+      }
+
+      const to = raw.to ?? raw.action?.to;
+      if (to) {
+        console.info("[Dashboard] onCardAction: resolved to =", to);
+
+        if (typeof to === "string") {
+          try {
+            if (this.$router && typeof this.$router.push === "function") {
+              await this.$router.push(to);
+              return;
+            }
+          } catch (err) {
+            console.warn("[Dashboard] router.push threw, falling back:", err);
+          }
+          window.location.href = to;
+          return;
+        }
+
+        if (typeof to === "object") {
+          try {
+            if (this.$router && typeof this.$router.push === "function") {
+              await this.$router.push(to);
+              return;
+            }
+          } catch (err) {
+            console.warn("[Dashboard] router.push(object) threw, trying to build path:", err);
+          }
+
+          const id = to.params?.id ?? to.params?.cardId ?? raw.cardId ?? raw.value?.cardId;
+          if (id) {
+            const path = `/cards/${id}`;
+            window.location.href = path;
+            return;
+          }
+        }
+      }
+
+      if (raw.value?.type === "toggle-block" || raw.type === "toggle-block") {
+        const cid = raw.value?.cardId ?? raw.cardId ?? payload?.card?.id;
+        if (cid) {
+          const found = this.cards.find(c => (c.id ?? c._id ?? c.cardId) === cid);
+          if (found) {
+            found.status = found.status === "BLOCKED" ? "ACTIVE" : "BLOCKED";
+          }
+        }
+        return;
+      }
+
+      const cardId = raw.cardId ?? raw.value?.cardId ?? payload?.card?.id ?? payload?.id;
+      if (cardId) {
+        const path = `/cards/${cardId}`;
+        console.info("[Dashboard] onCardAction fallback navigating to", path);
+        if (this.$router && typeof this.$router.push === "function") {
+          this.$router.push(path).catch(e => {
+            console.warn("[Dashboard] router.push fallback error:", e);
+            window.location.href = path;
+          });
+        } else {
+          window.location.href = path;
+        }
+        return;
+      }
+
+      const maybeCard = payload?.card ?? payload?.action?.card;
+      if (maybeCard) {
+        const id = maybeCard.id ?? maybeCard._id ?? maybeCard.cardId;
+        if (id) {
+          const path = `/cards/${id}`;
+          console.info("[Dashboard] onCardAction last-resort navigate to", path);
+          if (this.$router && typeof this.$router.push === "function") {
+            this.$router.push(path).catch(() => (window.location.href = path));
+          } else {
+            window.location.href = path;
+          }
+          return;
+        }
+      }
+
+      console.warn("[Dashboard] onCardAction: could not determine navigation target from payload", payload);
     }
   }
 };
 </script>
+
+
 
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap");

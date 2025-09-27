@@ -4,7 +4,7 @@
       <div class="page-header">
         <div class="title-block">
           <h1 class="page-title">Card Details</h1>
-          <p class="page-sub">Manage your {{ card?.network || 'VISA' }} card ending in <strong>{{ cardLastFour }}</strong></p>
+          <p class="page-sub">Manage your {{ card?.cardType?.name || card?.network || 'VISA' }} card ending in <strong>{{ cardLastFour }}</strong></p>
         </div>
 
         <div class="renderBack">
@@ -16,7 +16,7 @@
         <div class="left">
           <Card
             v-if="card"
-            :card="card"
+            :card="cardPresentation"
             :userName="userName"
             :showMenu="false"
             :actions="cardActionsMenu"
@@ -31,7 +31,7 @@
             <p class="muted">Manage your card settings and limits</p>
 
             <div class="action-controls">
-              <button class="update-btn" @click="openLimitModal">↗ Update Credit Limit</button>
+              <button class="update-btn" @click="openLimitModal" :disabled="loading">↗ Update Credit Limit</button>
             </div>
           </div>
         </div>
@@ -45,7 +45,7 @@
               <div class="ov-left">
                 <div class="row">
                   <div class="rlabel">Credit Limit</div>
-                  <div class="rval">₹{{ formatINR(card?.totalLimit || fallbackTotalLimit) }}</div>
+                  <div class="rval">₹{{ formatINR(card?.creditLimit || card?.totalLimit || fallbackTotalLimit) }}</div>
                 </div>
 
                 <div class="row">
@@ -66,6 +66,17 @@
                 <div class="progress-wrap">
                   <div class="progress util-danger" :style="{ width: utilizationPercentage + '%' }"></div>
                 </div>
+
+                <div class="row card-number-row" v-if="card">
+                  <div class="rlabel">Card Number</div>
+                  <div class="rval">
+                    <span>{{ showFullNumber ? (fullPan || card.cardNumber || card.number) : (card.cardNumber || card.number) }}</span>
+                    <button class="link-btn" @click="toggleShowFull" :disabled="loadingPan || loading">
+                      {{ showFullNumber ? 'Hide' : (loadingPan ? 'Loading...' : 'Show') }}
+                    </button>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -96,87 +107,78 @@
     <UpdateCreditLimitModal
       v-if="card"
       v-model="isLimitModalOpen"
-      :currentLimit="card?.totalLimit"
+      :currentLimit="Number(card.creditLimit ?? card.totalLimit ?? fallbackTotalLimit)"
       :outstanding="calculatedOutstanding"
       @next="handleLimitNext"
-    />
-
-    <ConfirmIdentityModal
-      v-if="card"
-      v-model="isConfirmModalOpen"
-      :amount="pendingLimit"
-      :serverError="confirmErrorMessage"
-      @verified="onVerifiedPassword"
     />
   </div>
 </template>
 
 <script>
-import axios from 'axios'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Card from '../../components/Card.vue'
 import UpdateCreditLimitModal from '../../components/UpdateCreditLimitModal.vue'
-import ConfirmIdentityModal from '../../components/ConfirmIdentityModal.vue'
+import { getCardById, getCardPan, updateCardLimit } from '../../services/dashboardService'
 
 export default {
   name: 'CardDetail',
-  components: { Card, UpdateCreditLimitModal, ConfirmIdentityModal },
+  components: { Card, UpdateCreditLimitModal }, // <-- ConfirmIdentityModal removed
   setup() {
     const route = useRoute()
     const router = useRouter()
 
     const card = ref(null)
     const userName = ref('')
-    const loading = ref(true)
+    const loading = ref(false)
     const error = ref(null)
-    const isMasked = ref(true)
     const fallbackTotalLimit = ref(0)
     const fallbackAvailableCredit = ref(0)
-    const fallbackOutstanding = ref(0)
     const transactions = ref([])
 
     const isLimitModalOpen = ref(false)
-    const isConfirmModalOpen = ref(false)
     const pendingLimit = ref(0)
-    const confirmErrorMessage = ref(null)
+    const updating = ref(false)
+
+    const showFullNumber = ref(false)
+    const fullPan = ref(null)
+    const loadingPan = ref(false)
 
     const cardLastFour = computed(() => {
-      if (!card.value || !card.value.number) return '1234'
-      return String(card.value.number).replace(/\s+/g,'').slice(-4)
+      if (!card.value) return '1234'
+      const num = card.value.cardNumber ?? card.value.number
+      if (!num) return '1234'
+      return String(num).replace(/\s+/g,'').slice(-4)
     })
 
-    const cardLast4 = cardLastFour 
+    const cardPresentation = computed(() => {
+      if (!card.value) return null
+      return {
+        id: card.value.id ?? card.value.cardId,
+        name: card.value.cardType?.name ?? card.value.name ?? 'Card',
+        number: card.value.cardNumber ?? card.value.number,
+        totalLimit: Number(card.value.creditLimit ?? card.value.totalLimit ?? 0),
+        availableLimit: Number(card.value.availableLimit ?? 0),
+        status: card.value.cardStatus ?? card.value.status
+      }
+    })
 
     const calculatedOutstanding = computed(() => {
-      if (!card.value) return fallbackOutstanding.value || 0
-      if (card.value.outstanding !== undefined) return Number(card.value.outstanding)
-      const total = Number(card.value.totalLimit || fallbackTotalLimit.value || 0)
-      const avail = Number(card.value.availableLimit ?? fallbackAvailableCredit.value ?? 0)
+      if (!card.value) return 0
+      if (card.value.outstanding !== undefined && card.value.outstanding !== null) return Number(card.value.outstanding)
+      const total = Number(card.value?.creditLimit ?? card.value?.totalLimit ?? (fallbackTotalLimit.value || 0))
+      const avail = Number(card.value?.availableLimit ?? fallbackAvailableCredit.value ?? 0)
       return Math.max(0, total - avail)
     })
 
     const utilizationPercentage = computed(() => {
-      const total = Number(card.value?.totalLimit || fallbackTotalLimit.value || 0)
+      const total = Number(card.value?.creditLimit ?? card.value?.totalLimit ?? (fallbackTotalLimit.value || 0))
       const out = Number(calculatedOutstanding.value || 0)
       if (!total) return 0
       return Math.round((out / total) * 100)
     })
 
-    const recentTransactionsList = computed(() => {
-      return (transactions.value || []).slice(0, 6)
-    })
-
-    function maskCardNumber(cardNumber) {
-      if (!cardNumber) return '**** **** **** 1234'
-      const digitsOnly = String(cardNumber).replace(/\s+/g,'')
-      return '**** **** **** ' + digitsOnly.slice(-4)
-    }
-
-    function formatCardNumber(cardNumber) {
-      if (!cardNumber) return '1111 2222 3333 4444'
-      return String(cardNumber).replace(/\s+/g,'').replace(/(\d{4})(?=\d)/g, '$1 ')
-    }
+    const recentTransactionsList = computed(() => (transactions.value || []).slice(0, 6))
 
     function formatINR(amount) {
       const numericValue = Number(amount || 0)
@@ -195,13 +197,6 @@ export default {
       return dateObj.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     }
 
-    function toggleMask() { isMasked.value = !isMasked.value }
-
-    function toggleCardBlock(cardItem) {
-      if (!cardItem) return
-      cardItem.status = cardItem.status === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED'
-    }
-
     const cardActionsMenu = computed(() => {
       const id = card.value?.id || ''
       return [
@@ -213,13 +208,7 @@ export default {
 
     function handleCardAction({ action }) {
       if (!action) return
-      if (action.to) {
-        router.push(action.to)
-      } else if (action.value?.type === 'toggle-block') {
-        toggleCardBlock(card.value)
-      } else {
-        console.log('card action', action)
-      }
+      if (action.to) router.push(action.to)
     }
 
     function handleCardBlock(payload) {
@@ -227,96 +216,172 @@ export default {
       payload.card.status = payload.newStatus
     }
 
-    function handleLimitNext(payload) {
+    function openLimitModal() {
+      if (!card.value) return
+      isLimitModalOpen.value = true
+    }
+
+    async function handleLimitNext(payload) {
       const selectedNewLimit = Number(payload?.newLimit || 0)
       if (!selectedNewLimit) return
       pendingLimit.value = selectedNewLimit
       isLimitModalOpen.value = false
-      confirmErrorMessage.value = null
-      setTimeout(() => isConfirmModalOpen.value = true, 160)
-    }
+      updating.value = true
 
-    async function onVerifiedPassword({ password }) {
-      confirmErrorMessage.value = null
-      try {
-        await new Promise(resolve => setTimeout(resolve, 600))
-        if (card.value) {
-          card.value.totalLimit = Number(pendingLimit.value)
-        }
-        isConfirmModalOpen.value = false
-        console.log('Limit successfully updated to', pendingLimit.value)
-      } catch (err) {
-        console.error('verification/update failed', err)
-        const msg = err?.response?.data?.message || (err.message || 'Verification failed')
-        confirmErrorMessage.value = String(msg)
-      }
-    }
-
-    function openLimitModal() {
-      if (!card.value) {
-        console.warn('No card selected to update limit for.')
+      const id = card.value?.id || route.params.id
+      if (!id) {
+        alert('Invalid card id')
+        updating.value = false
         return
       }
-      isLimitModalOpen.value = true
-    }
 
-    function closeLimitModal() {
-      isLimitModalOpen.value = false
-    }
-
-    const loadData = async () => {
       try {
-        const res = await axios.get('/data/dashboard.json')
-        const data = res.data
-        userName.value = data.user?.name || 'User'
-        fallbackTotalLimit.value = (data.totalLimit ?? data.cards?.reduce((sum, cardItem) => sum + (Number(cardItem.totalLimit) || 0), 0)) || 0
-        fallbackAvailableCredit.value = data.availableCredit ?? 0
-        fallbackOutstanding.value = data.outstanding ?? 0
-        transactions.value = data.transactions || []
-
-        const idToFind = route.params.id || (data.cards?.[0]?.id)
-        card.value = (data.cards || []).find(c => String(c.id) === String(idToFind)) || data.cards?.[0] || null
+        const res = await updateCardLimit(id, Number(pendingLimit.value))
+        const updated = res
+        if (updated && (updated.newLimit !== undefined || updated.availableLimit !== undefined)) {
+          await loadCard()
+        } else if (updated && updated.card) {
+          card.value = updated.card
+          transactions.value = updated.transactions || []
+        } else {
+          await loadCard()
+        }
+        window.dispatchEvent(new CustomEvent('card-updated', { detail: { cardId: id } }))
+        pendingLimit.value = 0
+        alert('Limit updated successfully')
       } catch (err) {
-        console.error(err)
-        error.value = 'Failed to load data'
+        console.error('Failed to update limit', err)
+        const msg = err?.response?.data?.message || err?.message || 'Update failed'
+        alert(`Failed to update limit: ${String(msg)}`)
       } finally {
-        loading.value = false
+        updating.value = false
       }
     }
 
-    onMounted(loadData)
+    async function toggleShowFull() {
+      if (showFullNumber.value) {
+        showFullNumber.value = false
+        return
+      }
+      if (fullPan.value) {
+        showFullNumber.value = true
+        return
+      }
+      loadingPan.value = true
+      try {
+        const id = route.params.id
+        const pan = await getCardPan(id)
+        fullPan.value = pan
+        showFullNumber.value = true
+      } catch (err) {
+        console.error('Unable to fetch full PAN', err)
+        alert('Unable to show full card number. Make sure you are the card owner.')
+      } finally {
+        loadingPan.value = false
+      }
+    }
+
+    async function loadCard() {
+      loading.value = true;
+      error.value = null;
+      console.log('loadCard(): route.id =', route.params.id);
+
+      try {
+        const id = route.params.id;
+        if (!id) {
+          error.value = 'No card id provided';
+          console.warn('loadCard: no route param id');
+          return;
+        }
+
+        // debug: show token presence (remove in prod)
+        console.log('loadCard: token present=', !!localStorage.getItem('token'));
+
+        // call service (which uses axios instance with interceptor)
+        const resp = await getCardById(id);
+        console.log('loadCard: getCardById response =', resp);
+
+        // Case A: backend returns a wrapper { card: {...}, transactions: [...] }
+        if (resp && resp.card) {
+          card.value = resp.card;
+          transactions.value = resp.transactions || [];
+          console.log('loadCard: set from resp.card');
+          return;
+        }
+
+        // Case B: backend returns the card object directly
+        const looksLikeCard = resp && (resp.id || resp.cardNumber || resp.creditLimit || resp.totalLimit);
+        if (looksLikeCard) {
+          card.value = resp;
+          // if resp contains transactions array (sometimes included), use it
+          transactions.value = resp.transactions || [];
+          console.log('loadCard: set from direct card object');
+          return;
+        }
+
+        // Case C: backend returned a dashboard-like object: { cards: [...] }
+        if (resp && Array.isArray(resp.cards)) {
+          const found = resp.cards.find(c => String(c.id) === String(id) || String(c.cardId) === String(id));
+          if (found) {
+            card.value = found;
+            transactions.value = resp.transactions || [];
+            console.log('loadCard: found card in resp.cards');
+            return;
+          }
+        }
+
+        // nothing matched
+        console.warn('loadCard: response did not contain card data', resp);
+        error.value = 'Card data not available from server';
+      } catch (err) {
+        console.error('loadCard: failed', err);
+        // show sensible message
+        if (err?.response) {
+          // axios error with response
+          console.error('status', err.response.status, 'data', err.response.data);
+          if (err.response.status === 401 || err.response.status === 403) {
+            error.value = 'You are not authorized. Please login.';
+          } else if (err.response.status === 404) {
+            error.value = 'Card not found (404).';
+          } else {
+            error.value = err.response.data?.message || 'Server error while loading card';
+          }
+        } else {
+          error.value = err.message || 'Network error';
+        }
+      } finally {
+        loading.value = false;
+      }
+    }
+
+
+    onMounted(loadCard)
 
     return {
       card,
       userName,
       loading,
       error,
-      isMasked,
-      cardLast4,
+      isLimitModalOpen,
+      pendingLimit,
+      updating,
       cardLastFour,
-      maskCardNumber,
-      formatCardNumber,
+      cardPresentation,
+      calculatedOutstanding,
+      utilizationPercentage,
+      recentTransactionsList,
       formatINR,
       formatCurrency,
       formatDateTime,
-      utilizationPercentage,
-      recentTransactionsList,
-      calculatedOutstanding,
-      fallbackTotalLimit,
-      fallbackAvailableCredit,
-      toggleMask,
-      toggleCardBlock,
       cardActionsMenu,
       handleCardAction,
       handleCardBlock,
-      isLimitModalOpen,
-      handleLimitNext,
       openLimitModal,
-      closeLimitModal,
-      isConfirmModalOpen,
-      pendingLimit,
-      confirmErrorMessage,
-      onVerifiedPassword
+      handleLimitNext,
+      showFullNumber,
+      fullPan,
+      loadingPan,
+      toggleShowFull
     }
   }
 }
@@ -324,6 +389,16 @@ export default {
 
 
 <style scoped>
+.link-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  margin-left: 8px;
+  font-size: 0.9rem;
+}
+.link-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 :root{
   --bg: #f6f7f9;
   --accent: #0b2540;
