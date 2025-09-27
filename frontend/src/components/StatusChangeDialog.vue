@@ -6,7 +6,7 @@
       @click.self="cancel"
     >
       <div
-        class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl transform transition-all"
+        class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl transform transition-all width-350"
       >
         <!-- Header -->
         <div class="flex items-center justify-between mb-4">
@@ -101,5 +101,8 @@ export default defineComponent({
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+.width-350{
+  width: 350px;
 }
 </style>
