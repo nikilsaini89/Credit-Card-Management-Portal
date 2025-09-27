@@ -3,6 +3,8 @@ import AuthView from "../views/Users/AuthView.vue";
 import UserProfile from "../components/UserProfile.vue";
 import store from "../store";
 import Login from "../views/Login.vue";
+import CardApplicationPage from "../views/Users/CardApplicationPage.vue";
+import CardApplicationHistoryPage from "../views/Users/CardApplicationHistoryPage.vue";
 
 
 const Dashboard = () => import("../views/Users/Dashboard.vue");
@@ -64,37 +66,17 @@ const routes = [
     path: "/apply-card",
     name: "ApplyCard",
     component: { template: "<div class='p-8 text-center'><h1 class='text-2xl font-bold text-gray-900'>Apply Card</h1><p class='text-gray-600 mt-2'>This feature is coming soon!</p></div>" },
+  },
+  {
+    path: "/apply-card",
+    name: "ApplyCard",
+    component: CardApplicationPage,
+  },
+  {
+    path : "/my-applications",
+    name : "MyApplications",
+    component : CardApplicationHistoryPage
   }
-  // {
-  //   path: "/my-cards",
-  //   name: "MyCards",
-  //   component: () => import("../views/Users/MyCards.vue"), 
-  // },
-  // {
-  //   path: "/transactions",
-  //   name: "Transactions",
-  //   component: () => import("../views/Users/Transactions.vue"), 
-  // },
-  // {
-  //   path: "/apply-card",
-  //   name: "ApplyCard",
-  //   component: { template: "<div>Apply Card Page (placeholder)</div>" },
-  // },
-  // {
-  //   path: "/new-transaction",
-  //   name: "NewTransaction",
-  //   component: { template: "<div>New Transaction Page (placeholder)</div>" },
-  // },
-  // {
-  //   path: "/profile",
-  //   name: "Profile",
-  //   component: { template: "<div>Profile Page (placeholder)</div>" },
-  // },
-  // {
-  //   path: "/my-cards/:id",
-  //   name: "CardDetail",
-  //   component: { template: "<div>Card Details Page (placeholder)</div>" },
-  // },
 ];
 
 const router = createRouter({
