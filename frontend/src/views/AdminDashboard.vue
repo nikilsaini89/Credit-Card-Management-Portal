@@ -108,10 +108,18 @@ const store = useStore()
 
 // Reactive data
 const loading = ref(true)
-const adminName = ref('Ayesha') // This could be fetched from user profile
 
 // Computed properties
 const applications = computed(() => store.getters['applications/applications'] || [])
+const user = computed(() => store.getters['auth/user'])
+const adminName = computed(() => {
+  if (user.value && user.value.name) {
+    return user.value.name
+  }
+  const email = store.getters['auth/userRole'] ? 'Admin' : 'User'
+  return email
+})
+
 const totalApplications = computed(() => applications.value.length)
 const pendingApplications = computed(() => 
   applications.value.filter(app => app.status === APPLICATION_STATUS.PENDING).length
