@@ -1,5 +1,6 @@
 package com.ccms.portal.dto.response;
 
+import com.ccms.portal.enums.TransactionStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,6 +25,6 @@ public class TransactionResponse {
     private Boolean isBnpl;
     private String cardType;
     private String lastFour;
-    private String status;
+    private TransactionStatus status;
     private LocalDateTime createdAt;
 }
