@@ -110,6 +110,19 @@ const processing = ref(false)
 // Computed properties
 const applications = computed(() => store.getters['applications/applications'] || [])
 const loading = computed(() => store.getters['applications/loading'])
+const user = computed(() => store.getters['auth/user'])
+
+// Get current admin name
+const currentAdminName = computed(() => {
+  if (user.value && user.value.name) {
+    return user.value.name
+  }
+  // Fallback to email or generic admin name
+  if (user.value && user.value.email) {
+    return user.value.email.split('@')[0] // Extract name from email
+  }
+  return 'Admin'
+})
 
 // Methods
 const handleApprove = async (applicationId: number) => {
@@ -165,7 +178,8 @@ const getStatusBadgeClass = (status: string) => {
 const getReviewerMessage = (application: CardApplication) => {
   const isApproved = application.status === APPLICATION_STATUS.ACCEPTED
   const actionText = isApproved ? APPLICATION_MESSAGES.APPROVED_BY : APPLICATION_MESSAGES.REJECTED_BY
-  return `${actionText} ${application.reviewerName} ${APPLICATION_MESSAGES.ON} ${formatDate(application.reviewDate!)}`
+  const reviewerName = application.reviewerName || currentAdminName.value
+  return `${actionText} ${reviewerName} ${APPLICATION_MESSAGES.ON} ${formatDate(application.reviewDate!)}`
 }
 
 // Load applications on component mount if not already loaded
