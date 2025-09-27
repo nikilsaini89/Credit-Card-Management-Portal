@@ -33,4 +33,13 @@ public class CardApplicationEntity {
     private Long reviewerId;
     private LocalDateTime reviewDate;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cardTypeId", insertable = false, updatable = false)
+    private CardTypeEntity cardType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewerId", insertable = false, updatable = false)
+    private UserEntity reviewer;  // 👈 this lets us access reviewer.getName()
+
+
 }
