@@ -95,6 +95,7 @@ export default {
   async created() {
     try {
       const fetchedCards = await getCardTypes();
+      console.log("Fetched cards from backend:", fetchedCards);
 
       // 🔑 Map backend structure to the expected frontend structure
       this.cards = fetchedCards.map(card => ({
