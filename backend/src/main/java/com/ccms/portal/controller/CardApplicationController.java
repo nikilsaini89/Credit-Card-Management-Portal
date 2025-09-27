@@ -25,8 +25,8 @@ public class CardApplicationController {
         return new ResponseEntity<>(savedApplication,HttpStatus.CREATED);
     }
     @GetMapping
-    public ResponseEntity<List<CardApplicationEntity>> getApplications(){
-        List<CardApplicationEntity> savedApplications = cardApplicationService.getApplications();
+    public ResponseEntity<List<CardApplicationResponse>> getApplications(){
+        List<CardApplicationResponse> savedApplications = cardApplicationService.getApplications();
         return new ResponseEntity<>(savedApplications,HttpStatus.CREATED);
     }
 
