@@ -12,7 +12,7 @@ public class CardApplicationResponse {
 
     private final Long id;
     private final Long userId;
-//    private final Long cardTypeId;
+    private final Long cardTypeId;
     private final Long requestedLimit;
     private final LocalDateTime applicationDate;
     private final CardApplicationStatus status;
@@ -22,7 +22,7 @@ public class CardApplicationResponse {
     public CardApplicationResponse(CardApplicationEntity entity) {
         this.id = entity.getId();
         this.userId = entity.getUserId();
-//        this.cardTypeId = entity.getCardTypeId();
+        this.cardTypeId = entity.getCardTypeId();
         this.requestedLimit = entity.getRequestedLimit();
         this.applicationDate = entity.getApplicationDate();
         this.status = entity.getStatus();
