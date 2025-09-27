@@ -12,7 +12,7 @@ public class CardApplicationResponse {
 
     private Long id;
     private Long userId;
-    private String userName;                // 👈 new field
+    private String userName;
     private String cardTypeName;
     private String cardNetworkType;
     private Long requestedLimit;
@@ -25,7 +25,7 @@ public class CardApplicationResponse {
     public CardApplicationResponse(CardApplicationEntity entity) {
         this.id = entity.getId();
         this.userId = entity.getUserId();
-        this.userName = entity.getUser() != null ? entity.getUser().getName() : null;  // 👈
+        this.userName = entity.getUser() != null ? entity.getUser().getName() : null;
         this.cardTypeName = entity.getCardType() != null ? entity.getCardType().getName() : null;
         this.cardNetworkType = entity.getCardType() != null ? entity.getCardType().getNetworkType().name() : null;
         this.requestedLimit = entity.getRequestedLimit();

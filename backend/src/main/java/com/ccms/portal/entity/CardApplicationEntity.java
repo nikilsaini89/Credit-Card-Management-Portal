@@ -39,10 +39,10 @@ public class CardApplicationEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewerId", insertable = false, updatable = false)
-    private UserEntity reviewer;  // 👈 this lets us access reviewer.getName()
+    private UserEntity reviewer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "userId", insertable = false, updatable = false)
-    private UserEntity user;    // 👈 applicant user object
+    private UserEntity user;
 
 }
