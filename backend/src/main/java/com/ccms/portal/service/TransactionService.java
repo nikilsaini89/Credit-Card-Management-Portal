@@ -8,6 +8,7 @@ import com.ccms.portal.entity.CreditCardEntity;
 import com.ccms.portal.entity.MerchantAccount;
 import com.ccms.portal.entity.Transaction;
 import com.ccms.portal.entity.Transaction.TransactionStatus;
+import com.ccms.portal.exception.ResourceNotFoundException;
 import com.ccms.portal.repository.CreditCardRepository;
 import com.ccms.portal.repository.MerchantAccountRepository;
 import com.ccms.portal.repository.TransactionRepository;
@@ -39,11 +40,12 @@ public class TransactionService {
 
     // Validate card exists
     CreditCardEntity card = creditCardRepository.findById(request.getCardId())
-        .orElseThrow(() -> new RuntimeException("Card not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("Card not found with ID: " + request.getCardId()));
 
     // Validate merchant account exists
     MerchantAccount merchantAccount = merchantAccountRepository.findById(request.getMerchantAccountId())
-        .orElseThrow(() -> new RuntimeException("Merchant account not found"));
+        .orElseThrow(() -> new ResourceNotFoundException(
+            "Merchant account not found with ID: " + request.getMerchantAccountId()));
 
     // Create transaction
     Transaction transaction = new Transaction();
@@ -162,7 +164,7 @@ public class TransactionService {
     log.info("Fetching transaction by ID: {}", transactionId);
 
     Transaction transaction = transactionRepository.findById(transactionId)
-        .orElseThrow(() -> new RuntimeException("Transaction not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("Transaction not found with ID: " + transactionId));
 
     return mapToTransactionResponse(transaction);
   }
@@ -172,7 +174,7 @@ public class TransactionService {
     log.info("Deleting transaction: {}", transactionId);
 
     if (!transactionRepository.existsById(transactionId)) {
-      throw new RuntimeException("Transaction not found");
+      throw new ResourceNotFoundException("Transaction not found with ID: " + transactionId);
     }
 
     transactionRepository.deleteById(transactionId);

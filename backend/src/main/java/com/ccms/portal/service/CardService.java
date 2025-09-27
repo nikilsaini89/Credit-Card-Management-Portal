@@ -76,4 +76,12 @@ public class CardService {
                 CreditCardEntity savedEntity = cardRepository.save(creditCard);
                 return cardHelper.buildCreditCardResponse(savedEntity);
         }
+
+        public CreditCardResponse getCardById(Long cardId) {
+                CreditCardEntity creditCard = cardRepository.findById(cardId)
+                                .orElseThrow(() -> new CreditCardNotFoundException(
+                                                "Credit Card not found with card Id: " + cardId));
+
+                return cardHelper.buildCreditCardResponse(creditCard);
+        }
 }

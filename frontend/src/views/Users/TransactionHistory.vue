@@ -31,7 +31,7 @@
         <!-- Main Content -->
         <div>
           <!-- Bill Cycle Information -->
-          <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-4 sm:p-6 mb-6">
+          <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-4 sm:p-6 mb-6" v-if="!store.state.bills?.loading && bill">
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center">
                 <div class="h-8 w-8 rounded-lg flex items-center justify-center mr-3" style="background: #ffd60a;">
@@ -43,41 +43,59 @@
               </div>
               <div class="text-right">
                 <div class="text-sm font-medium text-gray-600">Statement Date</div>
-                <div class="text-lg font-bold" style="color: #0b2540;">14 Oct 2024</div>
+                <div class="text-lg font-bold" style="color: #0b2540;">
+                  {{ bill ? new Date(bill.statementDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Loading...' }}
+                </div>
               </div>
             </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Total Statement Amount</div>
-                <div class="text-2xl font-bold" style="color: #0b2540;">₹ 34,948.00</div>
+                <div class="text-2xl font-bold" style="color: #0b2540;">
+                  {{ bill ? `₹ ${formatNumber(bill.totalStatementAmount)}` : 'Loading...' }}
+                </div>
               </div>
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Amount Due</div>
-                <div class="text-2xl font-bold text-red-600">₹ 34,948.00</div>
-                <div class="text-xs text-gray-500 mt-1">Due on 08 Nov 2024</div>
+                <div class="text-2xl font-bold text-red-600">
+                  {{ bill ? `₹ ${formatNumber(bill.amountDue)}` : 'Loading...' }}
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                  {{ bill ? `Due on ${new Date(bill.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Loading...' }}
+                </div>
               </div>
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Available Credit</div>
-                <div class="text-2xl font-bold text-green-600">₹ 15,052.00</div>
-                <div class="text-xs text-gray-500 mt-1">Out of ₹50,000 limit</div>
+                <div class="text-2xl font-bold text-green-600">
+                  {{ bill ? `₹ ${formatNumber(bill.availableCredit)}` : 'Loading...' }}
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                  {{ bill ? `Out of ₹${formatNumber(bill.creditLimit)} limit` : 'Loading...' }}
+                </div>
               </div>
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Credit Limit Usage</div>
                 <div class="flex items-center justify-between mb-2">
-                  <div class="text-2xl font-bold" style="color: #0b2540;">68%</div>
-                  <div class="text-xs text-gray-500">₹34,948 / ₹50,000</div>
+                  <div class="text-2xl font-bold" style="color: #0b2540;">
+                    {{ bill ? `${bill.creditLimitUsage.toFixed(1)}%` : 'Loading...' }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    {{ bill ? `₹${formatNumber(bill.creditLimit - bill.availableCredit)} / ₹${formatNumber(bill.creditLimit)}` : 'Loading...' }}
+                  </div>
                 </div>
                 <!-- Gauge Meter -->
                 <div class="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden">
                   <div class="absolute top-0 left-0 h-full rounded-full transition-all duration-1000" 
                        :style="{ 
-                         width: '68%', 
+                         width: bill ? `${Math.min(bill.creditLimitUsage, 100)}%` : '0%', 
                          background: 'linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%)' 
                        }">
                   </div>
                 </div>
-                <div class="text-xs text-gray-500 mt-1">You spent 15% more than last month</div>
+                <div class="text-xs text-gray-500 mt-1">
+                  {{ bill ? bill.spendingTrend : 'Loading...' }}
+                </div>
               </div>
             </div>
             
@@ -90,6 +108,19 @@
               </div>
               <button @click="handleBillPayment" class="px-6 py-2 text-sm font-medium text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200" style="background: #0b2540;">
                 PAY NOW
+              </button>
+            </div>
+          </div>
+
+          <!-- Loading State for Bill -->
+          <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-4 sm:p-6 mb-6" v-if="store.state.bills?.loading || !bill">
+            <div class="flex items-center justify-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: #0b2540;"></div>
+              <span class="ml-3 text-gray-600">Loading bill information...</span>
+            </div>
+            <div class="mt-4 text-center">
+              <button @click="fetchBill" class="px-4 py-2 text-sm font-medium text-white rounded-lg" style="background: #0b2540;">
+                Retry Bill Fetch
               </button>
             </div>
           </div>
@@ -455,16 +486,24 @@
       @close-payment="closePayment"
       @payment-success="onPaymentSuccess"
     />
+
+    <!-- Error Boundary -->
+    <ErrorBoundary 
+      :error="store.state.transactions?.error || store.state.analytics?.error || store.state.bnpl?.error || store.state.bills?.error"
+      @retry="handleRetry"
+      @dismiss="handleDismissError"
+    />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useStore } from 'vuex'
 // @ts-ignore
 import { useRouter } from 'vue-router'
 import TransactionTable from '../../components/TransactionTable.vue'
 import BnplSection from '../../components/BnplSection.vue'
 import PaymentFlow from '../../components/PaymentFlow.vue'
+import ErrorBoundary from '../../components/ErrorBoundary.vue'
 import { Chart, registerables } from 'chart.js'
 import jsPDF from 'jspdf'
 
@@ -494,6 +533,8 @@ const router = useRouter()
 const loading = ref(false)
 const categoryChart = ref<HTMLCanvasElement | null>(null)
 const trendsChart = ref<HTMLCanvasElement | null>(null)
+const categoryChartInstance = ref<Chart | null>(null)
+const trendsChartInstance = ref<Chart | null>(null)
 const showPayment = ref(false)
 const paymentAmount = ref(0)
 const paymentType = ref('')
@@ -517,6 +558,7 @@ const showCategoryDropdown = ref(false)
 // Computed properties
 const transactions = computed(() => store.state?.transactions?.transactions || [])
 const cards = computed(() => store.state?.cards?.cards || [])
+const bill = computed(() => store.state?.bills?.bill || null)
 const bnplPlans = computed(() => store.state?.bnpl?.plans || [
   {
     id: '1',
@@ -572,27 +614,24 @@ const bnplPlans = computed(() => store.state?.bnpl?.plans || [
   }
 ])
 const analytics = computed(() => store.state?.analytics?.data || {
-  thisMonth: 1250000,
-  lastMonth: 980000,
-  change: 27.6,
+  thisMonth: 0,
+  lastMonth: 0,
+  change: 0,
   categoryBreakdown: [],
-  topMerchants: []
+  topMerchants: [],
+  monthlyData: []
 })
 
-const categoryBreakdown = computed(() => [
-  { name: 'Shopping', percentage: 45, color: 'bg-yellow-500' },
-  { name: 'Food', percentage: 30, color: 'bg-orange-500' },
-  { name: 'Travel', percentage: 25, color: 'bg-blue-900' }
-])
+const categoryBreakdown = computed(() => analytics.value.categoryBreakdown || [])
 
 
 const summary = computed(() => ({
-  totalTransactions: transactions.value.length || 5,
-  totalSpent: transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 25000000,
-  bnplTransactions: transactions.value.filter((t: Transaction) => t.isBnpl).length || 2,
+  totalTransactions: transactions.value.length || 0,
+  totalSpent: transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0,
+  bnplTransactions: transactions.value.filter((t: Transaction) => t.isBnpl).length || 0,
   avgTransaction: transactions.value.length > 0 
     ? transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0) / transactions.value.length 
-    : 5000000
+    : 0
 }))
 
 const filteredTransactions = computed(() => {
@@ -916,11 +955,20 @@ const exportTransactionsPDF = () => {
   doc.save(`transactions_${new Date().toISOString().split('T')[0]}.pdf`)
 }
 
-const handleEmiPayment = (planId: string, amount: number) => {
-  paymentAmount.value = amount
-  paymentType.value = 'BNPL EMI Payment'
-  dueDate.value = new Date().toISOString()
-  showPayment.value = true
+const handleEmiPayment = async (planId: string, amount: number) => {
+  try {
+    const userId = 1 // TODO: Get from auth store
+    await store.dispatch('bnpl/processEmiPayment', { planId, amount, userId })
+    
+    // Show success message
+    paymentAmount.value = amount
+    paymentType.value = 'BNPL EMI Payment'
+    dueDate.value = new Date().toISOString()
+    showPayment.value = true
+  } catch (error) {
+    console.error('Error processing BNPL payment:', error)
+    // Error will be handled by ErrorBoundary
+  }
 }
 
 const handleBillPayment = () => {
@@ -941,14 +989,44 @@ const onPaymentSuccess = (transactionId: string, amount: number) => {
   }, 2000) 
 }
 
+const handleRetry = async () => {
+  const userId = 7 // TODO: Get from auth store
+  await fetchTransactions()
+  store.dispatch('analytics/fetchAnalytics', userId)
+  store.dispatch('bnpl/fetchActivePlans', userId)
+  await fetchBill()
+}
+
+const handleDismissError = () => {
+  store.commit('transactions/SET_ERROR', null)
+  store.commit('analytics/SET_ERROR', null)
+  store.commit('bnpl/SET_ERROR', null)
+  store.commit('bills/SET_ERROR', null)
+}
+
 const fetchTransactions = async () => {
   loading.value = true
   try {
-    await store.dispatch('transactions/fetchTransactions', 1) 
+    await store.dispatch('transactions/fetchTransactions', 7) 
   } catch (error) {
     console.error('Error fetching transactions:', error)
   } finally {
     loading.value = false
+  }
+}
+
+const fetchBill = async () => {
+  try {
+    // Use the first card for now, or you can make this dynamic
+    const firstCard = cards.value[0]
+    if (firstCard) {
+      await store.dispatch('bills/fetchBill', { userId: 7, cardId: firstCard.id })
+    } else {
+      // If no cards, try with a default card ID
+      await store.dispatch('bills/fetchBill', { userId: 7, cardId: 4 })
+    }
+  } catch (error) {
+    console.error('Error fetching bill:', error)
   }
 }
 
@@ -959,12 +1037,25 @@ const initCategoryChart = () => {
   const ctx = categoryChart.value.getContext('2d')
   if (!ctx) return
 
-  new Chart(ctx, {
+  // Destroy existing chart if it exists
+  if (categoryChartInstance.value) {
+    categoryChartInstance.value.destroy()
+  }
+
+  // Only create chart if we have data
+  if (categoryBreakdown.value.length === 0) {
+    console.log('No category data available for chart')
+    return
+  }
+
+  console.log('Creating category chart with data:', categoryBreakdown.value)
+
+  categoryChartInstance.value = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: categoryBreakdown.value.map(cat => cat.name),
+      labels: categoryBreakdown.value.map((cat: any) => cat.name),
       datasets: [{
-        data: categoryBreakdown.value.map(cat => cat.percentage),
+        data: categoryBreakdown.value.map((cat: any) => cat.percentage),
         backgroundColor: [
           '#ffd60a',
           '#f97316', 
@@ -994,17 +1085,43 @@ const initTrendsChart = () => {
   const ctx = trendsChart.value.getContext('2d')
   if (!ctx) return
 
+  // Destroy existing chart if it exists
+  if (trendsChartInstance.value) {
+    trendsChartInstance.value.destroy()
+  }
+
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const currentMonth = new Date().getMonth()
-  const last6Months = months.slice(currentMonth - 5, currentMonth + 1)
   
-  new Chart(ctx, {
+  // Get the last 6 months of data from analytics
+  const monthlyData = analytics.value.monthlyData || []
+  const currentDate = new Date()
+  const last6MonthsData = []
+  const last6MonthsLabels = []
+  
+  // Generate last 6 months
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+    const monthIndex = date.getMonth()
+    const year = date.getFullYear()
+    
+    last6MonthsLabels.push(months[monthIndex])
+    
+    // Find matching data from backend
+    const matchingData = monthlyData.find((item: any) => 
+      item.year === year && item.month === monthIndex + 1
+    )
+    last6MonthsData.push(matchingData ? matchingData.amount / 1000 : 0)
+  }
+  
+  console.log('Trends chart data:', { last6MonthsLabels, last6MonthsData, monthlyData })
+  
+  trendsChartInstance.value = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: last6Months,
+      labels: last6MonthsLabels,
       datasets: [{
         label: 'Spending',
-        data: [45000, 52000, 48000, 61000, 55000, analytics.value.thisMonth / 1000],
+        data: last6MonthsData,
         borderColor: '#ffd60a',
         backgroundColor: 'rgba(255, 214, 10, 0.1)',
         borderWidth: 3,
@@ -1046,12 +1163,33 @@ const initTrendsChart = () => {
   })
 }
 
+// Watchers to re-initialize charts when data changes
+watch(categoryBreakdown, () => {
+  if (categoryBreakdown.value.length > 0) {
+    nextTick(() => {
+      initCategoryChart()
+    })
+  }
+}, { deep: true })
+
+watch(() => analytics.value.monthlyData, () => {
+  if (analytics.value.monthlyData && analytics.value.monthlyData.length > 0) {
+    nextTick(() => {
+      initTrendsChart()
+    })
+  }
+}, { deep: true })
+
 onMounted(async () => {
+  const userId = 7 // TODO: Get from auth store
   await fetchTransactions()
-  store.dispatch('cards/fetchCards', 1)
+  await store.dispatch('cards/fetchCards', userId)
   store.dispatch('merchants/fetchMerchants')
-  store.dispatch('bnpl/fetchActivePlans')
-  store.dispatch('analytics/fetchAnalytics')
+  store.dispatch('bnpl/fetchActivePlans', userId)
+  store.dispatch('analytics/fetchAnalytics', userId)
+  
+  // Fetch bill data after cards are loaded
+  await fetchBill()
   
   // Initialize charts after DOM is ready
   await nextTick()

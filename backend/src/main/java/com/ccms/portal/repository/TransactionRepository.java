@@ -94,4 +94,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         // Find max serial number
         @Query("SELECT MAX(t.serialNo) FROM Transaction t")
         Long findMaxSerialNo();
+
+        // Get current month spending by card
+        @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.card.id = :cardId " +
+                        "AND YEAR(t.createdAt) = YEAR(CURRENT_DATE) AND MONTH(t.createdAt) = MONTH(CURRENT_DATE)")
+        BigDecimal getCurrentMonthSpendingByCardId(@Param("cardId") Long cardId);
+
+        // Get last month spending by card
+        @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.card.id = :cardId " +
+                        "AND YEAR(t.createdAt) = :lastYear AND MONTH(t.createdAt) = :lastMonth")
+        BigDecimal getLastMonthSpendingByCardId(@Param("cardId") Long cardId, 
+                        @Param("lastYear") Integer lastYear, 
+                        @Param("lastMonth") Integer lastMonth);
 }

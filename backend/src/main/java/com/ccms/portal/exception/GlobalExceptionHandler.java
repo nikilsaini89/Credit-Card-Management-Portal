@@ -1,12 +1,13 @@
 package com.ccms.portal.exception;
 
-import com.ccms.portal.dto.response.ApiErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -16,102 +17,104 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleUserNotFound(UserNotFoundException ex) {
-        log.error("User not found: {}", ex.getMessage());
-        return buildErrorResponse("User Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, WebRequest request) {
+        log.error("Unexpected error occurred", ex);
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Internal Server Error")
+                .message("An unexpected error occurred. Please try again later.")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 
-    @ExceptionHandler(CreditCardNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleCreditCardNotFound(CreditCardNotFoundException ex) {
-        log.error("Credit Card not found: {}", ex.getMessage());
-        return buildErrorResponse("Credit Card Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex,
+            WebRequest request) {
+        log.error("Invalid argument: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
-    @ExceptionHandler(CardTypeNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleCardTypeNotFound(CardTypeNotFoundException ex) {
-        log.error("Card Type not found: {}", ex.getMessage());
-        return buildErrorResponse("Card Type Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
-    }
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex, WebRequest request) {
+        log.error("Runtime error: {}", ex.getMessage());
 
-    @ExceptionHandler(CardNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleCardNotFoundException(CardNotFoundException ex) {
-        log.error("Card not found: {}", ex.getMessage());
-        return buildErrorResponse("Card Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
-    }
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
 
-    @ExceptionHandler(InsufficientLimitException.class)
-    public ResponseEntity<ApiErrorResponse> handleInsufficientLimit(InsufficientLimitException ex) {
-        log.error("Insufficient limit: {}", ex.getMessage());
-        return buildErrorResponse("Insufficient Credit Limit", ex.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY, null);
-    }
-
-    @ExceptionHandler(MerchantAccountNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleMerchantAccountNotFoundException(MerchantAccountNotFoundException ex) {
-        log.error("Merchant account not found: {}", ex.getMessage());
-        return buildErrorResponse("Merchant Account Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
-    }
-
-    @ExceptionHandler(InvalidCardStatusException.class)
-    public ResponseEntity<ApiErrorResponse> handleInvalidCardStatusException(InvalidCardStatusException ex) {
-        log.error("Invalid card status: {}", ex.getMessage());
-        return buildErrorResponse("Invalid Card Status", ex.getMessage(), HttpStatus.BAD_REQUEST, null);
-    }
-
-    @ExceptionHandler(InvalidBnplRequestException.class)
-    public ResponseEntity<ApiErrorResponse> handleInvalidBnplRequestException(InvalidBnplRequestException ex) {
-        log.error("Invalid BNPL request: {}", ex.getMessage());
-        return buildErrorResponse("Invalid BNPL Request", ex.getMessage(), HttpStatus.BAD_REQUEST, null);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex,
+            WebRequest request) {
         log.error("Validation error: {}", ex.getMessage());
 
-        Map<String, String> fieldErrors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors()
-                .forEach(error -> fieldErrors.put(error.getField(), error.getDefaultMessage()));
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach((error) -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
 
-        return buildErrorResponse("Validation Failed", "Invalid input data", HttpStatus.BAD_REQUEST, fieldErrors);
-    }
-
-    @ExceptionHandler(CardLimitException.class)
-    public ResponseEntity<ApiErrorResponse> handleCardLimitException(CardLimitException ex) {
-        log.error("Card limit error: {}", ex.getMessage());
-        return buildErrorResponse("Card Limit Error", ex.getMessage(), HttpStatus.BAD_REQUEST, null);
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiErrorResponse> handleGenericException(Exception ex) {
-        log.error("Unexpected error: {}", ex.getMessage(), ex);
-        return buildErrorResponse("Internal Server Error", "An unexpected error occurred",
-                HttpStatus.INTERNAL_SERVER_ERROR, null);
-    }
-
-    @ExceptionHandler(CardApplicationNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleCardApplicationNotFound(CardApplicationNotFoundException ex) {
-        log.error("Card application not found: {}", ex.getMessage());
-        return buildErrorResponse("Card Application Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
-    }
-
-    @ExceptionHandler(UnauthorizedApplicationActionException.class)
-    public ResponseEntity<ApiErrorResponse> handleUnauthorizedApplicationAction(UnauthorizedApplicationActionException ex) {
-        log.error("Unauthorized application action: {}", ex.getMessage());
-        return buildErrorResponse("Unauthorized Action", ex.getMessage(), HttpStatus.FORBIDDEN, null);
-    }
-
-
-    private ResponseEntity<ApiErrorResponse> buildErrorResponse(
-            String error, String message, HttpStatus status, Map<String, String> fieldErrors) {
-
-        ApiErrorResponse apiError = ApiErrorResponse.builder()
-                .error(error)
-                .message(message)
-                .status(status.value())
+        ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
-                .fieldErrors(fieldErrors)
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Validation Failed")
+                .message("Invalid input data")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .validationErrors(errors)
                 .build();
 
-        return ResponseEntity.status(status).body(apiError);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex,
+            WebRequest request) {
+        log.error("Resource not found: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("Not Found")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorizedException(UnauthorizedException ex, WebRequest request) {
+        log.error("Unauthorized access: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error("Unauthorized")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
 }

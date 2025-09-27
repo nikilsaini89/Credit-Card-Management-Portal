@@ -3,6 +3,7 @@ package com.ccms.portal.service;
 import com.ccms.portal.dto.response.BnplPlanResponse;
 import com.ccms.portal.entity.BnplPlan;
 import com.ccms.portal.entity.BnplPlan.BnplStatus;
+import com.ccms.portal.exception.ResourceNotFoundException;
 import com.ccms.portal.repository.BnplPlanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +43,7 @@ public class BnplService {
     log.info("Fetching BNPL plan by ID: {}", planId);
 
     BnplPlan plan = bnplPlanRepository.findById(planId)
-        .orElseThrow(() -> new RuntimeException("BNPL plan not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("BNPL plan not found with ID: " + planId));
 
     return mapToBnplPlanResponse(plan);
   }
@@ -51,14 +52,14 @@ public class BnplService {
     log.info("Processing BNPL EMI payment for plan: {} with amount: {}", planId, amount);
 
     BnplPlan plan = bnplPlanRepository.findById(planId)
-        .orElseThrow(() -> new RuntimeException("BNPL plan not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("BNPL plan not found with ID: " + planId));
 
     if (!plan.getIsActive()) {
-      throw new RuntimeException("BNPL plan is not active");
+      throw new IllegalArgumentException("BNPL plan is not active");
     }
 
     if (plan.getStatus() == BnplStatus.COMPLETED) {
-      throw new RuntimeException("BNPL plan is already completed");
+      throw new IllegalArgumentException("BNPL plan is already completed");
     }
 
     // Update paid amount
@@ -118,10 +119,10 @@ public class BnplService {
     log.info("Cancelling BNPL plan: {}", planId);
 
     BnplPlan plan = bnplPlanRepository.findById(planId)
-        .orElseThrow(() -> new RuntimeException("BNPL plan not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("BNPL plan not found with ID: " + planId));
 
     if (plan.getStatus() == BnplStatus.COMPLETED) {
-      throw new RuntimeException("Cannot cancel completed BNPL plan");
+      throw new IllegalArgumentException("Cannot cancel completed BNPL plan");
     }
 
     plan.setStatus(BnplStatus.CANCELLED);

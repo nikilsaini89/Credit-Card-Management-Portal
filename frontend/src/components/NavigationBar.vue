@@ -36,7 +36,7 @@
       </button>
 
       <div class="avatar desktop-avatar">
-        <RouterLink>{{ userInitials }}</RouterLink>
+        <RouterLink to="/profile">{{ userInitials }}</RouterLink>
       </div>
     </div>
 

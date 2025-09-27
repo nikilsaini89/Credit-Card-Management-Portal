@@ -72,27 +72,33 @@ const mutations = {
 }
 
 const actions = {
-  async fetchActivePlans({ commit }: any) {
+  async fetchActivePlans({ commit }: any, userId: number) {
     commit('SET_LOADING', true)
     try {
-      const response = await axios.get('http://localhost:8080/api/bnpl/active')
+      const response = await axios.get(`http://localhost:8080/api/bnpl/active/${userId}`)
       commit('SET_PLANS', response.data)
     } catch (error: any) {
-      commit('SET_ERROR', error.response?.data?.message || 'Failed to fetch BNPL plans')
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'Failed to fetch BNPL plans'
+      commit('SET_ERROR', errorMessage)
       console.error('Error fetching BNPL plans:', error)
     } finally {
       commit('SET_LOADING', false)
     }
   },
 
-  async processEmiPayment({ commit, dispatch }: any, { planId, amount }: { planId: string, amount: number }) {
+  async processEmiPayment({ commit, dispatch }: any, { planId, amount, userId }: { planId: string, amount: number, userId: number }) {
     commit('SET_LOADING', true)
     try {
-      await axios.post(`http://localhost:8080/api/bnpl/${planId}/payment`, { amount })
+      await axios.post(`http://localhost:8080/api/bnpl/plan/${planId}/pay?amount=${amount}`)
       // Refresh plans after payment
-      await dispatch('bnpl/fetchActivePlans')
+      await dispatch('bnpl/fetchActivePlans', userId)
     } catch (error: any) {
-      commit('SET_ERROR', error.response?.data?.message || 'Failed to process EMI payment')
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'Failed to process EMI payment'
+      commit('SET_ERROR', errorMessage)
       throw error
     } finally {
       commit('SET_LOADING', false)

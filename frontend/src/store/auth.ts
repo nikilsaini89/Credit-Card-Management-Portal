@@ -41,8 +41,22 @@ const auth: Module<AuthState, RootState> = {
 
   state: (): AuthState => {
     const token = localStorage.getItem('token');
-    const decoded = decodeToken(token || '');
-    const user = decoded ? JSON.parse(localStorage.getItem('user') || 'null') : null;
+    let decoded = null;
+    let user = null;
+    
+    if (token) {
+      try {
+        decoded = decodeToken(token);
+        if (decoded) {
+          const userData = localStorage.getItem('user');
+          user = userData ? JSON.parse(userData) : null;
+        }
+      } catch (error) {
+        console.warn('Invalid token in localStorage, clearing auth state');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    }
 
     return {
       token: decoded ? token : null,

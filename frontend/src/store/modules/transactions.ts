@@ -123,10 +123,15 @@ const actions = {
   async fetchTransactions({ commit }: any, userId: number) {
     commit('SET_LOADING', true)
     try {
-      const response = await axios.get(`http://localhost:8080/api/transactions/${userId}`)
-      commit('SET_TRANSACTIONS', response.data)
+      const response = await axios.get(`http://localhost:8080/api/transactions/${userId}?page=0&size=50`)
+      // Handle the response structure from backend
+      const transactions = response.data.transactions || response.data
+      commit('SET_TRANSACTIONS', transactions)
     } catch (error: any) {
-      commit('SET_ERROR', error.response?.data?.message || 'Failed to fetch transactions')
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'Failed to fetch transactions'
+      commit('SET_ERROR', errorMessage)
       console.error('Error fetching transactions:', error)
     } finally {
       commit('SET_LOADING', false)
@@ -140,7 +145,10 @@ const actions = {
       commit('ADD_TRANSACTION', response.data)
       return response.data
     } catch (error: any) {
-      commit('SET_ERROR', error.response?.data?.message || 'Failed to create transaction')
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'Failed to create transaction'
+      commit('SET_ERROR', errorMessage)
       throw error
     } finally {
       commit('SET_LOADING', false)
