@@ -45,7 +45,7 @@ public class CardApplicationService {
         return  new CardApplicationResponse(cardApplicationEntity);
     }
 
-    public List<CardApplicationEntity> getApplications(){
+    public List<CardApplicationResponse> getApplications(){
 
         JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
                 .getContext()
@@ -54,10 +54,13 @@ public class CardApplicationService {
 
         Long userId = currentUser.getUserId();
         String userRole = currentUser.getRole();
-        if(Objects.equals(userRole, "ADMIN")){
-           return repository.findAll();
-        }
-        return repository.findAllByUserId(userId);
+        List<CardApplicationEntity> applications = Objects.equals(userRole, "ADMIN")
+                ? repository.findAll()
+                : repository.findAllByUserId(userId);
+
+        return applications.stream()
+                .map(CardApplicationResponse::new)
+                .toList();
     }
     public Optional<CardApplicationEntity> getApplicationById(Long id){
         return repository.findById(id);
@@ -69,8 +72,9 @@ public class CardApplicationService {
                 .getAuthentication()
                 .getPrincipal();
         Long userId = currentUser.getUserId();
+        String userRole = currentUser.getRole();
         CardApplicationEntity application = repository.findById(id).orElseThrow(()->new CardApplicationNotFoundException("Application with id " + id + " not found"));
-        if(!application.getUserId().equals(userId)){
+        if(!Objects.equals(userRole, "ADMIN")){
             throw new UnauthorizedApplicationActionException("You are not authorized to update this application");
         }
         CreateCardRequest createCardRequest = new CreateCardRequest();
