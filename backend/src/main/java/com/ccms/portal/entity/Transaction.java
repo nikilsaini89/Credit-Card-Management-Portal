@@ -1,5 +1,6 @@
 package com.ccms.portal.entity;
 
+import com.ccms.portal.enums.TransactionStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -72,7 +73,4 @@ public class Transaction {
     }
   }
 
-  public enum TransactionStatus {
-    PENDING, COMPLETED, FAILED, REFUNDED
-  }
 }
