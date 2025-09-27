@@ -61,6 +61,11 @@ const routes = [
     component: () => import("../views/Users/MyCards.vue"),
   },
   {
+    path: "/admin",
+    name: "AdminReviewCenter",
+    component: () => import("../views/AdminReviewCenter.vue"),
+  },
+  {
     path: "/apply-card",
     name: "ApplyCard",
     component: { template: "<div class='p-8 text-center'><h1 class='text-2xl font-bold text-gray-900'>Apply Card</h1><p class='text-gray-600 mt-2'>This feature is coming soon!</p></div>" },
