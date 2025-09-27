@@ -327,6 +327,21 @@
   transform: translateX(16px);
 }
 
+.cvv-eye {
+  background: rgba(255,255,255,0.04);
+  width: 30px;
+  height: 26px;
+  align-items:center;
+  justify-content:center;
+  display:flex;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.12s ease, transform .12s;
+}
+.cvv-eye:hover { transform: translateY(-2px); }
+.cvv-eye svg { width:18px; height:18px; stroke: currentColor; }
+
 @media (max-width: 520px) {
   .toggle-checkbox {
     width: 36px;
