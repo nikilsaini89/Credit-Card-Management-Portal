@@ -14,7 +14,6 @@ export const getUserIdFromToken = (): number | null => {
 
   try {
     const decoded = jwtDecode<DecodedToken>(token);
-    console.log(decoded?.userId," = userId from token");
     return decoded?.userId ?? null;
   } catch (error) {
     console.error('Error decoding token:', error);
