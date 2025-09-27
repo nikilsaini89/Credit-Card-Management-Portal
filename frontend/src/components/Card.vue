@@ -3,7 +3,7 @@
     <div 
       v-if="activeCard" 
       class="credit-card" 
-      :class="{ blocked: activeCard.cardStatus === 'BLOCKED'}"
+      :class="{ blocked: activeCard.cardStatus === 'BLOCKED', 'cursor-pointer': showToggle}"
       @click="onCardClick">
       <!-- Card Menu -->
       <div v-if="showMenu" class="card-menu" ref="menuRoot">
