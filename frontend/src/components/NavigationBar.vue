@@ -133,10 +133,12 @@ const toggleMobileNav = () => {
 const handleLogout = async () => {
   try {
     await logout();
+    // Clear any cached data and reload the window for a clean state
     router.push('/');
+    window.location.reload();
   } catch (err) {
     console.error('Logout failed:', err);
-    alert('logout ')
+    alert('logout failed');
   }
 };
 
