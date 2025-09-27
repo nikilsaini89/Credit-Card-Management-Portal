@@ -63,7 +63,7 @@ const routes = [
     component: () => import("../views/Users/MyCards.vue"),
   },
   {
-    path: "/admin",
+    path: "/admin-review",
     name: "AdminReviewCenter",
     component: () => import("../views/AdminReviewCenter.vue"),
   },
