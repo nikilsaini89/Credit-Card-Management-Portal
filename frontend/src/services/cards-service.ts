@@ -30,7 +30,6 @@ export const getCardTypes = async (): Promise<CardType[]> => {
     });
     return res.data;
   } catch (err) {
-    console.error('Error fetching cards:', err);
     return [];
   }
 };
