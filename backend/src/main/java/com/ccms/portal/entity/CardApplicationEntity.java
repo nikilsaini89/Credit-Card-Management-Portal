@@ -33,7 +33,4 @@ public class CardApplicationEntity {
     private Long reviewerId;
     private LocalDateTime reviewDate;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "card_type_id", nullable = false)  // FK column
-//    private CardTypeEntity cardType;
 }
