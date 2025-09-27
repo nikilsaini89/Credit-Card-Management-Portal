@@ -101,7 +101,13 @@
         <button class="cvv-eye" @click="toggleCvvMask">
           <img :src="isCvvMasked ? EyeClosedIcon : EyeOpenIcon" alt="toggle cvv" />
         </button>
-      </div>
+        </div>
+        <div class="text-right ml-auto">
+          <div class="label small">Network</div>
+          <div class="network-type" :class="activeCard.cardType?.networkType?.toLowerCase()">
+            {{ activeCard.cardType?.networkType }}
+          </div>
+        </div>
       </div>
     </div>
 
