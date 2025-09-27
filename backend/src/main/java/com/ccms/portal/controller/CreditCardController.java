@@ -1,12 +1,11 @@
 package com.ccms.portal.controller;
 
 
-import com.ccms.portal.dto.request.CreateCardRequest;
 import com.ccms.portal.dto.request.UpdateCardStatusRequest;
 import com.ccms.portal.dto.response.CreditCardResponse;
 import com.ccms.portal.service.CardService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import com.ccms.portal.dto.response.CardDetailResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +27,14 @@ public class CreditCardController {
         return ResponseEntity.ok(userCards);
     }
 
+    @GetMapping("/{cardId}")
+    public ResponseEntity<?> getCardDetail(@PathVariable Long cardId) {
+        CardDetailResponse resp = cardService.getCardDetail(cardId);
+        if (resp == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(resp);
+    }
 
     @PutMapping("/{cardId}/status")
     public ResponseEntity<?> updateCardStatus(@RequestBody UpdateCardStatusRequest cardStatusRequest, @PathVariable Long cardId){
