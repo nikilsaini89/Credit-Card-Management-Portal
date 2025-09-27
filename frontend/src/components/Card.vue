@@ -1,6 +1,10 @@
 <template>
   <article class="card-visual-wrap">
-    <div v-if="activeCard" class="credit-card" :class="{ blocked: activeCard.cardStatus === 'BLOCKED' }">
+    <div 
+      v-if="activeCard" 
+      class="credit-card" 
+      :class="{ blocked: activeCard.cardStatus === 'BLOCKED'}"
+      @click="onCardClick">
       <!-- Card Menu -->
       <div v-if="showMenu" class="card-menu" ref="menuRoot">
         <button
@@ -28,13 +32,13 @@
         </div>
       </div>
 
-       <div class="absolute top-2 right-2 flex items-center gap-2">
+       <div v-if="showToggle" class="absolute top-2 right-2 flex items-center gap-2">
         <span class="text-sm font-medium">Blocked</span>
         <input 
           type="checkbox" 
           class="toggle-checkbox"
           :checked="activeCard.cardStatus === 'BLOCKED'"
-          @change="toggleBlock(activeCard)"
+          @click.prevent="() => toggleBlock(activeCard)"
         />
       </div>
 
@@ -102,17 +106,32 @@
 
     <div v-else class="notice">No card data available.</div>
   </article>
+
+
+<StatusChangeDialog
+  v-if="showStatusDialog"
+  v-model="showStatusDialog"
+  :current-status="activeCard.cardStatus"
+  :requested-status="requestedStatus"
+  :card-last4="cardLast4"
+  @confirm="confirmStatusChange"
+  @cancel="cancelStatusChange"
+/>
+
+
 </template>
 
 <script setup>
 import EyeOpenIcon from '../assets/eye-open.svg'
 import EyeClosedIcon from '../assets/eye-closed.svg'
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
+import StatusChangeDialog from './StatusChangeDialog.vue'
 
 /* ------------------ Props & Emits ------------------ */
 const props = defineProps({
   card: { type: Object, required: false },
   showMenu: { type: Boolean, default: false },
+  showToggle: { type: Boolean, default: false },
   actions: { type: Array, default: () => [] }
 })
 const emit = defineEmits(['action', 'block'])
@@ -122,6 +141,9 @@ const isMasked = ref(true)
 const menuOpen = ref(false)
 const menuRoot = ref(null)
 const localCard = ref(null)
+const showStatusDialog = ref(false)
+const pendingCard = ref(null)
+const requestedStatus = ref('')
 
 /* ------------------ Regex ------------------ */
 const REGEX_REMOVE_SPACES = /\s+/g
@@ -131,9 +153,9 @@ const REGEX_GROUP_CARD_DIGITS = /(\d{4})(?=\d)/g
 const activeCard = computed(() => props.card || localCard.value)
 
 const bankLabel = computed(() => {
-    const card = activeCard.value
-    if (!card) return 'BANK'
-    return (card.bank || card.bankName || card.issuer || 'BANK').toUpperCase().slice(0, 18)
+  const card = activeCard.value
+  if (!card) return 'BANK'
+  return (card.bank || card.bankName || card.issuer || 'BANK').toUpperCase().slice(0, 18)
 })
 
 const bankLabelSub = computed(() => {
@@ -173,9 +195,39 @@ function formatExpiry(dateStr) {
 /* ------------------ Event Handlers ------------------ */
 function toggleMask() { isMasked.value = !isMasked.value }
 
+/** Instead of directly emitting, open modal */
 function toggleBlock(card) {
   if (!card) return
-  emit('block', { card, newStatus: card.cardStatus === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED' })
+  pendingCard.value = card
+  requestedStatus.value = card.cardStatus === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED'
+  showStatusDialog.value = true
+}
+
+/** Trigger "view-details" if showToggle is true */
+function onCardClick(e) {
+  if (!props.showToggle) return
+  const target = e.target
+  if (
+    target.closest('.menu-btn, .menu-pop, .eye, .toggle-checkbox, button')
+  ) {
+    return
+  }
+  emit('view-details', activeCard.value?.id)
+}
+
+
+/** Called when user confirms in modal */
+function confirmStatusChange() {
+  if (!pendingCard.value) return
+  emit('block', { card: pendingCard.value, newStatus: requestedStatus.value })
+  showStatusDialog.value = false
+  pendingCard.value = null
+}
+
+/** Called when user cancels modal */
+function cancelStatusChange() {
+  showStatusDialog.value = false
+  pendingCard.value = null
 }
 
 function handleAction(action, idx) {
@@ -198,12 +250,16 @@ watch(menuOpen, (open) => {
 defineExpose({
   toggleMask,
   toggleBlock,
+  confirmStatusChange,
+  cancelStatusChange,
   getMaskedCardNumber,
   getFullCardNumber,
   formatNumber,
   cardLast4,
   activeCard,
-  formatExpiry
+  formatExpiry,
+  showStatusDialog,
+  requestedStatus
 })
 </script>
 
