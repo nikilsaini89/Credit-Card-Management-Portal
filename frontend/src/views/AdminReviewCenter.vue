@@ -92,47 +92,33 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from "vue"
-import { getCardApplications, updateApplicationStatus } from '../services/cards-service'
+import { ref, computed, onMounted } from "vue"
+import { useStore } from 'vuex'
 import type { CardApplication } from '../types/cardApplication'
 import { 
   APPLICATION_STATUS, 
   APPLICATION_STATUS_LABELS, 
   APPLICATION_ACTIONS, 
-  STATUS_COLORS, 
-  ACTION_BUTTON_COLORS, 
   APPLICATION_MESSAGES 
 } from '../constants/constants'
 
+const store = useStore()
+
 // Reactive data
-const applications = ref<CardApplication[]>([])
-const loading = ref(true)
 const processing = ref(false)
 
-// Methods
-const loadApplications = async () => {
-  try {
-    loading.value = true
-    const data = await getCardApplications()
-    applications.value = data
-  } catch (error) {
-    console.error('Error loading applications:', error)
-  } finally {
-    loading.value = false
-  }
-}
+// Computed properties
+const applications = computed(() => store.getters['applications/applications'] || [])
+const loading = computed(() => store.getters['applications/loading'])
 
+// Methods
 const handleApprove = async (applicationId: number) => {
   try {
     processing.value = true
-    const result = await updateApplicationStatus(applicationId, APPLICATION_ACTIONS.APPROVE)
-    if (result) {
-      // Update the local state
-      const index = applications.value.findIndex(app => app.id === applicationId)
-      if (index !== -1) {
-        applications.value[index] = result
-      }
-    }
+    await store.dispatch('applications/updateApplicationStatus', {
+      applicationId,
+      status: APPLICATION_ACTIONS.APPROVE
+    })
   } catch (error) {
     console.error('Error approving application:', error)
   } finally {
@@ -143,14 +129,10 @@ const handleApprove = async (applicationId: number) => {
 const handleReject = async (applicationId: number) => {
   try {
     processing.value = true
-    const result = await updateApplicationStatus(applicationId, APPLICATION_ACTIONS.REJECT)
-    if (result) {
-      // Update the local state
-      const index = applications.value.findIndex(app => app.id === applicationId)
-      if (index !== -1) {
-        applications.value[index] = result
-      }
-    }
+    await store.dispatch('applications/updateApplicationStatus', {
+      applicationId,
+      status: APPLICATION_ACTIONS.REJECT
+    })
   } catch (error) {
     console.error('Error rejecting application:', error)
   } finally {
@@ -186,9 +168,11 @@ const getReviewerMessage = (application: CardApplication) => {
   return `${actionText} ${application.reviewerName} ${APPLICATION_MESSAGES.ON} ${formatDate(application.reviewDate!)}`
 }
 
-// Load applications on component mount
+// Load applications on component mount if not already loaded
 onMounted(() => {
-  loadApplications()
+  if (applications.value.length === 0) {
+    store.dispatch('applications/fetchApplications')
+  }
 })
 </script>
 

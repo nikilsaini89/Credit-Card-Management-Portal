@@ -14,14 +14,10 @@
       </div>
 
       <nav class="topnav desktop-nav" role="navigation" aria-label="Primary" v-for="link in navLinks" :key="link.label">
-                <RouterLink class="nav-item" v-if="link.to" :to="link.to">{{ link.label }}</RouterLink>
-
+        <RouterLink class="nav-item" v-if="link.to" :to="link.to">{{ link.label }}</RouterLink>
         <a class="nav-item" v-else-if="link.action === 'logout'" @click.prevent="handleLogout">{{ link.label }}</a>
-
-        
       </nav>
        
-
       <button
         class="hamburger"
         @click="toggleMobileNav"
@@ -89,9 +85,13 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute } from "vue-router";
+import { useStore } from 'vuex';
 import router from "../router";
 import { logout } from "../services/authService";
 
+const store = useStore();
+const route = useRoute();
+const isMobileNavOpen = ref(false);
 
 const userName = "Abhay Dhek";
 
@@ -100,23 +100,36 @@ const userInitials = computed(() => {
   return nameParts.map((part) => part[0]).join("").toUpperCase();
 });
 
-const navLinks = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/cards", label: "My Cards" },
-  { to: "/apply-card", label: "Apply Card" },
-  { to: "/transactions", label: "Transactions" },
-  { to: "/profile", label: "Profile" },
-  { action: "logout", label: "Logout" }
+// Get user role from store
+const isAdmin = computed(() => store.getters["auth/isAdmin"]);
 
-];
-
-const route = useRoute();
-const isMobileNavOpen = ref(false);
+// Conditional navigation links based on user role
+const navLinks = computed(() => {
+  if (isAdmin.value) {
+    // Admin navigation
+    return [
+      { to: "/admin-dashboard", label: "Dashboard" },
+      { to: "/admin-review", label: "Applications" },
+      { action: "logout", label: "Logout" }
+    ];
+  } else {
+    // User navigation
+    return [
+      { to: "/dashboard", label: "Dashboard" },
+      { to: "/cards", label: "My Cards" },
+      { to: "/apply-card", label: "Apply Card" },
+      { to: "/transactions", label: "Transactions" },
+      { to: "/profile", label: "Profile" },
+      { action: "logout", label: "Logout" }
+    ];
+  }
+});
 
 const toggleMobileNav = () => {
   isMobileNavOpen.value = !isMobileNavOpen.value;
   setBodyScrollLocked(isMobileNavOpen.value);
 };
+
 const handleLogout = async () => {
   try {
     await logout();
