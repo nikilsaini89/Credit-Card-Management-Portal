@@ -4,6 +4,7 @@ package com.ccms.portal.controller;
 import com.ccms.portal.dto.request.CreateCardRequest;
 import com.ccms.portal.dto.request.UpdateCardStatusRequest;
 import com.ccms.portal.dto.response.CreditCardResponse;
+import com.ccms.portal.entity.CardTypeEntity;
 import com.ccms.portal.service.CardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,12 @@ public class CreditCardController {
     public ResponseEntity<?> updateCardStatus(@RequestBody UpdateCardStatusRequest cardStatusRequest, @PathVariable Long cardId){
         CreditCardResponse updatedCard = cardService.updateCardStatus(cardStatusRequest, cardId);
         return ResponseEntity.ok(updatedCard);
+    }
+
+    @GetMapping("/type")
+    public ResponseEntity<?> getCardTypes(){
+        List<CardTypeEntity> allCardType = cardService.getCardTypes();
+        return ResponseEntity.ok(allCardType);
     }
 
 }
