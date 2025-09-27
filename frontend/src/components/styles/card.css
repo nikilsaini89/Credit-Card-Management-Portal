@@ -194,9 +194,6 @@
 }
 
 .network-type {
-  position: absolute;
-  bottom: 10px;
-  right: 32px;
   font-weight: 800;
   font-size: 18px;
   color: #878488;
