@@ -8,7 +8,6 @@
         <input v-model="form.address" placeholder="Address" required />
         <input v-model.number="form.annualIncome" placeholder="Annual Income" required type="number" />
       </div>
-
       <input v-model="form.email" placeholder="Email" required type="email" />
       <input v-model="form.password" placeholder="Password" required type="password" />
 
