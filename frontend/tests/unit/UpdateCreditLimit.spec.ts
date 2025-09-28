@@ -1,4 +1,3 @@
-// tests/unit/ManageLimit.spec.ts
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import UpdateCreditLimitModal from '../../src/components/UpdateCreditLimitModal.vue'
@@ -32,7 +31,7 @@ describe('UpdateCreditLimitModal (ManageLimit.vue) — Unit Tests', () => {
     const input = wrapper.get('input[type="number"]')
     const updateBtn = wrapper.get('.button-primary')
 
-    await input.setValue('900') // below outstanding
+    await input.setValue('900') 
     expect((updateBtn.element as HTMLButtonElement).disabled).toBe(true)
   })
 

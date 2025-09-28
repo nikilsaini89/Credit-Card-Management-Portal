@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard">
     <main class="container">
-      <section class="hero">
+      <section class="main">
         <h1>Welcome back, {{ user.name }}!</h1>
         <p class="subtitle">Here's your credit card overview</p>
 
@@ -40,7 +40,6 @@
           </div>
 
           <div class="card-list">
-            <!-- CHANGED: wrapper makes the entire card clickable as fallback -->
             <div
               v-for="cardItem in cards"
               :key="cardItem.id ?? cardItem._id ?? cardItem.cardId"
@@ -57,7 +56,6 @@
                 @block.stop="onToggleBlock"
               />
             </div>
-            <!-- END CHANGED -->
           </div>
         </div>
 
@@ -71,12 +69,27 @@
             <ul class="tx-list">
               <li v-for="tx in transactions" :key="tx.id" class="tx">
                 <div>
-                  <div class="tx-title">{{ tx.merchant }} <span v-if="tx.mode" class="pill">{{ tx.mode }}</span></div>
-                  <div class="tx-sub">{{ tx.category }} • {{ formatDate(tx.date) }}</div>
+                  <div class="tx-title">
+                    {{ tx.merchantName }}
+                    <span v-if="tx.isBnpl" class="pill">BNPL</span>
+                  </div>
+                  <div class="tx-sub">
+                    {{ tx.category || 'Other' }} • {{ formatDate(tx.date) }}
+                  </div>
+                  <div v-if="tx.processorName" class="processor-badge">{{ tx.processorName }}</div>
                 </div>
+
                 <div :class="['tx-amount', tx.amount < 0 ? 'danger' : '']">
                   {{ tx.amount < 0 ? '-' : '' }}₹{{ formatNumber(Math.abs(tx.amount)) }}
                 </div>
+              </li>
+
+              <li v-if="transactions.length === 0" class="tx">
+                <div>
+                  <div class="tx-title">No recent transactions</div>
+                  <div class="tx-sub">You have no transaction history yet</div>
+                </div>
+                <div class="tx-amount">—</div>
               </li>
             </ul>
           </div>
@@ -96,8 +109,8 @@
 
 <script>
 import Card from "../../components/Card.vue";
-import { useRouter } from "vue-router";
 import { getDashboard } from "../../services/dashboardService";
+import { getCards } from "../../services/cards-service";
 
 export default {
   name: "Dashboard",
@@ -133,17 +146,14 @@ export default {
       this.error = null;
       try {
         const data = await getDashboard();
-        console.debug("[Dashboard] getDashboard response:", data);
 
         if (!data) {
           this.error = "No dashboard data received";
           return;
         }
 
-        // user
         this.user.name = data.userName || (data.user && data.user.name) || this.user.name;
 
-        // summary
         if (data.summary) {
           this.summary.activeCards = data.summary.activeCards ?? this.summary.activeCards;
           this.summary.totalCards = data.summary.totalCards ?? this.summary.totalCards;
@@ -152,19 +162,10 @@ export default {
           this.summary.outstanding = data.summary.outstanding ?? this.summary.outstanding;
         }
 
-        // cards & transactions
-        this.cards = Array.isArray(data.cards) ? data.cards : [];
-        this.transactions = Array.isArray(data.transactions) ? data.transactions : [];
+        const rawTx = Array.isArray(data.transactions) ? data.transactions : [];
+        this.transactions = rawTx.map(t => this.normalizeTx(t));
 
-        // initialize showFull map for cards (Vue 3 friendly)
-        this.cards.forEach((cardItem) => {
-          const id = cardItem.id ?? cardItem._id ?? cardItem.cardId;
-          if (id) {
-            this.showFull[id] = false;
-          }
-        });
-
-        console.debug("[Dashboard] loaded cards:", this.cards.length, "transactions:", this.transactions.length);
+        await this.loadCards();
       } catch (err) {
         console.error("Failed to load dashboard from service:", err);
         this.error = "Failed to load dashboard";
@@ -173,21 +174,101 @@ export default {
       }
     },
 
-    // helpers (unchanged)
-    maskNumber(cardNumber) {
-      if (!cardNumber) return "";
-      const onlyDigits = cardNumber.toString();
-      const lastFour = onlyDigits.slice(-4);
-      return "**** **** **** " + lastFour;
+    async loadCards() {
+      try {
+        const list = await getCards();
+        if (!Array.isArray(list)) {
+          this.cards = [];
+          return;
+        }
+
+        this.cards = list.map(c => ({
+          id: c.id ?? c.cardId ?? c._id,
+          cardNumber: c.cardNumber ?? c.number ?? c.maskedNumber ?? c.masked_number,
+          cardHolderName: c.cardHolderName ?? c.name ?? c.holderName,
+          creditLimit: c.creditLimit ?? c.totalLimit ?? c.total_limit,
+          availableLimit: c.availableLimit ?? c.availableCredit ?? c.available_limit,
+          cardStatus: c.cardStatus ?? c.status,
+          expiryDate: c.expiryDate ?? c.expiry_date,
+          cvv: c.cvv,
+          cardType: c.cardType ?? c.type ?? null,
+          ...c
+        }));
+
+        this.cards.forEach(cardItem => {
+          const id = cardItem.id ?? cardItem._id ?? cardItem.cardId;
+          if (id) this.showFull[id] = false;
+        });
+      } catch (err) {
+        console.error('Dashboard.loadCards failed', err);
+        this.cards = [];
+      }
     },
+
+    normalizeTx(tx = {}) {
+      const id = tx.id ?? tx.transactionId ?? tx.txnId ?? Math.random().toString(36).slice(2,9);
+      const amount = Number(tx.amount ?? tx.value ?? 0);
+      const date = tx.date ?? tx.createdAt ?? tx.created_at ?? tx.createdAtTimestamp ?? null;
+      const category = tx.category ?? tx.modeCategory ?? tx.categoryName ?? null;
+      const isBnpl = Boolean(tx.isBnpl ?? tx.is_bnpl ?? false);
+
+      let merchantName = 'Merchant';
+      let accountNumber = null;
+      if (tx.merchant) {
+        if (typeof tx.merchant === 'string') {
+          const nameMatch = tx.merchant.match(/merchant=.*?name=([^,\)]+)/);
+          if (nameMatch && nameMatch[1]) merchantName = nameMatch[1].trim();
+          const acctMatch = tx.merchant.match(/accountNumber=([^,\)]+)/);
+          if (acctMatch && acctMatch[1]) accountNumber = acctMatch[1].trim();
+        } else if (typeof tx.merchant === 'object') {
+          accountNumber = tx.merchant.accountNumber ?? tx.merchant.account_number ?? tx.merchant.id ?? null;
+          if (tx.merchant.merchant && tx.merchant.merchant.name) merchantName = tx.merchant.merchant.name;
+          else if (tx.merchant.name) merchantName = tx.merchant.name;
+        }
+      }
+
+      let processorName = null;
+      if (tx.mode) {
+        if (typeof tx.mode === 'string') {
+          const pMatch = tx.mode.match(/name=([^,\)]+)/);
+          if (pMatch && pMatch[1]) processorName = pMatch[1].trim();
+        } else if (typeof tx.mode === 'object') {
+          processorName = tx.mode.name ?? tx.mode.processorName ?? null;
+        }
+      } else if (tx.processor) {
+        if (typeof tx.processor === 'string') {
+          const pMatch2 = tx.processor.match(/name=([^,\)]+)/);
+          if (pMatch2 && pMatch2[1]) processorName = pMatch2[1].trim();
+        } else if (typeof tx.processor === 'object') {
+          processorName = tx.processor.name ?? null;
+        }
+      }
+
+      if ((!merchantName || merchantName === 'Merchant') && typeof tx.merchant === 'string') {
+        const fallback = tx.merchant.match(/Merchant\(.*?name=([^,\)]+)/);
+        if (fallback && fallback[1]) merchantName = fallback[1].trim();
+      }
+
+      return {
+        id,
+        amount,
+        date,
+        category,
+        isBnpl,
+        merchantName,
+        accountNumber,
+        processorName,
+        raw: tx
+      };
+    },
+
     formatNumber(value) {
       if (value == null) return "0";
-      return value.toLocaleString("en-IN");
+      return Number(value).toLocaleString("en-IN");
     },
-    sum(list = [], key) {
-      return list.reduce((accumulator, item) => accumulator + (Number(item[key]) || 0), 0);
-    },
+
     formatDate(isoString) {
+      if (!isoString) return "";
       try {
         const dateObj = new Date(isoString);
         const options = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
@@ -197,27 +278,21 @@ export default {
       }
     },
 
-    toggleCardNumber(cardId) {
-      // Vue 3: direct assignment is reactive for plain objects in data()
-      this.showFull[cardId] = !this.showFull[cardId];
-    },
     toggleMenu(cardId) {
       this.openMenu = this.openMenu === cardId ? null : cardId;
     },
+
     onToggleBlock(card) {
       card.status = card.status === "BLOCKED" ? "ACTIVE" : "BLOCKED";
       this.openMenu = null;
     },
+
     globalClick(event) {
       const clickedOutside = !event.target.closest(".card-menu");
       if (clickedOutside) this.openMenu = null;
     },
-    isImageString(source) {
-      return typeof source === "string" && /\.(png|jpe?g|svg|webp)$/.test(source);
-    },
 
     cardActions(card) {
-      // Return a simple string path first — fewer surprises when emitted
       const id = card.id ?? card._id ?? card.cardId ?? "";
       const path = id ? `/cards/${id}` : "/cards";
       return [
@@ -226,69 +301,32 @@ export default {
       ];
     },
 
-    // CHANGED: new helper to force navigation when needed
     goToCard(card) {
       const id = card?.id ?? card?._id ?? card?.cardId;
-      if (!id) {
-        console.warn("[Dashboard] goToCard: no id on card", card);
-        return;
-      }
-      const path = `/cards/${id}`;
-      console.info("[Dashboard] goToCard -> navigating to", path);
-      if (this.$router && typeof this.$router.push === "function") {
-        this.$router.push(path).catch((e) => {
-          console.warn("[Dashboard] router.push error (fallback to hard redirect):", e);
-          window.location.href = path;
-        });
-      } else {
-        console.warn("[Dashboard] router not available, using window.location.href");
-        window.location.href = path;
-      }
+      if (!id) return;
+
+      this.$router.push({
+        path: `/cards/${id}`,
+        state: {
+          summary: this.summary,
+          transactions: this.transactions
+        }
+      }).catch(() => (window.location.href = `/cards/${id}`));
     },
 
-    // CHANGED: robust onCardAction with logging and fallback navigation
     async onCardAction(payload) {
-      console.info("[Dashboard] onCardAction called with payload:", payload);
-
       const raw = payload?.action ?? payload;
-      if (!raw) {
-        console.warn("[Dashboard] onCardAction: no action in payload", payload);
-        return;
-      }
-
+      if (!raw) return;
       const to = raw.to ?? raw.action?.to;
       if (to) {
-        console.info("[Dashboard] onCardAction: resolved to =", to);
-
         if (typeof to === "string") {
-          try {
-            if (this.$router && typeof this.$router.push === "function") {
-              await this.$router.push(to);
-              return;
-            }
-          } catch (err) {
-            console.warn("[Dashboard] router.push threw, falling back:", err);
-          }
+          try { if (this.$router && typeof this.$router.push === "function") { await this.$router.push(to); return; } } catch (err) {}
           window.location.href = to;
           return;
         }
-
         if (typeof to === "object") {
-          try {
-            if (this.$router && typeof this.$router.push === "function") {
-              await this.$router.push(to);
-              return;
-            }
-          } catch (err) {
-            console.warn("[Dashboard] router.push(object) threw, trying to build path:", err);
-          }
-
           const id = to.params?.id ?? to.params?.cardId ?? raw.cardId ?? raw.value?.cardId;
-          if (id) {
-            const path = `/cards/${id}`;
-            window.location.href = path;
-            return;
-          }
+          if (id) { window.location.href = `/cards/${id}`; return; }
         }
       }
 
@@ -296,51 +334,14 @@ export default {
         const cid = raw.value?.cardId ?? raw.cardId ?? payload?.card?.id;
         if (cid) {
           const found = this.cards.find(c => (c.id ?? c._id ?? c.cardId) === cid);
-          if (found) {
-            found.status = found.status === "BLOCKED" ? "ACTIVE" : "BLOCKED";
-          }
+          if (found) { found.status = found.status === "BLOCKED" ? "ACTIVE" : "BLOCKED"; }
         }
         return;
       }
-
-      const cardId = raw.cardId ?? raw.value?.cardId ?? payload?.card?.id ?? payload?.id;
-      if (cardId) {
-        const path = `/cards/${cardId}`;
-        console.info("[Dashboard] onCardAction fallback navigating to", path);
-        if (this.$router && typeof this.$router.push === "function") {
-          this.$router.push(path).catch(e => {
-            console.warn("[Dashboard] router.push fallback error:", e);
-            window.location.href = path;
-          });
-        } else {
-          window.location.href = path;
-        }
-        return;
-      }
-
-      const maybeCard = payload?.card ?? payload?.action?.card;
-      if (maybeCard) {
-        const id = maybeCard.id ?? maybeCard._id ?? maybeCard.cardId;
-        if (id) {
-          const path = `/cards/${id}`;
-          console.info("[Dashboard] onCardAction last-resort navigate to", path);
-          if (this.$router && typeof this.$router.push === "function") {
-            this.$router.push(path).catch(() => (window.location.href = path));
-          } else {
-            window.location.href = path;
-          }
-          return;
-        }
-      }
-
-      console.warn("[Dashboard] onCardAction: could not determine navigation target from payload", payload);
     }
   }
 };
 </script>
-
-
-
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap");
 :root {
@@ -399,7 +400,7 @@ export default {
   font-weight: 700;
 }
 
-.hero h1 {
+.main h1 {
   font-size: 32px;
   margin: 8px 0;
 }
