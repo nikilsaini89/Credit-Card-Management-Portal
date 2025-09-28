@@ -90,6 +90,8 @@
 import axios from "axios";
 import Card from "../../components/Card.vue";
 import { useRouter } from "vue-router";
+import { mapGetters, mapActions } from 'vuex';
+import { LOCAL_STORAGE } from '../../constants/constants';
 
 export default {
   name: "DashboardView",
@@ -104,41 +106,53 @@ export default {
         availableCredit: 0,
         outstanding: 0,
       },
-      cards: [],
       transactions: [],
       showFull: {},
       openMenu: null,
     };
   },
-  created() {
-    this.loadDashboard();
+  computed: {
+    ...mapGetters('cards', [
+      'cards',
+      'loading',
+      'activeCardsCount',
+      'blockedCardsCount'
+    ])
+  },
+  async created() {
+    await this.loadDashboard();
     document.addEventListener("click", this.globalClick);
   },
   beforeUnmount() {
     document.removeEventListener("click", this.globalClick);
   },
   methods: {
+    ...mapActions('cards', ['fetchCards']),
+    
     async loadDashboard() {
       try {
+        // Fetch cards from store
+        await this.fetchCards();
+        
+        // Load other data from JSON
         const response = await axios.get("/data/dashboard.json");
         const data = response.data;
 
         this.user = data.user || this.user;
-
-        this.summary.activeCards = data.activeCards ?? (data.cards ? data.cards.length : 0);
-        this.summary.totalCards = data.totalCards ?? (data.cards ? data.cards.length : 0);
-        this.summary.totalLimit = data.totalLimit ?? this.sum(data.cards, "totalLimit");
-        this.summary.availableCredit = data.availableCredit ?? this.sum(data.cards, "availableLimit");
-        this.summary.outstanding = data.outstanding ?? 0;
-
-        this.cards = data.cards || [];
         this.transactions = data.transactions || [];
+
+        // Update summary based on store cards
+        this.summary.activeCards = this.activeCardsCount;
+        this.summary.totalCards = this.cards.length;
+        this.summary.totalLimit = this.sum(this.cards, "creditLimit");
+        this.summary.availableCredit = this.sum(this.cards, "availableLimit");
+        this.summary.outstanding = this.summary.totalLimit - this.summary.availableCredit;
 
         this.cards.forEach((cardItem) => {
           this.$set(this.showFull, cardItem.id, false);
         });
       } catch (err) {
-        console.error("Failed to load dashboard JSON:", err);
+        console.error("Failed to load dashboard data:", err);
       }
     },
 
@@ -186,12 +200,18 @@ export default {
     cardActions(card) {
       return [
         { label: "View Details", to: { name: "CardDetail", params: { id: card.id } } },
-        { label: card.status === "BLOCKED" ? "Unblock" : "Block", value: { type: "toggle-block" } }
+        { label: card.cardStatus === "BLOCKED" ? "Unblock" : "Block", value: { type: "toggle-block" } }
       ];
     },
 
-    onCardAction({ action }) {
+    onCardAction({ action, card }) {
       if (!action) return;
+      
+      // Store card details in localStorage when viewing details
+      if (action.to && action.to.name === "CardDetail") {
+        localStorage.setItem(LOCAL_STORAGE.SELECTED_CARD, JSON.stringify(card));
+      }
+      
       if (action.to) {
         if (this.$router) this.$router.push(action.to);
         else {
