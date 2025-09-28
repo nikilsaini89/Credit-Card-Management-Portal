@@ -82,11 +82,23 @@
       </div>
       
       <div class="space-y-4">
-        <div v-for="(plan, index) in bnplPlans" :key="plan.id" class="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-all duration-200 border-l-4" :class="getPlanBorderColor(index)">
+        <div v-for="(plan, index) in bnplPlans" :key="plan.id" :class="[
+          'rounded-lg border p-4 sm:p-6 transition-all duration-200 border-l-4',
+          plan.status === 'COMPLETED' 
+            ? 'bg-green-50 border-green-200 border-l-green-500' 
+            : 'bg-white border-gray-200 hover:shadow-md',
+          plan.status !== 'COMPLETED' ? getPlanBorderColor(index) : ''
+        ]">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 space-y-2 sm:space-y-0">
             <div class="flex items-center min-w-0 flex-1">
-              <div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0" :class="getPlanIconBg(index)">
-                <svg class="h-4 w-4 sm:h-5 sm:w-5" :class="getPlanIconColor(index)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div :class="[
+                'h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0',
+                plan.status === 'COMPLETED' ? 'bg-green-500' : getPlanIconBg(index)
+              ]">
+                <svg v-if="plan.status === 'COMPLETED'" class="h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <svg v-else class="h-4 w-4 sm:h-5 sm:w-5" :class="getPlanIconColor(index)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                 </svg>
               </div>
@@ -98,8 +110,13 @@
                 <div class="text-xs text-gray-600">{{ plan.tenureMonths }} installments • Started {{ formatDate(plan.startDate) }}</div>
               </div>
             </div>
-            <span class="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border border-blue-200 w-fit">
-              Active
+            <span :class="[
+              'inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-semibold w-fit',
+              plan.status === 'COMPLETED' 
+                ? 'bg-green-100 text-green-800 border border-green-200' 
+                : 'bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border border-blue-200'
+            ]">
+              {{ plan.status === 'COMPLETED' ? 'Completed' : 'Active' }}
             </span>
           </div>
 
@@ -200,10 +217,16 @@
           <div class="flex justify-center">
             <button 
               @click="payNow(plan)"
-              class="w-full px-6 py-3 text-sm font-medium text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
-              style="background: #0b2540;"
+              :disabled="plan.status === 'COMPLETED'"
+              :class="[
+                'w-full px-6 py-3 text-sm font-medium rounded-lg shadow-lg transition-all duration-200',
+                plan.status === 'COMPLETED' 
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-60' 
+                  : 'text-white hover:shadow-xl cursor-pointer'
+              ]"
+              :style="plan.status !== 'COMPLETED' ? 'background: #0b2540;' : ''"
             >
-              Pay Now
+              {{ plan.status === 'COMPLETED' ? 'Completed' : 'Pay Now' }}
             </button>
           </div>
         </div>
@@ -233,6 +256,7 @@ import Button from './ui/Button.vue'
 
 interface BnplPlan {
   id: string
+  transactionId?: number
   merchant: string
   status: string
   tenureMonths: number
@@ -327,6 +351,10 @@ const viewSchedule = (plan: BnplPlan) => {
 }
 
 const payNow = (plan: BnplPlan) => {
-  emit('pay-emi', plan.id, plan.monthlyEmi)
+  // Don't allow payment if plan is completed
+  if (plan.status === 'COMPLETED') {
+    return
+  }
+  emit('pay-emi', plan.transactionId?.toString() || plan.id, plan.monthlyEmi)
 }
 </script>
