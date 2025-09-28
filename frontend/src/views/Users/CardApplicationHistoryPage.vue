@@ -126,7 +126,7 @@ export default {
 <style scoped>
 .applications {
   font-family: "Inter", system-ui, Arial;
-  background: #f7f7f9;
+  /* background: #f7f7f9; */
   min-height: 100vh;
 }
 
@@ -163,7 +163,7 @@ export default {
 }
 
 .application-card {
-  background: #fff;
+  background: #f7f7f9;
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
