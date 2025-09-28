@@ -7,10 +7,10 @@
       </div>
 
       <button
-        class="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-[#2463ea] transition"
+        class="flex items-center gap-2 bg-[#ffd60a] text-black px-5 py-2.5 rounded-xl font-medium hover:bg-[#e5cd56] transition"
         @click="$router.push('/apply-card')"
       >
-        <img src="../../assets/plus-sign.svg" alt="icon" class="icon" />
+        <img src="../../assets/plus-sign.svg" alt="icon" />
         Apply for New Card
       </button>
     </div>
@@ -73,10 +73,10 @@
 
         <!-- Button -->
         <button
-          class="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-[#2463ea] transition"
+          class="flex items-center gap-2 bg-[#ffd60a] text-black px-5 py-2.5 rounded-xl font-medium hover:bg-[#e5cd56] transition"
           @click="$router.push('/apply-card')"
         >
-          <img src="../../assets/plus-sign.svg" alt="Add" class="w-4 h-4 icon" />
+          <img src="../../assets/plus-sign.svg" alt="Add" class="w-4 h-4" />
           Apply for New Card
         </button>
       </div>
