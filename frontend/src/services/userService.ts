@@ -1,26 +1,40 @@
 import { BASE_URL } from '../constants/constants';
 import axios from 'axios';
 import type { User } from '../types/User';
+import { retryWithRefresh } from './authService';
 
-export function getUserProfile(userId: number) {
+export async function getUserProfile(userId: number) {
   const token = localStorage.getItem('token');
-  const user=localStorage.getItem('user');
-  return axios.get(`${BASE_URL}/profile/${userId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+  try {
+    return await axios.get(`${BASE_URL}/profile/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  } catch (error: any) {
+    return retryWithRefresh(error, {
+      method: 'get',
+      url: `${BASE_URL}/profile/${userId}`,
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      _retry: false
+    });
+  }
 }
 
-export const updateUserProfile = async (
+export async function updateUserProfile(
   userId: number,
-  payload: Omit<User, 'id'|'email' | 'password'>
-) => {
+  payload: Omit<User, 'id' | 'email' | 'password'>
+) {
   const token = localStorage.getItem('token');
-
-  return axios.put(`${BASE_URL}/profile/${userId}`, payload,{
-     headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
-};
+  try {
+    return await axios.put(`${BASE_URL}/profile/${userId}`, payload, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  } catch (error: any) {
+    return retryWithRefresh(error, {
+      method: 'put',
+      url: `${BASE_URL}/profile/${userId}`,
+      data: payload,
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      _retry: false
+    });
+  }
+}
