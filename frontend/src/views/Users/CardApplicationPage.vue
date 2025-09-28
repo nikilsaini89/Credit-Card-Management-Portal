@@ -2,6 +2,7 @@
   <div class="apply-card">
     <main class="container">
 
+      <!-- Header -->
       <section class="hero">
         <div class="hero-header">
           <h1>Apply for Credit Card</h1>
@@ -11,6 +12,7 @@
         </div>
       </section>
 
+      <!-- Card Selection -->
       <section class="card-selection">
         <h2>Select Your Card</h2>
         <p class="muted">Choose the credit card that best fits your lifestyle</p>
@@ -56,7 +58,8 @@
             <small>Range: ₹{{ selectedCard.minLimit }} – ₹{{ selectedCard.maxLimit }}</small>
           </div>
 
-          <div class="form-row info">
+          <!-- ✅ Show real user info -->
+          <div class="form-row info" v-if="user">
             <h4>Applicant Information</h4>
             <p><strong>Name:</strong> {{ user.name }}</p>
             <p><strong>Email:</strong> {{ user.email }}</p>
@@ -73,18 +76,16 @@
 <script>
 import { getCardTypes } from '../../services/cards-service';
 import { applyForCard } from "../../services/cardApplicationService";
+import { getUserProfile } from "../../services/userService";      // ✅ backend user fetch
 import { getUserIdFromToken } from '../../utils/getTokenData';
 
 export default {
   name: "ApplyCardView",
+
   data() {
     return {
-      user: {
-        name: "Rahul Verma",
-        email: "rahul@example.com",
-        bnplEligible: true,
-      },
-      cards: [],              // will be filled after fetching
+      user: null,          // ✅ fetched from backend
+      cards: [],           // filled after fetch
       selectedCard: null,
       form: {
         creditLimit: "",
@@ -94,24 +95,31 @@ export default {
 
   async created() {
     try {
-      const fetchedCards = await getCardTypes();
-      console.log("Fetched cards from backend:", fetchedCards);
+      // ✅ fetch logged-in user profile
+      const userId = getUserIdFromToken();
+      if (userId) {
+        const { data } = await getUserProfile(userId);
+        this.user = data;
+        console.log("Fetched user profile:", this.user);
+      } else {
+        console.warn("No user ID found in token");
+      }
 
-      // 🔑 Map backend structure to the expected frontend structure
+      // ✅ fetch cards from backend
+      const fetchedCards = await getCardTypes();
       this.cards = fetchedCards.map(card => ({
         id: card.id,
         name: card.name,
-        icon: card.networkType === 'AMEX' ? '⭐' : '💳',   // pick icon by networkType
-        benefits: [card.description],                    // use description as benefit for now
+        icon: card.networkType === 'AMEX' ? '⭐' : '💳',
+        benefits: [card.description],
         limitRange: `${card.minCardLimit.toLocaleString()} – ${card.maxCardLimit.toLocaleString()}`,
         minLimit: card.minCardLimit,
         maxLimit: card.maxCardLimit,
-        tags: [card.networkType],                         // add tags based on network type
+        tags: [card.networkType],
       }));
 
-      console.log("Mapped cards for frontend:", this.cards);
     } catch (err) {
-      console.error("Error fetching cards:", err);
+      console.error("Error fetching data:", err);
     }
   },
 
@@ -120,22 +128,31 @@ export default {
       this.selectedCard = card;
       this.form.creditLimit = card.minLimit;
     },
-    submitApplication() {
-      const cardApplication = {};
-      cardApplication.cardTypeId = this.selectedCard.id;
-      cardApplication.requestLimit = this.form.creditLimit;
-      cardApplication.userId = getUserIdFromToken();
-      console.log(cardApplication," = card application data");
-      applyForCard(cardApplication);
-      this.$router.push("/my-applications");
-      alert(
-        `Applied for ${this.selectedCard.name} with credit limit ₹${this.form.creditLimit}`
-      );
+
+    async submitApplication() {
+      if (!this.user) {
+        alert("User profile not loaded. Please log in again.");
+        return;
+      }
+
+      const cardApplication = {
+        userId: this.user.id,                // ✅ use real backend user id
+        cardTypeId: this.selectedCard.id,
+        requestLimit: this.form.creditLimit,
+      };
+
+      try {
+        await applyForCard(cardApplication);
+        alert(`Applied for ${this.selectedCard.name} with credit limit ₹${this.form.creditLimit}`);
+        this.$router.push("/my-applications");
+      } catch (err) {
+        console.error("Application failed:", err);
+        alert("Something went wrong while submitting your application.");
+      }
     },
   },
 };
 </script>
-
 
 <style scoped>
 .apply-card {
@@ -247,18 +264,18 @@ export default {
   cursor: pointer;
   font-weight: 600;
 }
-/* Container for title and button */
+
+/* Header */
 .hero-header {
   display: flex;
-  justify-content: space-between; /* places items on opposite ends */
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
 }
 
-/* History Button */
 .btn-history {
-  background: #ffd60a;              /* bright yellow accent */
-  color: #0b2540;                    /* dark text for contrast */
+  background: #ffd60a;
+  color: #0b2540;
   font-weight: 600;
   padding: 10px 18px;
   font-size: 15px;
@@ -270,7 +287,6 @@ export default {
   cursor: pointer;
 }
 
-/* Hover and focus styles */
 .btn-history:hover {
   background: #e5cd56;
   border-color: #e5cd56;
@@ -281,5 +297,4 @@ export default {
   outline: 2px solid rgba(31, 111, 235, 0.3);
   outline-offset: 3px;
 }
-
 </style>

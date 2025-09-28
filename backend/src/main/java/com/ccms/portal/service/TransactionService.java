@@ -38,6 +38,7 @@ public class TransactionService {
 
         private final TransactionRepository transactionRepository;
         private final CreditCardRepository creditCardRepository;
+        private final CreditCardStatementService creditCardStatementService;
 
         /**
          * Create a new transaction
@@ -84,11 +85,23 @@ public class TransactionService {
                 Transaction savedTransaction = transactionRepository.save(transaction);
                 log.info("Transaction created successfully with ID: {}", savedTransaction.getId());
 
-                // Update available credit limit
-                BigDecimal newAvailableLimit = availableLimit.subtract(request.getAmount());
-                card.setAvailableLimit(newAvailableLimit.doubleValue());
-                creditCardRepository.save(card);
-                log.info("Updated available limit for card {} to: {}", card.getId(), newAvailableLimit);
+                // Update available credit limit only for non-BNPL transactions
+                if (!request.getIsBnpl()) {
+                        BigDecimal newAvailableLimit = availableLimit.subtract(request.getAmount());
+                        card.setAvailableLimit(newAvailableLimit.doubleValue());
+                        creditCardRepository.save(card);
+                        log.info("Updated available limit for card {} to: {}", card.getId(), newAvailableLimit);
+                } else {
+                        log.info("BNPL transaction created - credit limit not deducted until payment is made");
+                }
+
+                // Trigger statement recalculation for current month
+                try {
+                        creditCardStatementService.createCurrentStatement(card.getId());
+                        log.info("Statement recalculated for card {}", card.getId());
+                } catch (Exception e) {
+                        log.warn("Failed to recalculate statement for card {}: {}", card.getId(), e.getMessage());
+                }
 
                 return mapToTransactionResponse(savedTransaction);
         }
