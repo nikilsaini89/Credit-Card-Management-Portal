@@ -7,10 +7,9 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-
 @Data
 @Entity
-@Table(name="credit_card_application")
+@Table(name = "credit_card_application")
 public class CardApplicationEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,5 +1,25 @@
 <template>
   <div class="min-h-screen bg-gray-50">
+    <!-- Notification -->
+    <div v-if="showNotification" class="fixed top-4 right-4 z-50 animate-fadeIn">
+      <div :class="[
+        'px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3',
+        notificationType === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+      ]">
+        <svg v-if="notificationType === 'success'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        <span class="font-medium">{{ notificationMessage }}</span>
+        <button @click="showNotification = false" class="ml-4 text-white hover:text-gray-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
     <!-- Header Section -->
     <div class="bg-white border-b border-gray-100 shadow-sm">
       <div class="w-full py-4 sm:py-6">
@@ -76,7 +96,9 @@
                         class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
                       >
                         <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-3"></span>
-                        <span class="text-gray-700 font-medium">{{ card.cardType }} ****{{ card.lastFour }}</span>
+                        <span class="text-gray-700 font-medium">
+                          {{ card.cardType?.networkType || card.cardType || 'VISA' }} ****{{ card.lastFour || card.cardNumber?.slice(-4) || '****' }}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -134,13 +156,25 @@
                   </div>
                   <input
                     v-model="form.amount"
+                    @input="validateAmount"
                     type="number"
                     step="0.01"
                     min="0.01"
                     placeholder="0.00"
-                    class="block w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 bg-white"
+                    :class="[
+                      'block w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 bg-white',
+                      amountError ? 'border-red-300 focus:ring-red-400 focus:border-red-400' : 'border-gray-200 focus:ring-yellow-400 focus:border-yellow-400'
+                    ]"
                     required
                   />
+                  <!-- Amount validation message -->
+                  <div v-if="amountError" class="absolute -bottom-6 left-0 text-xs text-red-500">
+                    {{ amountError }}
+                  </div>
+                  <!-- Available limit display -->
+                  <div v-if="selectedCardInfo" class="absolute -bottom-6 right-0 text-xs text-gray-500">
+                    Available: ₹{{ formatNumber(selectedCardInfo.availableLimit) }}
+                  </div>
                 </div>
               </div>
 
@@ -336,7 +370,7 @@
                   class="flex-1 px-6 py-3 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
                   style="background: #ffd60a; color: #0b2540;"
                 >
-                  <span v-if="!loading">Create Transaction</span>
+                  <span v-if="!loading">{{ form.isBnpl ? 'Create BNPL Transaction' : 'Create Transaction' }}</span>
                   <span v-else class="flex items-center justify-center">
                     <svg class="animate-spin -ml-1 mr-3 h-5 w-5" style="color: #0b2540;" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -384,6 +418,10 @@ const form = ref({
 })
 
 const loading = ref(false)
+const amountError = ref('')
+const showNotification = ref(false)
+const notificationMessage = ref('')
+const notificationType = ref('success')
 
 // Dropdown state
 const showCardDropdown = ref(false)
@@ -394,6 +432,11 @@ const showTenureDropdown = ref(false)
 // Computed properties
 const cards = computed(() => store.state?.cards?.cards || [])
 const merchants = computed(() => store.state?.merchants?.merchants || [])
+
+const selectedCardInfo = computed(() => {
+  if (!form.value.cardId) return null
+  return cards.value.find((card: any) => card.id === form.value.cardId)
+})
 
 const monthlyEmi = computed(() => {
   if (!form.value.amount || !form.value.tenureMonths) return 0
@@ -413,6 +456,42 @@ const formatNumber = (value: number) => {
     minimumFractionDigits: 0, 
     maximumFractionDigits: 2 
   }).format(value)
+}
+
+const validateAmount = () => {
+  const amount = parseFloat(form.value.amount)
+  const selectedCard = selectedCardInfo.value
+  
+  if (!amount || amount <= 0) {
+    amountError.value = 'Please enter a valid amount'
+    return false
+  }
+  
+  if (selectedCard && amount > selectedCard.availableLimit) {
+    amountError.value = `Amount exceeds available limit of ₹${formatNumber(selectedCard.availableLimit)}`
+    return false
+  }
+  
+  amountError.value = ''
+  return true
+}
+
+const showSuccessNotification = (message: string) => {
+  notificationMessage.value = message
+  notificationType.value = 'success'
+  showNotification.value = true
+  setTimeout(() => {
+    showNotification.value = false
+  }, 3000)
+}
+
+const showErrorNotification = (message: string) => {
+  notificationMessage.value = message
+  notificationType.value = 'error'
+  showNotification.value = true
+  setTimeout(() => {
+    showNotification.value = false
+  }, 3000)
 }
 
 // Dropdown methods
@@ -467,7 +546,13 @@ const selectTenure = (tenure: string) => {
 const getCardDisplayText = () => {
   if (!form.value.cardId) return 'Choose your card'
   const selectedCard = cards.value.find((card: any) => card.id === form.value.cardId)
-  return selectedCard ? `${selectedCard.cardType} ****${selectedCard.lastFour}` : 'Choose your card'
+  if (!selectedCard) return 'Choose your card'
+  
+  // Handle different card object structures
+  const cardType = selectedCard.cardType?.networkType || selectedCard.cardType || 'VISA'
+  const lastFour = selectedCard.lastFour || selectedCard.cardNumber?.slice(-4) || '****'
+  
+  return `${cardType} ****${lastFour}`
 }
 
 const getMerchantDisplayText = () => {
@@ -499,11 +584,42 @@ const getTenureDisplayText = () => {
 const submitTransaction = async () => {
   if (loading.value) return
   
+  // Validate form
+  if (!validateForm()) {
+    return
+  }
+  
   loading.value = true
   
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Prepare transaction data
+    const transactionData = {
+      cardId: parseInt(form.value.cardId),
+      merchantName: getMerchantDisplayText(),
+      amount: parseFloat(form.value.amount),
+      category: form.value.category,
+      isBnpl: form.value.isBnpl,
+      transactionDate: new Date().toISOString().split('T')[0]
+    }
+    
+    console.log('Creating transaction:', transactionData)
+    
+    // Call the transaction service
+    const newTransaction = await store.dispatch('transactions/createTransaction', transactionData)
+    
+    console.log('Transaction created successfully:', newTransaction)
+    
+    // Show success message
+    showSuccessNotification(`Transaction of ₹${formatNumber(parseFloat(form.value.amount))} created successfully!`)
+    
+    // Refresh transaction list for the selected card
+    if (form.value.cardId) {
+      await store.dispatch('transactions/fetchTransactions', { 
+        cardId: parseInt(form.value.cardId), 
+        page: 0, 
+        size: 10 
+      })
+    }
     
     // Reset form
     form.value = {
@@ -519,9 +635,41 @@ const submitTransaction = async () => {
     router.push('/transactions')
   } catch (error) {
     console.error('Error creating transaction:', error)
+    showErrorNotification('Failed to create transaction. Please try again.')
   } finally {
     loading.value = false
   }
+}
+
+const validateForm = () => {
+  if (!form.value.cardId) {
+    showErrorNotification('Please select a card')
+    return false
+  }
+  
+  if (!form.value.merchantAccountId) {
+    showErrorNotification('Please select a merchant')
+    return false
+  }
+  
+  if (!form.value.amount || parseFloat(form.value.amount) <= 0) {
+    showErrorNotification('Please enter a valid amount')
+    return false
+  }
+  
+  if (!form.value.category) {
+    showErrorNotification('Please select a category')
+    return false
+  }
+  
+  // Check if amount exceeds card limit
+  const selectedCard = cards.value.find((card: any) => card.id === form.value.cardId)
+  if (selectedCard && parseFloat(form.value.amount) > selectedCard.availableLimit) {
+    showErrorNotification(`Amount exceeds available limit of ₹${formatNumber(selectedCard.availableLimit)}`)
+    return false
+  }
+  
+  return true
 }
 
 onMounted(() => {
