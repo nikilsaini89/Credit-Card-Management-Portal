@@ -343,13 +343,33 @@
                     </div>
                   </div>
 
-                  <div v-if="form.tenureMonths && form.amount" class="bg-white rounded-xl p-4 border border-yellow-200">
-                    <div class="flex justify-between items-center">
+                  <div v-if="form.tenureMonths && form.amount" class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-200">
+                    <div class="flex justify-between items-center mb-3">
                       <span class="text-lg font-semibold text-gray-700">Monthly EMI:</span>
-                      <span class="text-2xl font-bold" style="color: #0b2540;">₹{{ formatNumber(monthlyEmi) }}</span>
+                      <span class="text-2xl font-bold text-green-600">₹{{ formatNumber(monthlyEmi) }}</span>
                     </div>
-                    <div class="mt-2 text-sm text-gray-600">
-                      Total amount: ₹{{ formatNumber(parseFloat(form.amount) || 0) }} over {{ form.tenureMonths }} months
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span class="text-gray-600">Total Amount:</span>
+                        <span class="font-semibold text-gray-800">₹{{ formatNumber(parseFloat(form.amount) || 0) }}</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600">Tenure:</span>
+                        <span class="font-semibold text-gray-800">{{ form.tenureMonths }} months</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600">Interest Rate:</span>
+                        <span class="font-semibold text-gray-800">0% (No Interest)</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600">Total Payable:</span>
+                        <span class="font-semibold text-gray-800">₹{{ formatNumber(parseFloat(form.amount) || 0) }}</span>
+                      </div>
+                    </div>
+                    <div class="mt-3 p-2 bg-green-100 rounded-lg">
+                      <p class="text-sm text-green-800">
+                        <span class="font-semibold">✓ Interest-free EMI</span> - No additional charges for {{ form.tenureMonths }} months
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -370,7 +390,7 @@
                   class="flex-1 px-6 py-3 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
                   style="background: #ffd60a; color: #0b2540;"
                 >
-                  <span v-if="!loading">{{ form.isBnpl ? 'Create BNPL Transaction' : 'Create Transaction' }}</span>
+                  <span v-if="!loading">{{ form.isBnpl ? `Create BNPL Transaction (₹${formatNumber(monthlyEmi)}/month)` : 'Create Transaction' }}</span>
                   <span v-else class="flex items-center justify-center">
                     <svg class="animate-spin -ml-1 mr-3 h-5 w-5" style="color: #0b2540;" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -383,8 +403,59 @@
             </form>
           </div>
         </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div v-if="showSuccessModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+      <!-- Success Icon -->
+      <div class="flex justify-center mb-6">
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+          <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Success Message -->
+      <div class="text-center mb-6">
+        <h3 class="text-2xl font-bold text-gray-900 mb-2">Transaction Created Successfully!</h3>
+        <p class="text-gray-600 mb-4">
+          Your {{ successModalData.isBnpl ? 'BNPL' : 'regular' }} transaction of 
+          <span class="font-semibold text-green-600">₹{{ formatNumber(successModalData.amount) }}</span> 
+          has been processed.
+        </p>
+        
+        <div v-if="successModalData.isBnpl" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-sm text-blue-800">
+              Your BNPL plan is now active. You can manage your installments from the BNPL overview section.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button
+          @click="createAnotherTransaction"
+          class="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors duration-200"
+        >
+          Create Another Transaction
+        </button>
+        <button
+          @click="goToTransactions"
+          class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200"
+        >
+          View Transactions
+        </button>
       </div>
     </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -422,6 +493,14 @@ const amountError = ref('')
 const showNotification = ref(false)
 const notificationMessage = ref('')
 const notificationType = ref('success')
+
+// Success modal state
+const showSuccessModal = ref(false)
+const successModalData = ref({
+  amount: 0,
+  isBnpl: false,
+  transactionId: null as number | null
+})
 
 // Dropdown state
 const showCardDropdown = ref(false)
@@ -494,6 +573,62 @@ const showErrorNotification = (message: string) => {
   }, 3000)
 }
 
+const showSuccessModalFunc = (amount: number, isBnpl: boolean) => {
+  successModalData.value = {
+    amount,
+    isBnpl,
+    transactionId: Date.now() // Simple ID for display
+  }
+  showSuccessModal.value = true
+}
+
+const closeSuccessModal = () => {
+  showSuccessModal.value = false
+}
+
+const goToTransactions = () => {
+  closeSuccessModal()
+  router.push('/transactions')
+}
+
+const createAnotherTransaction = () => {
+  closeSuccessModal()
+  // Form is already reset, user can create another transaction
+}
+
+// Add missing functions for data refresh
+const fetchCurrentStatement = async (cardId: number) => {
+  try {
+    const response = await fetch(`http://localhost:8080/api/statements/current/${cardId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    if (response.ok) {
+      const statement = await response.json()
+      console.log('Statement refreshed:', statement)
+    }
+  } catch (error) {
+    console.error('Error fetching statement:', error)
+  }
+}
+
+const fetchBnplOverview = async (cardId: number) => {
+  try {
+    const response = await fetch(`http://localhost:8080/api/bnpl/overview/card/${cardId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    if (response.ok) {
+      const overview = await response.json()
+      console.log('BNPL overview refreshed:', overview)
+    }
+  } catch (error) {
+    console.error('Error fetching BNPL overview:', error)
+  }
+}
+
 // Dropdown methods
 const toggleCardDropdown = () => {
   showCardDropdown.value = !showCardDropdown.value
@@ -541,6 +676,9 @@ const selectCategory = (category: string) => {
 const selectTenure = (tenure: string) => {
   form.value.tenureMonths = tenure
   showTenureDropdown.value = false
+  
+  // Don't auto-submit, let user review the EMI calculation first
+  console.log('Tenure selected:', tenure, 'EMI will be:', monthlyEmi.value)
 }
 
 const getCardDisplayText = () => {
@@ -609,16 +747,21 @@ const submitTransaction = async () => {
     
     console.log('Transaction created successfully:', newTransaction)
     
-    // Show success message
-    showSuccessNotification(`Transaction of ₹${formatNumber(parseFloat(form.value.amount))} created successfully!`)
+    // Show success modal instead of immediate redirect
+    showSuccessModalFunc(parseFloat(form.value.amount), form.value.isBnpl)
     
-    // Refresh transaction list for the selected card
+    // Refresh all data after transaction creation
     if (form.value.cardId) {
-      await store.dispatch('transactions/fetchTransactions', { 
-        cardId: parseInt(form.value.cardId), 
-        page: 0, 
-        size: 10 
-      })
+      await Promise.all([
+        store.dispatch('transactions/fetchTransactions', { 
+          cardId: parseInt(form.value.cardId), 
+          page: 0, 
+          size: 10 
+        }),
+        store.dispatch('cards/fetchCards'), // Refresh card data to get updated available limit
+        fetchCurrentStatement(parseInt(form.value.cardId)), // Refresh statement
+        fetchBnplOverview(parseInt(form.value.cardId)) // Refresh BNPL data
+      ])
     }
     
     // Reset form
@@ -630,9 +773,6 @@ const submitTransaction = async () => {
       isBnpl: false,
       tenureMonths: ''
     }
-    
-    // Navigate back to transactions page
-    router.push('/transactions')
   } catch (error) {
     console.error('Error creating transaction:', error)
     showErrorNotification('Failed to create transaction. Please try again.')
@@ -667,6 +807,20 @@ const validateForm = () => {
   if (selectedCard && parseFloat(form.value.amount) > selectedCard.availableLimit) {
     showErrorNotification(`Amount exceeds available limit of ₹${formatNumber(selectedCard.availableLimit)}`)
     return false
+  }
+  
+  // BNPL specific validations
+  if (form.value.isBnpl) {
+    if (!form.value.tenureMonths) {
+      showErrorNotification('Please select tenure for BNPL transaction')
+      return false
+    }
+    
+    const emi = parseFloat(form.value.amount) / parseInt(form.value.tenureMonths)
+    if (emi < 100) {
+      showErrorNotification('EMI amount should be at least ₹100')
+      return false
+    }
   }
   
   return true
