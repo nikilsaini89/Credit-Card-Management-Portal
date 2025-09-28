@@ -184,17 +184,27 @@
               
               <!-- Chart Container -->
               <div class="h-64 flex items-center justify-center">
-                <canvas ref="categoryChart" class="w-full h-full"></canvas>
+                <div v-if="!hasCategoryData" class="text-center">
+                  <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
+                    </svg>
+                  </div>
+                  <h4 class="text-lg font-semibold text-gray-700 mb-2">No Spending Data</h4>
+                  <p class="text-sm text-gray-500">Start making transactions to see your spending breakdown by category</p>
+                </div>
+                <canvas v-else ref="categoryChart" class="w-full h-full"></canvas>
               </div>
               
               <!-- Legend -->
-              <div class="mt-4 grid grid-cols-2 gap-2">
+              <div v-if="hasCategoryData" class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 <div v-for="category in categoryBreakdown" :key="category.name" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                   <div class="flex items-center">
-                    <div :class="category.color" class="w-3 h-3 rounded-full mr-2"></div>
-                    <span class="text-sm font-medium text-gray-700">{{ category.name }}</span>
+                    <div class="w-3 h-3 rounded-full mr-2" :style="{ backgroundColor: category.hexColor }"></div>
+                    <span class="text-sm font-medium text-gray-700 truncate">{{ category.name }}</span>
                   </div>
-                  <span class="text-sm font-bold" style="color: #0b2540;">{{ category.percentage }}%</span>
+                  <span class="text-sm font-bold ml-2" style="color: #0b2540;">{{ category.percentage }}%</span>
                 </div>
               </div>
             </div>
@@ -220,11 +230,20 @@
               
               <!-- Chart Container -->
               <div class="h-64 flex items-center justify-center">
-                <canvas ref="trendsChart" class="w-full h-full"></canvas>
+                <div v-if="!hasTrendsData" class="text-center">
+                  <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                  </div>
+                  <h4 class="text-lg font-semibold text-gray-700 mb-2">No Trend Data</h4>
+                  <p class="text-sm text-gray-500">Start making transactions to see your monthly spending trends</p>
+                </div>
+                <canvas v-else ref="trendsChart" class="w-full h-full"></canvas>
               </div>
               
               <!-- Summary Stats -->
-              <div class="mt-4 grid grid-cols-2 gap-4">
+              <div v-if="hasTrendsData" class="mt-4 grid grid-cols-2 gap-4">
                 <div class="text-center p-3 bg-gray-50 rounded-lg">
                   <div class="text-sm font-medium text-gray-600">This Month</div>
                   <div :class="getAmountSize(analytics.thisMonth)" class="font-bold mt-1" style="color: #0b2540;">{{ formatCurrency(analytics.thisMonth) }}</div>
@@ -729,17 +748,80 @@ const categoryBreakdown = computed(() => {
     categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount
   })
   
-  const colors = ['bg-yellow-500', 'bg-orange-500', 'bg-blue-900', 'bg-green-500', 'bg-purple-500']
-  let colorIndex = 0
+  // Predefined beautiful color palette for better visual appeal
+  const predefinedColors = [
+    '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57',
+    '#ff9ff3', '#54a0ff', '#5f27cd', '#00d2d3', '#ff9f43',
+    '#10ac84', '#ee5a24', '#0984e3', '#6c5ce7', '#a29bfe',
+    '#fd79a8', '#fdcb6e', '#e17055', '#00b894', '#00cec9',
+    '#6c5ce7', '#a29bfe', '#fd79a8', '#fdcb6e', '#e17055'
+  ]
+
+  // Generate dynamic colors based on category name for consistency
+  const generateColor = (categoryName: string, index: number) => {
+    // First try predefined colors for better visual appeal
+    if (index < predefinedColors.length) {
+      return {
+        bg: `bg-[${predefinedColors[index]}]`,
+        hex: predefinedColors[index]
+      }
+    }
+    
+    // For additional categories, generate colors using hash
+    let hash = 0
+    for (let i = 0; i < categoryName.length; i++) {
+      hash = categoryName.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    
+    // Use hash to generate consistent colors
+    const hue = Math.abs(hash) % 360
+    const saturation = 70 + (Math.abs(hash) % 20) // 70-90% saturation
+    const lightness = 45 + (Math.abs(hash) % 20) // 45-65% lightness
+    
+    // Convert HSL to hex for better Chart.js compatibility
+    const hslToHex = (h: number, s: number, l: number) => {
+      l /= 100
+      const a = s * Math.min(l, 1 - l) / 100
+      const f = (n: number) => {
+        const k = (n + h / 30) % 12
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)
+        return Math.round(255 * color).toString(16).padStart(2, '0')
+      }
+      return `#${f(0)}${f(8)}${f(4)}`
+    }
+    
+    const hexColor = hslToHex(hue, saturation, lightness)
+    
+    return {
+      bg: `bg-[${hexColor}]`,
+      hex: hexColor
+    }
+  }
   
   return Object.entries(categoryTotals)
-    .map(([category, amount]) => ({
-      name: category.charAt(0).toUpperCase() + category.slice(1),
-      percentage: totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0,
-      color: colors[colorIndex++ % colors.length]
-    }))
+    .map(([category, amount], index) => {
+      const colorData = generateColor(category, index)
+      return {
+        name: category.charAt(0).toUpperCase() + category.slice(1),
+        percentage: totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0,
+        color: colorData.bg,
+        hexColor: colorData.hex,
+        colorIndex: index
+      }
+    })
     .sort((a, b) => b.percentage - a.percentage)
-    .slice(0, 5) // Show top 5 categories
+    .slice(0, 10) // Show top 10 categories instead of 5
+})
+
+// Check if there's data for charts
+const hasCategoryData = computed(() => {
+  const totalSpent = transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  return totalSpent > 0
+})
+
+const hasTrendsData = computed(() => {
+  const totalSpent = transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  return totalSpent > 0
 })
 
 
@@ -1080,7 +1162,10 @@ const exportTransactionsPDF = () => {
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(0, 0, 0)
   
-  filteredTransactions.value.forEach((transaction: Transaction, index: number) => {
+  // Safety check for filteredTransactions
+  const transactionsToExport = filteredTransactions.value || []
+  
+  transactionsToExport.forEach((transaction: Transaction, index: number) => {
     // Check if we need a new page
     if (yPosition > doc.internal.pageSize.height - 20) {
       doc.addPage()
@@ -1098,13 +1183,48 @@ const exportTransactionsPDF = () => {
     const formattedAmount = `Rs. ${amount.toLocaleString('en-IN')}`
     
     
+    // Safely get merchant name
+    const merchantName = transaction.merchantName || transaction.merchant || 'Unknown Merchant'
+    const truncatedMerchant = merchantName.length > 15 ? merchantName.substring(0, 15) + '...' : merchantName
+    
+    // Safely get category
+    const category = transaction.category || 'Other'
+    const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1)
+    
+    // Safely get status
+    const status = transaction.status || 'Unknown'
+    const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1)
+    
+    // Safely get card info
+    const cardType = transaction.cardType || 'Card'
+    const lastFour = transaction.lastFour
+    
+    // Try to get card info from cards data if lastFour is not available
+    let cardDisplay = cardType
+    if (lastFour && lastFour !== '0000' && lastFour.length === 4) {
+      cardDisplay = `${cardType} ****${lastFour}`
+    } else {
+      // Try to find the card from cards data
+      const userCard = cards.value.find((card: any) => card.id === transaction.cardId)
+      if (userCard && userCard.cardNumber) {
+        const cardNumber = userCard.cardNumber.toString()
+        const lastFourDigits = cardNumber.slice(-4)
+        cardDisplay = `${cardType} ****${lastFourDigits}`
+      } else if (lastFour && lastFour !== '0000') {
+        cardDisplay = `${cardType} ****${lastFour}`
+      } else {
+        // If no valid lastFour, just show card type
+        cardDisplay = cardType
+      }
+    }
+    
     const rowData = [
-      new Date(transaction.createdAt).toLocaleDateString('en-IN'),
-      transaction.merchant.length > 15 ? transaction.merchant.substring(0, 15) + '...' : transaction.merchant,
+      new Date(transaction.createdAt || transaction.transactionDate || new Date()).toLocaleDateString('en-IN'),
+      truncatedMerchant,
       formattedAmount,
-      transaction.category.charAt(0).toUpperCase() + transaction.category.slice(1),
-      transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1),
-      `${transaction.cardType} ****${transaction.lastFour}`,
+      formattedCategory,
+      formattedStatus,
+      cardDisplay,
       transaction.isBnpl ? 'BNPL' : 'Regular'
     ]
     
@@ -1145,10 +1265,10 @@ const exportTransactionsPDF = () => {
   yPosition += 10
   doc.setFontSize(10)
   doc.setTextColor(11, 37, 64)
-  doc.text(`Total Transactions: ${filteredTransactions.value.length}`, margin, yPosition)
+  doc.text(`Total Transactions: ${transactionsToExport.length}`, margin, yPosition)
   
   // Add total amount
-  const totalAmount = filteredTransactions.value.reduce((sum: number, transaction: Transaction) => sum + Number(transaction.amount), 0)
+  const totalAmount = transactionsToExport.reduce((sum: number, transaction: Transaction) => sum + Number(transaction.amount || 0), 0)
   doc.text(`Total Amount: Rs. ${totalAmount.toLocaleString('en-IN')}`, margin, yPosition + 10)
   
   // Add footer
@@ -1396,7 +1516,7 @@ const fetchTransactions = async () => {
 
 // Chart initialization methods
 const initCategoryChart = () => {
-  if (!categoryChart.value) return
+  if (!categoryChart.value || !hasCategoryData.value) return
   
   const ctx = categoryChart.value.getContext('2d')
   if (!ctx) return
@@ -1407,13 +1527,7 @@ const initCategoryChart = () => {
       labels: categoryBreakdown.value.map(cat => cat.name),
       datasets: [{
         data: categoryBreakdown.value.map(cat => cat.percentage),
-        backgroundColor: [
-          '#ffd60a',
-          '#f97316', 
-          '#0b2540', 
-          '#111827', 
-          '#6b7280' 
-        ],
+        backgroundColor: categoryBreakdown.value.map(cat => cat.hexColor),
         borderWidth: 0
       }]
     },
@@ -1431,7 +1545,7 @@ const initCategoryChart = () => {
 }
 
 const initTrendsChart = () => {
-  if (!trendsChart.value) return
+  if (!trendsChart.value || !hasTrendsData.value) return
   
   const ctx = trendsChart.value.getContext('2d')
   if (!ctx) return

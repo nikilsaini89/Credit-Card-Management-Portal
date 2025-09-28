@@ -126,23 +126,20 @@
                   
                   <!-- Custom Merchant Dropdown Overlay -->
                   <div v-if="showMerchantDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                    <div class="p-2 space-y-1">
-                      <button
-                        @click="selectMerchant('')"
-                        class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200"
-                      >
-                        Select merchant
-                      </button>
-                      <button
-                        v-for="merchant in merchants"
-                        :key="merchant.id"
-                        @click="selectMerchant(merchant.id)"
-                        class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
-                      >
-                        <span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-3"></span>
-                        <span class="text-gray-700 font-medium">{{ merchant.name }}</span>
-                      </button>
-                    </div>
+                    <button
+                      @click="selectMerchant('')"
+                      class="w-full px-4 py-3 text-sm text-left hover:bg-yellow-200 hover:text-gray-900 transition-colors duration-200 border-b border-gray-100 text-gray-500 font-medium"
+                    >
+                      Select merchant
+                    </button>
+                    <button
+                      v-for="merchant in merchants"
+                      :key="merchant.id"
+                      @click="selectMerchant(merchant.id)"
+                      class="w-full px-4 py-3 text-sm text-left hover:bg-yellow-200 hover:text-gray-900 transition-colors duration-200 border-b border-gray-100 last:border-b-0"
+                    >
+                      <span class="text-gray-700 font-medium">{{ merchant.name }}</span>
+                    </button>
                   </div>
                 </div>
               </div>
