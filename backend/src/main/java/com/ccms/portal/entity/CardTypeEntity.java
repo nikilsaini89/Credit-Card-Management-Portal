@@ -1,6 +1,7 @@
 package com.ccms.portal.entity;
 
 import com.ccms.portal.enums.NetworkType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import org.hibernate.annotations.CreationTimestamp;
@@ -36,5 +37,6 @@ public class CardTypeEntity {
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "cardType", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<CreditCardEntity> creditCards = new ArrayList<>();
 }
