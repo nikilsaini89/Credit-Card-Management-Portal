@@ -6,7 +6,6 @@ import lombok.*;
 
 import java.sql.Date;
 
-
 @Builder
 @Entity
 @Table(name = "credit_card")
@@ -45,4 +44,3 @@ public class CreditCardEntity {
     @JoinColumn(name = "card_type_id", nullable = false)
     private CardTypeEntity cardType;
 }
-
