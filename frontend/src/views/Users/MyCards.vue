@@ -88,6 +88,7 @@
 import Card from '../../components/Card.vue';
 import { LOCAL_STORAGE } from '../../constants/constants';
 import { getCards, updateCardStatus } from '../../services/cards-service';
+import { toast } from "vue3-toastify"; 
 
 export default {
   name: "MyCards",
@@ -142,7 +143,6 @@ export default {
           );
         }
       } catch (error) {
-        // Show error toast message
         this.showToast('Failed to update card status. Please try again.', 'error');
       }
     },
@@ -158,17 +158,12 @@ export default {
     },
 
     showToast(message, type = 'info') {
-      // Check if toast library is available
-      if (this.$toast) {
-        if (type === 'success') {
-          this.$toast.success(message);
-        } else if (type === 'error') {
-          this.$toast.error(message);
-        } else {
-          this.$toast.info(message);
-        }
+      if (type === 'success') {
+          toast.success(message);
+      } else if (type === 'error') {
+        toast.error(message);
       } else {
-        alert(message);
+        toast.info(message);
       }
     }
   }
