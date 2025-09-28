@@ -40,4 +40,15 @@ public class CreditCardStatementController {
     StatementResponse statement = statementService.getCurrentStatement(cardId);
     return ResponseEntity.ok(statement);
   }
+
+  @GetMapping("/card/{cardId}/debug")
+  public ResponseEntity<String> debugStatement(@PathVariable Long cardId) {
+    try {
+      // Force create statement with debug info
+      statementService.createCurrentStatement(cardId);
+      return ResponseEntity.ok("Statement created/updated successfully");
+    } catch (Exception e) {
+      return ResponseEntity.ok("Error: " + e.getMessage());
+    }
+  }
 }
