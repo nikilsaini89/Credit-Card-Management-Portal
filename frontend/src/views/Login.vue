@@ -173,8 +173,10 @@ const handleLogin = async () => {
   if (validateLogin()) {
     try {
       await store.dispatch("auth/login", loginForm);
-       toast.success("Login successful! 🎉");
+     
       router.push("/dashboard");
+       toast.success("Login successful! 🎉");
+
     } catch (err) {
       toast.error("Login failed. Please try again.");
       console.error("Login failed:", err);
@@ -190,9 +192,18 @@ const handleRegister = async () => {
     try {
       await store.dispatch("auth/register", registerForm);
       router.push("/");
+       toast.success("Registeration successful! 🎉");
+       toast.success("Login with your credentials now!");
+
+
     } catch (err) {
+      toast.error("Login failed. Please try again."+err);
+
       console.error("Registration failed:", err);
     }
+  }
+  else {
+    toast.warn("Please fix the highlighted errors.");
   }
 };
 </script>
