@@ -32,9 +32,6 @@
 
             <div class="action-controls">
               <button class="update-btn" @click="openLimitModal">↗ Update Credit Limit</button>
-              <button class="block-btn" @click="toggleCardBlock(card)">
-                {{ card && card.status === 'BLOCKED' ? 'Unblock Card' : 'Block Card' }}
-              </button>
             </div>
           </div>
         </div>
