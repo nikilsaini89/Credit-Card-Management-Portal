@@ -8,6 +8,7 @@ import bnpl from "./modules/bnpl";
 import analytics from "./modules/analytics";
 import applications from "./modules/applications";
 import payments from "./modules/payments";
+import myCards from "./modules/myCards";
 
 
 export interface RootState {
@@ -26,5 +27,6 @@ export default createStore({
     analytics,
     applications,
     payments,
+    myCards,
   },
 });
