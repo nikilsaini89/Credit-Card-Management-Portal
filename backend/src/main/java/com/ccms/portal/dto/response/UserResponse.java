@@ -16,4 +16,5 @@ public class UserResponse {
     private String phoneNumber;
     private String address;
     private Boolean isEligibleForBNPL;
+    private String role;
 }

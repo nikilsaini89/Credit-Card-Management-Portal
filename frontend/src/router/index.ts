@@ -112,6 +112,7 @@ const getInitialRoute = () => {
 
   try {
     const decoded = store.getters["auth/userRole"];
+    console.log('Decoded role:', decoded);
     if (decoded === 'ADMIN') {
       return { name: "AdminDashboard" };
     } else {

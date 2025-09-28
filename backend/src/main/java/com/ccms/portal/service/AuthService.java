@@ -134,6 +134,7 @@ public class AuthService {
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .role(user.getRole().toString())
                 .phoneNumber(user.getPhoneNumber())
                 .address(profile.getAddress())
                 .isEligibleForBNPL(profile.isEligibleBnpl())
