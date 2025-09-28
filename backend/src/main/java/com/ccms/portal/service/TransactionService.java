@@ -11,6 +11,8 @@ import com.ccms.portal.exception.CreditCardNotFoundException;
 import com.ccms.portal.exception.InsufficientLimitException;
 import com.ccms.portal.exception.InvalidTransactionException;
 import com.ccms.portal.exception.TransactionNotFoundException;
+import com.ccms.portal.exception.UnauthorizedException;
+import com.ccms.portal.util.JwtUserDetails;
 import com.ccms.portal.repository.CreditCardRepository;
 import com.ccms.portal.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,7 +73,13 @@ public class TransactionService {
                 transaction.setIsBnpl(request.getIsBnpl());
                 transaction.setCardType(request.getCardType());
                 transaction.setLastFour(request.getLastFour());
-                transaction.setStatus(TransactionStatus.COMPLETED);
+
+                // Set appropriate status based on BNPL flag
+                if (request.getIsBnpl()) {
+                        transaction.setStatus(TransactionStatus.BNPL_ACTIVE);
+                } else {
+                        transaction.setStatus(TransactionStatus.COMPLETED);
+                }
 
                 Transaction savedTransaction = transactionRepository.save(transaction);
                 log.info("Transaction created successfully with ID: {}", savedTransaction.getId());
@@ -91,9 +100,20 @@ public class TransactionService {
                         String category, Boolean isBnpl, String merchantName) {
                 log.info("Fetching transaction history for card: {}, page: {}, size: {}", cardId, page, size);
 
-                // Validate card exists
-                if (!creditCardRepository.existsById(cardId)) {
-                        throw new CreditCardNotFoundException("Card not found with ID: " + cardId);
+                // Get current authenticated user
+                JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
+                                .getContext()
+                                .getAuthentication()
+                                .getPrincipal();
+                Long userId = currentUser.getUserId();
+
+                // Validate card exists and belongs to the authenticated user
+                CreditCardEntity card = creditCardRepository.findById(cardId)
+                                .orElseThrow(() -> new CreditCardNotFoundException(
+                                                "Card not found with ID: " + cardId));
+
+                if (!card.getUser().getId().equals(userId)) {
+                        throw new UnauthorizedException("You are not authorized to access this card's transactions");
                 }
 
                 Pageable pageable = PageRequest.of(page, size);
@@ -129,9 +149,20 @@ public class TransactionService {
         public AnalyticsResponse getSpendingAnalytics(Long cardId) {
                 log.info("Fetching spending analytics for card: {}", cardId);
 
-                // Validate card exists
-                if (!creditCardRepository.existsById(cardId)) {
-                        throw new CreditCardNotFoundException("Card not found with ID: " + cardId);
+                // Get current authenticated user
+                JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
+                                .getContext()
+                                .getAuthentication()
+                                .getPrincipal();
+                Long userId = currentUser.getUserId();
+
+                // Validate card exists and belongs to the authenticated user
+                CreditCardEntity card = creditCardRepository.findById(cardId)
+                                .orElseThrow(() -> new CreditCardNotFoundException(
+                                                "Card not found with ID: " + cardId));
+
+                if (!card.getUser().getId().equals(userId)) {
+                        throw new UnauthorizedException("You are not authorized to access this card's analytics");
                 }
 
                 // Get total spent
@@ -181,7 +212,7 @@ public class TransactionService {
                 // Calculate average transaction amount
                 BigDecimal averageAmount = transactionCount > 0
                                 ? BigDecimal.valueOf(totalSpent).divide(BigDecimal.valueOf(transactionCount), 2,
-                                                BigDecimal.ROUND_HALF_UP)
+                                                java.math.RoundingMode.HALF_UP)
                                 : BigDecimal.ZERO;
 
                 return AnalyticsResponse.builder()
@@ -257,9 +288,20 @@ public class TransactionService {
         public List<Object[]> getMonthlySpendingTrends(Long cardId, LocalDate startDate) {
                 log.info("Fetching monthly spending trends for card: {}, startDate: {}", cardId, startDate);
 
-                // Validate card exists
-                if (!creditCardRepository.existsById(cardId)) {
-                        throw new CreditCardNotFoundException("Card not found with ID: " + cardId);
+                // Get current authenticated user
+                JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
+                                .getContext()
+                                .getAuthentication()
+                                .getPrincipal();
+                Long userId = currentUser.getUserId();
+
+                // Validate card exists and belongs to the authenticated user
+                CreditCardEntity card = creditCardRepository.findById(cardId)
+                                .orElseThrow(() -> new CreditCardNotFoundException(
+                                                "Card not found with ID: " + cardId));
+
+                if (!card.getUser().getId().equals(userId)) {
+                        throw new UnauthorizedException("You are not authorized to access this card's trends");
                 }
 
                 List<Object[]> monthlyData = transactionRepository.getMonthlySpendingTrend(cardId, startDate);

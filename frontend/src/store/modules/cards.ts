@@ -54,14 +54,19 @@ const mutations = {
 }
 
 const actions = {
-  async fetchCards({ commit }: any, userId: number) {
+  async fetchCards({ commit }: any) {
     commit('SET_LOADING', true)
     try {
-      const response = await axios.get(`http://localhost:8080/api/cards/${userId}`)
+      const token = localStorage.getItem('token')
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      
+      const response = await axios.get(`http://localhost:8080/cards`, { headers })
       commit('SET_CARDS', response.data)
+      return response.data
     } catch (error: any) {
       commit('SET_ERROR', error.response?.data?.message || 'Failed to fetch cards')
       console.error('Error fetching cards:', error)
+      throw error
     } finally {
       commit('SET_LOADING', false)
     }
