@@ -126,15 +126,27 @@ export default {
 
   methods: {
     async handleBlock({ card, newStatus }) {
-      const cardIndex = this.creditCards.findIndex(currentCard => currentCard.id === card.id);
-      if (cardIndex !== -1) {
-        this.creditCards[cardIndex] = {
-            ...this.creditCards[cardIndex],
-            cardStatus: newStatus
-        };
-        await updateCardStatus(card.id, newStatus);
+      try {
+        const cardIndex = this.creditCards.findIndex(currentCard => currentCard.id === card.id);
+        if (cardIndex !== -1) {
+          this.creditCards[cardIndex] = {
+              ...this.creditCards[cardIndex],
+              cardStatus: newStatus
+          };
+          await updateCardStatus(card.id, newStatus);
+          
+          // Show success toast message
+          this.showToast(
+            newStatus === 'BLOCKED' ? 'Card blocked successfully' : 'Card unblocked successfully',
+            'success'
+          );
+        }
+      } catch (error) {
+        // Show error toast message
+        this.showToast('Failed to update card status. Please try again.', 'error');
       }
     },
+    
     goToCardDetails(cardId) {
       const card = this.creditCards.find(c => c.id === cardId);
       if (card) {
@@ -143,10 +155,24 @@ export default {
       if (cardId && this.$router) {
         this.$router.push({ name: 'CardDetail', params: { id: cardId } })
       }
+    },
+
+    showToast(message, type = 'info') {
+      // Check if toast library is available
+      if (this.$toast) {
+        if (type === 'success') {
+          this.$toast.success(message);
+        } else if (type === 'error') {
+          this.$toast.error(message);
+        } else {
+          this.$toast.info(message);
+        }
+      } else {
+        alert(message);
+      }
     }
   }
 };
-
 </script>
 
 <style>
