@@ -47,7 +47,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MerchantAccountNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleMerchantAccountNotFoundException(MerchantAccountNotFoundException ex) {
+    public ResponseEntity<ApiErrorResponse> handleMerchantAccountNotFoundException(
+            MerchantAccountNotFoundException ex) {
         log.error("Merchant account not found: {}", ex.getMessage());
         return buildErrorResponse("Merchant Account Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
     }
@@ -95,11 +96,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UnauthorizedApplicationActionException.class)
-    public ResponseEntity<ApiErrorResponse> handleUnauthorizedApplicationAction(UnauthorizedApplicationActionException ex) {
+    public ResponseEntity<ApiErrorResponse> handleUnauthorizedApplicationAction(
+            UnauthorizedApplicationActionException ex) {
         log.error("Unauthorized application action: {}", ex.getMessage());
         return buildErrorResponse("Unauthorized Action", ex.getMessage(), HttpStatus.FORBIDDEN, null);
     }
-
 
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(
             String error, String message, HttpStatus status, Map<String, String> fieldErrors) {

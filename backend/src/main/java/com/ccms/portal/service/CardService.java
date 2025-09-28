@@ -90,4 +90,8 @@ public class CardService {
         CreditCardEntity savedEntity = cardRepository.save(creditCard);
         return cardHelper.buildCreditCardResponse(savedEntity);
     }
+
+    public List<CardTypeEntity> getCardTypes() {
+        return cardTypeRepository.findAll();
+    }
 }
