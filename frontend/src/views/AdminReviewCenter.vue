@@ -3,7 +3,7 @@
     <!-- Header Section -->
     <div class="header-section">
       <h1 class="main-title">Admin Review Center</h1>
-      <p class="subtitle">Review and approve applications, limit changes, and flagged transactions</p>
+      <p class="subtitle">Review and approve applications</p>
     </div>
 
     <!-- Loading State -->

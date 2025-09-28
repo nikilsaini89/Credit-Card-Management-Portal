@@ -88,6 +88,7 @@
 import Card from '../../components/Card.vue';
 import { LOCAL_STORAGE } from '../../constants/constants';
 import { getCards, updateCardStatus } from '../../services/cards-service';
+import { toast } from "vue3-toastify"; 
 
 export default {
   name: "MyCards",
@@ -126,15 +127,26 @@ export default {
 
   methods: {
     async handleBlock({ card, newStatus }) {
-      const cardIndex = this.creditCards.findIndex(currentCard => currentCard.id === card.id);
-      if (cardIndex !== -1) {
-        this.creditCards[cardIndex] = {
-            ...this.creditCards[cardIndex],
-            cardStatus: newStatus
-        };
-        await updateCardStatus(card.id, newStatus);
+      try {
+        const cardIndex = this.creditCards.findIndex(currentCard => currentCard.id === card.id);
+        if (cardIndex !== -1) {
+          this.creditCards[cardIndex] = {
+              ...this.creditCards[cardIndex],
+              cardStatus: newStatus
+          };
+          await updateCardStatus(card.id, newStatus);
+          
+          // Show success toast message
+          this.showToast(
+            newStatus === 'BLOCKED' ? 'Card blocked successfully' : 'Card unblocked successfully',
+            'success'
+          );
+        }
+      } catch (error) {
+        this.showToast('Failed to update card status. Please try again.', 'error');
       }
     },
+    
     goToCardDetails(cardId) {
       const card = this.creditCards.find(c => c.id === cardId);
       if (card) {
@@ -143,10 +155,19 @@ export default {
       if (cardId && this.$router) {
         this.$router.push({ name: 'CardDetail', params: { id: cardId } })
       }
+    },
+
+    showToast(message, type = 'info') {
+      if (type === 'success') {
+          toast.success(message);
+      } else if (type === 'error') {
+        toast.error(message);
+      } else {
+        toast.info(message);
+      }
     }
   }
 };
-
 </script>
 
 <style>
