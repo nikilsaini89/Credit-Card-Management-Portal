@@ -32,7 +32,7 @@
               class="status-badge"
               :class="getStatusBadgeClass(application.status)"
             >
-              {{ APPLICATION_STATUS_LABELS[application.status] }}
+              {{ APPLICATION_STATUS_LABELS[application.status as keyof typeof APPLICATION_STATUS_LABELS] || application.status }}
             </span>
           </div>
           
