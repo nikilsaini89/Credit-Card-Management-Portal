@@ -3,6 +3,7 @@ import type { RootState } from "../store";
 import type { UserResponse } from "../types/auth";
 import { login, register, logout, refreshToken } from "../services/authService";
 import { getUserProfile } from "../services/userService";
+import user from "./user";
 
 export interface AuthState {
   user: UserResponse | null;
@@ -65,10 +66,13 @@ const auth: Module<AuthState, RootState> = {
     },
   },
 
+
   getters: {
     isAuthenticated: (state) => !!state.token,
     token: (state) => state.token,
     user: (state) => state.user,
+    userRole: (state) => state.user?.role || null,
+    isAdmin: (state) => state.user?.role === "ADMIN",
   },
 };
 
