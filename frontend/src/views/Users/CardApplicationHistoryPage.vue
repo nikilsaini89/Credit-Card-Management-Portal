@@ -1,7 +1,6 @@
 <template>
   <div class="applications">
     <main class="container">
-      <!-- Header -->
       <section class="header">
         <div>
           <h1>My Applications</h1>
@@ -12,11 +11,9 @@
         </RouterLink>
       </section>
 
-      <!-- Loading / Error -->
       <div v-if="isLoading">Loading applications...</div>
       <div v-else-if="error" class="error">{{ error }}</div>
 
-      <!-- Application List -->
       <section v-else class="application-list">
         <div
           v-for="app in allApplications"
@@ -27,7 +24,6 @@
             <div class="title">
               <span class="icon">💳</span>
               <h3>{{ app.cardTypeName }}</h3>
-              <span class="status-pill">{{ app.status }}</span>
             </div>
             <div class="applied-date">
               <span>📅 Applied: {{ app.appliedDate }}</span>
@@ -37,13 +33,26 @@
           <div class="card-body">
             <p><strong>Application ID:</strong> #{{ app.id }}</p>
             <p><strong>Card Network:</strong> {{ app.cardNetworkType }}</p>
-            <p><strong>Requested Credit Limit:</strong> ₹{{ app.requestedLimit.toLocaleString() }}</p>
-
             <p>
-              <strong>Status:</strong>
-              <span class="status-pill">{{ app.status }}</span>
-              {{ app.statusText }}
+              <strong>Requested Credit Limit:</strong>
+              ₹{{ app.requestedLimit.toLocaleString() }}
             </p>
+
+            <div class="status-row">
+              <p class="status-text">
+                <strong>Status:</strong>
+                <span class="status-pill">{{ app.status }}</span>
+              </p>
+
+              <button
+                v-if="app.status === 'PENDING'"
+                class="btn-takeback"
+                @click="handleTakeBack(app.id)"
+                :disabled="takingBackId === app.id"
+              >
+                {{ takingBackId === app.id ? "Taking Back..." : "Take Back" }}
+              </button>
+            </div>
 
             <div class="timeline">
               <p>• Application submitted on {{ app.appliedDate }}</p>
@@ -52,7 +61,7 @@
                 on {{ app.reviewDate }}
               </p>
               <p class="muted">
-                • {{ app.statusText === "Under Review"
+                • {{ app.status === "UnderReview"
                   ? "Under review – typically takes 2-3 business days"
                   : "Final decision reached" }}
               </p>
@@ -66,25 +75,50 @@
 
 <script>
 import { mapGetters, mapActions } from "vuex";
+import { deleteApplication } from "./../../services/cardApplicationService";
 
 export default {
   name: "MyApplicationsView",
 
+  data() {
+    return {
+      takingBackId: null,
+    };
+  },
+
   computed: {
     ...mapGetters("userApplications", [
-      "allApplications",    // from store
+      "allApplications",
       "isLoading",
-      "error"
+      "error",
     ]),
   },
 
   created() {
-    // Fetch applications when component loads
     this.fetchAll();
   },
 
   methods: {
     ...mapActions("userApplications", ["fetchAll"]),
+
+    async handleTakeBack(id) {
+      const confirmDelete = confirm(
+        "Are you sure you want to take back this application?"
+      );
+      if (!confirmDelete) return;
+
+      this.takingBackId = id;
+      try {
+        await deleteApplication(id);
+        alert("Application taken back successfully!");
+        await this.fetchAll();
+      } catch (err) {
+        console.error("Error taking back application:", err);
+        alert("Failed to take back the application. Please try again.");
+      } finally {
+        this.takingBackId = null;
+      }
+    },
   },
 };
 </script>
@@ -148,12 +182,43 @@ export default {
   gap: 10px;
 }
 
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.status-text {
+  margin: 0;
+}
+
 .status-pill {
   background: #0b0d18;
   color: #fff;
   padding: 2px 10px;
   font-size: 12px;
   border-radius: 12px;
+  margin-left: 6px;
+}
+
+.btn-takeback {
+  background: #ff3b30;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-takeback:hover:not(:disabled) {
+  background: #e32d22;
+}
+
+.btn-takeback:disabled {
+  background: #aaa;
+  cursor: not-allowed;
 }
 
 .timeline {
