@@ -157,7 +157,7 @@ export default {
 <style scoped>
 .apply-card {
   font-family: "Inter", system-ui, Arial;
-  background: #f7f7f9;
+  /* background: #f7f7f9; */
   min-height: 100vh;
 }
 
@@ -186,7 +186,9 @@ export default {
 
 .option-card {
   flex: 1;
-  background: #fff;
+  /* background: #fff; */
+  background: #f7f7f9;
+  
   padding: 20px;
   border-radius: 12px;
   cursor: pointer;
@@ -233,7 +235,8 @@ export default {
 
 .application-form {
   margin-top: 40px;
-  background: #fff;
+  /* background: #fff; */
+  background: #f7f7f9;
   padding: 20px;
   border-radius: 12px;
 }
