@@ -21,6 +21,9 @@ public class CardApplicationResponse {
 
     private String reviewerName;
     private LocalDateTime reviewDate;
+    public CardApplicationResponse() {
+        // no-argument constructor
+    }
 
     public CardApplicationResponse(CardApplicationEntity entity) {
         this.id = entity.getId();
