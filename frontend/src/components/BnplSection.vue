@@ -1,50 +1,62 @@
 <template>
-  <div class="space-y-3 sm:space-y-4 overflow-x-hidden">
+  <div class="space-y-3 sm:space-y-4">
     <!-- BNPL Summary Card -->
-    <div class="bg-gradient-to-br from-white to-purple-50 rounded-xl sm:rounded-2xl shadow-lg border border-purple-100 p-3 sm:p-4 hover:shadow-xl transition-all duration-300">
-      <div class="flex items-center justify-between mb-4">
+    <div class="bg-white mt-5 rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6 hover:shadow-xl transition-all duration-300">
+      <div class="flex items-center justify-between mb-6">
         <div class="flex items-center">
-          <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center mr-3">
-            <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="h-10 w-10 rounded-lg flex items-center justify-center mr-4" style="background: #ffd60a;">
+            <svg class="h-6 w-6" style="color: #0b2540;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
             </svg>
           </div>
-          <h3 class="text-lg font-bold text-gray-900">BNPL Overview</h3>
+          <h3 class="text-xl font-bold text-gray-900">BNPL Overview</h3>
         </div>
         <div class="text-right">
-          <div class="text-2xl font-bold text-purple-600">{{ activePlansCount }}</div>
-          <div class="text-xs text-gray-600">Active Plans</div>
+          <div class="text-3xl font-bold" style="color: #0b2540;">{{ activePlansCount }}</div>
+          <div class="text-sm text-gray-600">Active Plans</div>
         </div>
       </div>
       
-      <div class="space-y-2 sm:space-y-3">
-        <div class="flex items-center justify-between p-2 sm:p-3 bg-white rounded-lg shadow-sm">
-          <div class="flex items-center min-w-0 flex-1">
-            <div class="w-3 h-3 bg-red-500 rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
-            <span class="text-xs sm:text-sm font-medium text-gray-700">Outstanding</span>
-          </div>
-          <div class="text-right flex-shrink-0 ml-2">
-            <div :class="getAmountSize(outstandingBalance)" class="font-bold text-red-600 text-xs sm:text-sm">{{ formatCurrency(outstandingBalance) }}</div>
-          </div>
-        </div>
-        
-        <div class="flex items-center justify-between p-2 sm:p-3 bg-white rounded-lg shadow-sm">
-          <div class="flex items-center min-w-0 flex-1">
-            <div class="w-3 h-3 bg-green-500 rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
-            <span class="text-xs sm:text-sm font-medium text-gray-700">Total Paid</span>
-          </div>
-          <div class="text-right flex-shrink-0 ml-2">
-            <div :class="getAmountSize(totalPaid)" class="font-bold text-green-600 text-xs sm:text-sm">{{ formatCurrency(totalPaid) }}</div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-red-50 rounded-lg p-4 border border-red-100">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium text-red-700 mb-1">Outstanding</div>
+              <div :class="getAmountSize(outstandingBalance)" class="font-bold text-red-600">{{ formatCurrency(outstandingBalance) }}</div>
+            </div>
+            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+              <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
           </div>
         </div>
         
-        <div class="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-          <div class="flex items-center min-w-0 flex-1">
-            <div class="w-3 h-3 bg-blue-500 rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
-            <span class="text-xs sm:text-sm font-medium text-gray-700">Progress</span>
+        <div class="bg-green-50 rounded-lg p-4 border border-green-100">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium text-green-700 mb-1">Total Paid</div>
+              <div :class="getAmountSize(totalPaid)" class="font-bold text-green-600">{{ formatCurrency(totalPaid) }}</div>
+            </div>
+            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
           </div>
-          <div class="text-right flex-shrink-0 ml-2">
-            <div class="text-sm sm:text-lg font-bold text-blue-600">{{ Math.round((totalPaid / (totalPaid + outstandingBalance)) * 100) }}%</div>
+        </div>
+        
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200" style="background: linear-gradient(135deg, #ffd60a 0%, #ffd60a 100%);">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium mb-1" style="color: #0b2540;">Progress</div>
+              <div class="text-2xl font-bold" style="color: #0b2540;">{{ Math.round((totalPaid / (totalPaid + outstandingBalance)) * 100) }}%</div>
+            </div>
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: rgba(11, 37, 64, 0.1);">
+              <svg class="w-4 h-4" style="color: #0b2540;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+              </svg>
+            </div>
           </div>
         </div>
       </div>
@@ -52,22 +64,25 @@
 
     <!-- Active BNPL Plans -->
     <div v-if="bnplPlans.length > 0" class="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-      <div class="px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+      <div class="px-4 sm:px-6 py-4 bg-gray-50 border-b border-gray-200">
         <div class="flex items-center justify-between">
           <div class="flex items-center">
-            <div class="h-5 w-5 sm:h-6 sm:w-6 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center mr-2">
-              <svg class="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="h-8 w-8 rounded-lg flex items-center justify-center mr-3" style="background: #ffd60a;">
+              <svg class="h-5 w-5" style="color: #0b2540;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
               </svg>
             </div>
-            <h3 class="text-base sm:text-lg font-bold text-gray-900">Active Plans</h3>
+            <h3 class="text-lg font-bold text-gray-900">Active BNPL Plans</h3>
           </div>
-          <span class="text-xs sm:text-sm font-semibold text-gray-600">{{ bnplPlans.length }} plans</span>
+          <div class="text-right">
+            <div class="text-sm font-medium text-gray-600">{{ bnplPlans.length }} active plans</div>
+            <div class="text-xs text-gray-500">Manage your installments</div>
+          </div>
         </div>
       </div>
       
-      <div class="divide-y divide-gray-100">
-        <div v-for="(plan, index) in bnplPlans" :key="plan.id" class="p-3 sm:p-4 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 border-l-4" :class="getPlanBorderColor(index)">
+      <div class="space-y-4">
+        <div v-for="(plan, index) in bnplPlans" :key="plan.id" class="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-all duration-200 border-l-4" :class="getPlanBorderColor(index)">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 space-y-2 sm:space-y-0">
             <div class="flex items-center min-w-0 flex-1">
               <div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0" :class="getPlanIconBg(index)">
@@ -88,80 +103,108 @@
             </span>
           </div>
 
-          <!-- Financial Breakdown -->
-          <div class="space-y-1 sm:space-y-2 mb-3 sm:mb-4">
-            <div class="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
-              <div class="flex items-center min-w-0 flex-1">
-                <div class="w-3 h-3 bg-gray-500 rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
-                <span class="text-xs sm:text-sm font-medium text-gray-700">Total</span>
-              </div>
-              <div class="text-right flex-shrink-0 ml-2">
-                <div :class="getAmountSize(plan.totalAmount)" class="font-bold text-gray-900 text-xs sm:text-sm">{{ formatCurrency(plan.totalAmount) }}</div>
+          <!-- Financial Breakdown with Visual Indicators -->
+          <div class="space-y-4 mb-4">
+            <!-- Progress Ring -->
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <div class="text-sm font-medium text-gray-700 mb-2">Payment Progress</div>
+                <div class="flex items-center space-x-4">
+                  <div class="relative w-16 h-16">
+                    <svg class="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
+                      <!-- Background circle -->
+                      <path
+                        d="M18 2.0845
+                          a 15.9155 15.9155 0 0 1 0 31.831
+                          a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="#e5e7eb"
+                        stroke-width="3"
+                      />
+                      <!-- Progress circle -->
+                      <path
+                        d="M18 2.0845
+                          a 15.9155 15.9155 0 0 1 0 31.831
+                          a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="#10b981"
+                        stroke-width="3"
+                        stroke-linecap="round"
+                        :stroke-dasharray="`${(plan.paidAmount / plan.totalAmount) * 100}, 100`"
+                      />
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <span class="text-xs font-bold" style="color: #0b2540;">{{ Math.round((plan.paidAmount / plan.totalAmount) * 100) }}%</span>
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <div class="text-xs text-gray-600">Paid: {{ formatCurrency(plan.paidAmount) }}</div>
+                    <div class="text-xs text-gray-600">Remaining: {{ formatCurrency(plan.remainingAmount) }}</div>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <div class="flex items-center justify-between p-2 sm:p-3 bg-green-50 rounded-lg">
-              <div class="flex items-center min-w-0 flex-1">
-                <div class="w-3 h-3 bg-green-500 rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
-                <span class="text-xs sm:text-sm font-medium text-gray-700">Paid</span>
-              </div>
-              <div class="text-right flex-shrink-0 ml-2">
-                <div :class="getAmountSize(plan.paidAmount)" class="font-bold text-green-600 text-xs sm:text-sm">{{ formatCurrency(plan.paidAmount) }}</div>
-              </div>
-            </div>
-            
-            <div class="flex items-center justify-between p-2 sm:p-3 bg-red-50 rounded-lg">
-              <div class="flex items-center min-w-0 flex-1">
-                <div class="w-3 h-3 bg-red-500 rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
-                <span class="text-xs sm:text-sm font-medium text-gray-700">Remaining</span>
-              </div>
-              <div class="text-right flex-shrink-0 ml-2">
-                <div :class="getAmountSize(plan.remainingAmount)" class="font-bold text-red-600 text-xs sm:text-sm">{{ formatCurrency(plan.remainingAmount) }}</div>
-              </div>
-            </div>
-            
-            <div class="flex items-center justify-between p-2 sm:p-3 bg-blue-50 rounded-lg">
-              <div class="flex items-center min-w-0 flex-1">
-                <div class="w-3 h-3 bg-blue-500 rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
-                <span class="text-xs sm:text-sm font-medium text-gray-700">EMI</span>
-              </div>
-              <div class="text-right flex-shrink-0 ml-2">
-                <div :class="getAmountSize(plan.monthlyEmi)" class="font-bold text-blue-600 text-xs sm:text-sm">{{ formatCurrency(plan.monthlyEmi) }}</div>
-              </div>
-            </div>
-          </div>
 
-          <!-- Progress and Next Payment -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 sm:mb-4">
-            <div>
-              <div class="flex justify-between text-xs font-semibold text-gray-700 mb-1">
-                <span>Progress</span>
-                <span>{{ plan.paidInstallments }}/{{ plan.tenureMonths }}</span>
+            <!-- Mini Bar Graphs -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-gray-600">Paid vs Remaining</span>
+                <span class="font-medium" style="color: #0b2540;">{{ formatCurrency(plan.totalAmount) }}</span>
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="flex h-3 bg-gray-200 rounded-full overflow-hidden">
                 <div 
-                  class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-                  :style="{ width: `${(plan.paidInstallments / plan.tenureMonths) * 100}%` }"
+                  class="bg-green-500 h-full transition-all duration-1000"
+                  :style="{ width: `${(plan.paidAmount / plan.totalAmount) * 100}%` }"
+                ></div>
+                <div 
+                  class="bg-red-500 h-full transition-all duration-1000"
+                  :style="{ width: `${(plan.remainingAmount / plan.totalAmount) * 100}%` }"
                 ></div>
               </div>
+              <div class="flex justify-between text-xs text-gray-500">
+                <span>Paid ({{ Math.round((plan.paidAmount / plan.totalAmount) * 100) }}%)</span>
+                <span>Remaining ({{ Math.round((plan.remainingAmount / plan.totalAmount) * 100) }}%)</span>
+              </div>
             </div>
-            <div class="text-center p-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-              <div class="text-xs font-semibold text-gray-700">Next Due</div>
-              <div class="text-sm font-bold text-blue-600">{{ formatDate(plan.nextDueDate) }}</div>
+
+            <!-- EMI Amount -->
+            <div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                  <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                  <span class="text-sm font-medium text-gray-700">Monthly EMI</span>
+                </div>
+                <div class="text-right">
+                  <div :class="getAmountSize(plan.monthlyEmi)" class="font-bold text-blue-600">{{ formatCurrency(plan.monthlyEmi) }}</div>
+                  <div class="text-xs text-gray-500">Due {{ formatDate(plan.nextDueDate) }}</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Action Buttons -->
-          <div class="flex">
-            <Button 
-              variant="primary"
-              size="sm"
-              full-width
+          <!-- Installment Progress -->
+          <div class="bg-gray-50 rounded-lg p-3 mb-4">
+            <div class="flex justify-between text-xs font-semibold text-gray-700 mb-2">
+              <span>Installment Progress</span>
+              <span>{{ plan.paidInstallments }}/{{ plan.tenureMonths }} installments</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                class="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-500"
+                :style="{ width: `${(plan.paidInstallments / plan.tenureMonths) * 100}%` }"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Action Button -->
+          <div class="flex justify-center">
+            <button 
               @click="payNow(plan)"
-              class="text-xs sm:text-sm"
+              class="w-full px-6 py-3 text-sm font-medium text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+              style="background: #0b2540;"
             >
               Pay Now
-            </Button>
+            </button>
           </div>
         </div>
       </div>
@@ -238,10 +281,10 @@ const formatCurrency = (amount: number) => {
 }
 
 const getAmountSize = (amount: number) => {
-  if (amount >= 10000000) return 'text-sm' // Crores - smallest
-  if (amount >= 100000) return 'text-base'   // Lakhs - small
-  if (amount >= 1000) return 'text-lg'    // Thousands - medium
-  return 'text-lg' // Small amounts - medium
+  if (amount >= 10000000) return 'text-sm'
+  if (amount >= 100000) return 'text-base'
+  if (amount >= 1000) return 'text-lg'
+  return 'text-lg'
 }
 
 const getPlanBorderColor = (index: number) => {

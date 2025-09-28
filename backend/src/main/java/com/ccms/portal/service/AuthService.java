@@ -13,6 +13,7 @@ import com.ccms.portal.exception.UserNotFoundException;
 import com.ccms.portal.repository.UserProfileRepository;
 import com.ccms.portal.repository.UserRepository;
 import com.ccms.portal.util.JwtUtil;
+import com.ccms.portal.util.TokenblackList;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,8 @@ public class AuthService {
     private final UserProfileRepository userProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final TokenblackList tokenblackList;
+
 
     public UserResponse register(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -66,9 +69,28 @@ public class AuthService {
         UserProfileEntity profile = userProfileRepository.findByUser(user)
                 .orElseThrow(() -> new UserNotFoundException("User profile not found"));
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().toString(), user.getId());
-        return new AuthResponse(token, buildUserResponse(user, profile));
+
+        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getRole().toString(), user.getId());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail(), user.getRole().toString(), user.getId());
+
+        return new AuthResponse(accessToken,refreshToken, buildUserResponse(user, profile));
     }
+    public AuthResponse refreshAccessToken(String refreshToken) {
+        if (tokenblackList.isBlacklisted(refreshToken)) throw new RuntimeException("Blacklisted refresh token");
+        if (!jwtUtil.validateRefreshToken(refreshToken)) throw new RuntimeException("Invalid or expired refresh token");
+
+        String email = jwtUtil.extractEmail(refreshToken);
+        UserEntity user = userRepository.findByEmail(email).orElseThrow();
+        UserProfileEntity profile = userProfileRepository.findByUser(user).orElseThrow();
+
+        String newRefreshToken = jwtUtil.generateRefreshToken(user.getEmail(), user.getRole().toString(), user.getId());
+        tokenblackList.blacklist(refreshToken);
+
+        String newAccessToken = jwtUtil.generateToken(user.getEmail(), user.getRole().toString(), user.getId());
+
+        return new AuthResponse(newAccessToken, newRefreshToken, buildUserResponse(user, profile));
+    }
+
 
     private UserResponse buildUserResponse(UserEntity user, UserProfileEntity profile) {
         return UserResponse.builder()
@@ -80,4 +102,6 @@ public class AuthService {
                 .isEligibleForBNPL(profile.isEligibleBnpl())
                 .build();
     }
+
+
 }

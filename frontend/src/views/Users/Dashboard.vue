@@ -36,7 +36,7 @@
         <div class="left-col">
           <div class="section-header">
             <h3 class="section-title">My Cards</h3>
-            <RouterLink to="/my-cards" class="view-all">View All</RouterLink>
+            <RouterLink to="/cards" class="view-all">View All</RouterLink>
           </div>
 
           <div class="card-list">
