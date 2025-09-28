@@ -56,6 +56,28 @@ public class JwtUtil {
             return false;
         }
     }
+    public String generateRefreshToken(String email, String role, Long id) {
+
+        long refreshExpiration = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+
+        return Jwts.builder()
+                .setSubject(email)
+                .claim(TokenVariable.USER_ROLE.getValue(), role)
+                .claim(TokenVariable.USER_ID.getValue(), id)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+    public boolean validateRefreshToken(String token) {
+        try {
+            return !isTokenExpired(token);
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+
 
     private boolean isTokenExpired(String token) {
         return getClaims(token).getExpiration().before(new Date());

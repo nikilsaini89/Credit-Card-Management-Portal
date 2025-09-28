@@ -88,6 +88,8 @@ import { useRoute } from "vue-router";
 import { useStore } from 'vuex';
 import router from "../router";
 import { logout } from "../services/authService";
+import { toast } from "vue3-toastify"; 
+
 
 const store = useStore();
 const route = useRoute();
@@ -133,12 +135,15 @@ const toggleMobileNav = () => {
 const handleLogout = async () => {
   try {
     await logout();
-    // Clear any cached data and reload the window for a clean state
+    toast.success("Logged out successfully! 🎉");
     router.push('/');
     window.location.reload();
   } catch (err) {
     console.error('Logout failed:', err);
     alert('logout failed');
+    toast.err("Error logging out. 🎉");
+
+ 
   }
 };
 
