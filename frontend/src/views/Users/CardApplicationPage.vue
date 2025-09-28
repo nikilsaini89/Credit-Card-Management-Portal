@@ -2,7 +2,6 @@
   <div class="apply-card">
     <main class="container">
 
-      <!-- Header -->
       <section class="hero">
         <div class="hero-header">
           <h1>Apply for Credit Card</h1>
@@ -12,7 +11,7 @@
         </div>
       </section>
 
-      <!-- Card Selection -->
+  
       <section class="card-selection">
         <h2>Select Your Card</h2>
         <p class="muted">Choose the credit card that best fits your lifestyle</p>
@@ -40,7 +39,6 @@
         </div>
       </section>
 
-      <!-- Application Form -->
       <section v-if="selectedCard" class="application-form">
         <h2>{{ selectedCard.name }} Application</h2>
         <p class="muted">Complete your application details</p>
@@ -58,7 +56,8 @@
             <small>Range: ₹{{ selectedCard.minLimit }} – ₹{{ selectedCard.maxLimit }}</small>
           </div>
 
-          <!-- ✅ Show real user info -->
+
+
           <div class="form-row info" v-if="user">
             <h4>Applicant Information</h4>
             <p><strong>Name:</strong> {{ user.name }}</p>
@@ -76,7 +75,7 @@
 <script>
 import { getCardTypes } from '../../services/cards-service';
 import { applyForCard } from "../../services/cardApplicationService";
-import { getUserProfile } from "../../services/userService";      // ✅ backend user fetch
+import { getUserProfile } from "../../services/userService";    
 import { getUserIdFromToken } from '../../utils/getTokenData';
 
 export default {
@@ -84,7 +83,7 @@ export default {
 
   data() {
     return {
-      user: null,          // ✅ fetched from backend
+      user: null,          // fetched from backend
       cards: [],           // filled after fetch
       selectedCard: null,
       form: {
@@ -95,7 +94,7 @@ export default {
 
   async created() {
     try {
-      // ✅ fetch logged-in user profile
+      // fetch logged-in user profile
       const userId = getUserIdFromToken();
       if (userId) {
         const { data } = await getUserProfile(userId);
@@ -105,7 +104,7 @@ export default {
         console.warn("No user ID found in token");
       }
 
-      // ✅ fetch cards from backend
+      // fetch cards from backend
       const fetchedCards = await getCardTypes();
       this.cards = fetchedCards.map(card => ({
         id: card.id,
@@ -136,7 +135,7 @@ export default {
       }
 
       const cardApplication = {
-        userId: this.user.id,                // ✅ use real backend user id
+        userId: this.user.id,                //  use real backend user id
         cardTypeId: this.selectedCard.id,
         requestLimit: this.form.creditLimit,
       };
@@ -157,7 +156,6 @@ export default {
 <style scoped>
 .apply-card {
   font-family: "Inter", system-ui, Arial;
-  /* background: #f7f7f9; */
   min-height: 100vh;
 }
 
@@ -186,7 +184,6 @@ export default {
 
 .option-card {
   flex: 1;
-  /* background: #fff; */
   background: #f7f7f9;
   
   padding: 20px;
@@ -235,7 +232,6 @@ export default {
 
 .application-form {
   margin-top: 40px;
-  /* background: #fff; */
   background: #f7f7f9;
   padding: 20px;
   border-radius: 12px;
@@ -268,7 +264,6 @@ export default {
   font-weight: 600;
 }
 
-/* Header */
 .hero-header {
   display: flex;
   justify-content: space-between;
