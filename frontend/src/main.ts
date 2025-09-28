@@ -13,6 +13,7 @@ const app = createApp(App);
 
 // Initialize auth and handle routing
 initializeAuth().then(auth => {
+  console.log('Auth result:', auth); // Debug log
   
   if (!auth) {
     logout();
@@ -20,14 +21,22 @@ initializeAuth().then(auth => {
     return;
   }
   
-  // Check user role after auth is initialized
-  const userRole = store.getters["auth/userRole"];  
-  if (userRole === 'ADMIN') {
-    router.push({ name: "AdminDashboard" });
-  } else {
-    router.push({ name: "Dashboard" });
-  }
+  // Add a small delay to ensure store is populated
+  setTimeout(() => {
+    const userRole = store.getters["auth/userRole"];
+    console.log('User role:', userRole); // Debug log
+    
+    if (userRole === 'ADMIN') {
+      console.log('Routing to AdminDashboard'); // Debug log
+      router.push({ name: "AdminDashboard" });
+    } else {
+      console.log('Routing to Dashboard'); // Debug log
+      router.push({ name: "Dashboard" });
+    }
+  }, 100); // Small delay to ensure store is populated
+  
 }).catch(error => {
+  console.error('Auth initialization error:', error);
   router.push({ name: "Login" });
 });
 
