@@ -48,7 +48,6 @@ class TransactionServiceUnitTest {
         .availableLimit(10000.0)
         .cardStatus(com.ccms.portal.enums.CardStatus.ACTIVE)
         .expiryDate(java.sql.Date.valueOf(LocalDate.now().plusYears(2)))
-        .cvv(123)
         .build();
 
     testRequest = new CreateTransactionRequest();

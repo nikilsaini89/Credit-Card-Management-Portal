@@ -74,7 +74,6 @@ public class CardService {
                 .availableLimit(cardRequest.getCreditLimit())
                 .cardStatus(CardStatus.ACTIVE)
                 .cardNumber(cardHelper.generateCardNumber())
-                .cvv(cardHelper.generateCvv())
                 .expiryDate(cardHelper.generateExpiryDate(5))
                 .build();
 

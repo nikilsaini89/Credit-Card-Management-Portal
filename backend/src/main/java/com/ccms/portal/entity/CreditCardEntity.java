@@ -34,7 +34,6 @@ public class CreditCardEntity {
     @Column(nullable = false)
     private Date expiryDate;
 
-    private Integer cvv;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)

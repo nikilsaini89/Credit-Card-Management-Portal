@@ -104,7 +104,6 @@ class CardServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(cardTypeRepository.findById(10L)).thenReturn(Optional.of(cardType));
         when(cardHelper.generateCardNumber()).thenReturn("1234567890123456");
-        when(cardHelper.generateCvv()).thenReturn(123);
         when(cardHelper.generateExpiryDate(anyInt()))
                 .thenReturn(new Date(System.currentTimeMillis()));
 

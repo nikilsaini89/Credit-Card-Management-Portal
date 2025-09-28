@@ -16,7 +16,6 @@ public class CreditCardResponse {
     private Double creditLimit;
     private Double availableLimit;
     private Date expiryDate;
-    private Integer cvv;
     private CardTypeInfo cardType;
 
     @Getter

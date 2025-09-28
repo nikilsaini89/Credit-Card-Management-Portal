@@ -28,11 +28,6 @@ public class CreditCardUtil {
         return cardNumber.toString();
     }
 
-    public Integer generateCvv(){
-        logger.debug("Generating new CVV");
-        return ThreadLocalRandom.current().nextInt(100, 1000);
-    }
-
     public Date generateExpiryDate(int yearsFromNow) {
         logger.debug("Generating expiry date {} years from now", yearsFromNow);
         LocalDate expiry = LocalDate.now().plusYears(yearsFromNow);
@@ -58,7 +53,6 @@ public class CreditCardUtil {
                 .creditLimit(cardEntity.getCreditLimit())
                 .availableLimit(cardEntity.getAvailableLimit())
                 .expiryDate(cardEntity.getExpiryDate())
-                .cvv(cardEntity.getCvv())
                 .cardType(cardTypeInfo)
                 .build();
 
