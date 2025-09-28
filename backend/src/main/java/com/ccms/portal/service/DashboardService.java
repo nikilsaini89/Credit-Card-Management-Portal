@@ -1,15 +1,18 @@
 package com.ccms.portal.service;
 
-import com.ccms.portal.dto.response.CardResponse;
 import com.ccms.portal.dto.response.DashboardResponse;
 import com.ccms.portal.dto.response.SummaryResponse;
 import com.ccms.portal.dto.response.TransactionResponse;
-import com.ccms.portal.entity.CreditCardEntity;
 import com.ccms.portal.entity.Transaction;
+import com.ccms.portal.entity.UserEntity;
+import com.ccms.portal.enums.CardStatus;
+import com.ccms.portal.exception.UserNotFoundException;
 import com.ccms.portal.repository.CreditCardRepository;
 import com.ccms.portal.repository.TransactionRepository;
-import com.ccms.portal.util.MaskUtil;
+import com.ccms.portal.repository.UserRepository;
+import com.ccms.portal.util.JwtUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,51 +26,44 @@ import java.util.stream.Collectors;
 public class DashboardService {
 
     @Autowired
-    CreditCardRepository cardRepo;
+    private CreditCardRepository cardRepo;
 
     @Autowired
-    TransactionRepository txRepo;
+    private TransactionRepository txRepo;
+
+    @Autowired
+    private UserRepository userRepo;
 
     @Transactional(readOnly = true)
     public DashboardResponse getDashboard() {
-        List<CreditCardEntity> cardEntities = cardRepo.findAll();
-        List<Transaction> txEntities = txRepo.findAll();
+        Object principal = SecurityContextHolder.getContext().getAuthentication() != null
+                ? SecurityContextHolder.getContext().getAuthentication().getPrincipal()
+                : null;
 
-        List<CardResponse> cards = cardEntities.stream()
-                .map(c -> {
-                    CardResponse r = new CardResponse();
-                    r.setId(c.getId() == null ? null : c.getId().toString());
-                    try {
-                        r.setName(c.getCardType() == null ? "Card" : c.getCardType().getName());
-                    } catch (Exception ignored) {
-                        r.setName("Card");
-                    }
-                    r.setNumber(MaskUtil.maskCardNumber(c.getCardNumber()));
-                    r.setTotalLimit(c.getCreditLimit() == null ? 0.0 : c.getCreditLimit());
-                    r.setAvailableLimit(c.getAvailableLimit() == null ? 0.0 : c.getAvailableLimit());
-                    try {
-                        r.setStatus(c.getCardStatus() == null ? null : c.getCardStatus().name());
-                    } catch (Exception ignored) {
-                        r.setStatus(null);
-                    }
-                    return r;
-                })
-                .collect(Collectors.toList());
+        Long userId;
+        if (principal instanceof JwtUserDetails) {
+            userId = ((JwtUserDetails) principal).getUserId();
+        } else {
+            userId = null;
+        }
 
-        double totalLimit = cards.stream()
-                .mapToDouble(c -> c.getTotalLimit() == null ? 0.0 : c.getTotalLimit())
-                .sum();
+        if (userId == null) {
+            throw new IllegalStateException("Authenticated user not found. Make sure request contains a valid JWT.");
+        }
 
-        double availableCredit = cards.stream()
-                .mapToDouble(c -> c.getAvailableLimit() == null ? 0.0 : c.getAvailableLimit())
-                .sum();
+        UserEntity userEntity = userRepo.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id " + userId));
+
+        Double totalLimitObj = cardRepo.sumCreditLimitByUserId(userId);
+        double totalLimit = totalLimitObj == null ? 0.0 : totalLimitObj;
+
+        Double availableObj = cardRepo.sumAvailableLimitByUserId(userId);
+        double availableCredit = availableObj == null ? 0.0 : availableObj;
 
         double outstanding = totalLimit - availableCredit;
 
-        int totalCards = cards.size();
-        int activeCards = (int) cards.stream()
-                .filter(c -> c.getStatus() != null && c.getStatus().equalsIgnoreCase("ACTIVE"))
-                .count();
+        int totalCards = (int) cardRepo.countByUserId(userId);
+        int activeCards = (int) cardRepo.countByUserIdAndStatus(userId, CardStatus.ACTIVE);
 
         SummaryResponse summary = new SummaryResponse();
         summary.setActiveCards(activeCards);
@@ -76,52 +72,30 @@ public class DashboardService {
         summary.setAvailableCredit(availableCredit);
         summary.setOutstanding(outstanding);
 
+        List<Transaction> txEntities = txRepo.findTop10ByUserId(userId);
         List<TransactionResponse> transactions = txEntities.stream()
                 .map(t -> {
                     TransactionResponse tr = new TransactionResponse();
-                    tr.setId(t.getId() == null ? null : t.getId().toString());
-                    try {
-                        tr.setCardId(t.getCard() == null || t.getCard().getId() == null ? null :
-                                t.getCard().getId().toString());
-                    } catch (Exception ignored) {
-                        tr.setCardId(null);
-                    }
-                    try {
-                        tr.setAmount(t.getAmount() == null ? 0.0 : t.getAmount().doubleValue());
-                    } catch (Exception ignored) {
-                        tr.setAmount(0.0);
-                    }
-                    try {
-                        tr.setMerchant(t.getMerchantAccount() == null ? null :
-                                String.valueOf(t.getMerchantAccount()));
-                    } catch (Exception ignored) {
-                        tr.setMerchant(null);
-                    }
+                    tr.setId(t.getId() != null ? t.getId().toString() : null);
+                    tr.setCardId(t.getCard() != null && t.getCard().getId() != null
+                            ? String.valueOf(t.getCard().getId()) : null);
+                    tr.setAmount(t.getAmount() != null ? t.getAmount().doubleValue() : 0.0);
+                    tr.setMerchant(t.getMerchantAccount() != null ? String.valueOf(t.getMerchantAccount()) : null);
                     tr.setCategory(t.getNetwork());
-                    try {
-                        tr.setMode(t.getProcessor() == null ? null : String.valueOf(t.getProcessor()));
-                    } catch (Exception ignored) {
-                        tr.setMode(null);
-                    }
-                    try {
-                        if (t.getCreatedAt() != null) {
-                            tr.setDate(t.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant());
-                        } else {
-                            tr.setDate(null);
-                        }
-                    } catch (Exception ignored) {
-                        tr.setDate(null);
-                    }
+                    tr.setMode(t.getProcessor() != null ? String.valueOf(t.getProcessor()) : null);
+                    tr.setDate(t.getCreatedAt() != null
+                            ? t.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant()
+                            : null);
                     return tr;
                 })
-                .sorted(Comparator.comparing(TransactionResponse::getDate, Comparator.nullsLast(Comparator.reverseOrder())))
+                .sorted(Comparator.comparing(TransactionResponse::getDate,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(10)
                 .collect(Collectors.toList());
 
         DashboardResponse dashboard = new DashboardResponse();
-        dashboard.setUserName("User");
+        dashboard.setUserName(userEntity.getName());
         dashboard.setSummary(summary);
-        dashboard.setCards(cards);
         dashboard.setTransactions(transactions);
         dashboard.setLastUpdated(Instant.now());
 

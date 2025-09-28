@@ -2,10 +2,9 @@ package com.ccms.portal.service;
 
 import com.ccms.portal.dto.request.CreateCardRequest;
 import com.ccms.portal.dto.request.UpdateCardStatusRequest;
-import com.ccms.portal.dto.response.CardDetailResponse;
-import com.ccms.portal.dto.response.CardResponse;
+
 import com.ccms.portal.dto.response.CreditCardResponse;
-import com.ccms.portal.dto.response.TransactionResponse;
+
 import com.ccms.portal.enums.CardStatus;
 import com.ccms.portal.exception.CardTypeNotFoundException;
 import com.ccms.portal.exception.CreditCardNotFoundException;
@@ -14,22 +13,16 @@ import com.ccms.portal.exception.UserNotFoundException;
 import com.ccms.portal.util.CreditCardUtil;
 import com.ccms.portal.entity.CardTypeEntity;
 import com.ccms.portal.entity.CreditCardEntity;
-import com.ccms.portal.entity.Transaction;
 import com.ccms.portal.entity.UserEntity;
 import com.ccms.portal.repository.CreditCardRepository;
 import com.ccms.portal.repository.CardTypeRepository;
 import com.ccms.portal.repository.TransactionRepository;
 import com.ccms.portal.repository.UserRepository;
 import com.ccms.portal.util.JwtUserDetails;
-import com.ccms.portal.util.MaskUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
-import jakarta.transaction.Transactional;
-import java.time.ZoneId;
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 @Service
@@ -103,64 +96,4 @@ public class CardService {
         CreditCardEntity savedEntity = cardRepository.save(creditCard);
         return cardHelper.buildCreditCardResponse(savedEntity);
     }
-
-    @Transactional
-    public CardDetailResponse getCardDetail(Long cardId) {
-        CreditCardEntity cardEntity = cardRepository.findById(cardId).orElse(null);
-        if (cardEntity == null) return null;
-
-        CreditCardResponse creditCardResp = cardHelper.buildCreditCardResponse(cardEntity);
-
-        // INSERTED: mask card number and remove cvv before sending to client
-        creditCardResp = CreditCardResponse.builder()
-                .id(creditCardResp.getId())
-                .cardHolderName(creditCardResp.getCardHolderName())
-                .cardNumber(MaskUtil.maskCardNumber(cardEntity.getCardNumber()))
-                .cardStatus(creditCardResp.getCardStatus())
-                .creditLimit(creditCardResp.getCreditLimit())
-                .availableLimit(creditCardResp.getAvailableLimit())
-                .expiryDate(creditCardResp.getExpiryDate())
-                .cvv(null)
-                .cardType(creditCardResp.getCardType())
-                .build();
-        // END INSERT
-
-        List<Transaction> txEntities = transactionRepository.findTop10ByCard_IdOrderByCreatedAtDesc(cardEntity.getId());
-        List<TransactionResponse> txDtos = txEntities.stream().map(t -> {
-            TransactionResponse tr = new TransactionResponse();
-            tr.setId(t.getId() == null ? null : t.getId().toString());
-            tr.setCardId(t.getCard() == null || t.getCard().getId() == null ? null : t.getCard().getId().toString());
-            tr.setAmount(t.getAmount() == null ? 0.0 : t.getAmount().doubleValue());
-            tr.setMerchant(t.getMerchantAccount() != null ? String.valueOf(t.getMerchantAccount()) : null);
-            tr.setCategory(t.getNetwork());
-            tr.setMode(t.getProcessor() != null ? String.valueOf(t.getProcessor()) : null);
-            if (t.getCreatedAt() != null) {
-                tr.setDate(t.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant());
-            } else {
-                tr.setDate(null);
-            }
-            return tr;
-        }).collect(Collectors.toList());
-        return CardDetailResponse.builder().card(creditCardResp).transactions(txDtos).build();
-    }
-
-    @Transactional
-    public List<CardResponse> getCardsForCurrentUser() {
-        JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Long userId = currentUser.getUserId();
-        List<CreditCardEntity> cards = cardRepository.findAllByUserIdWithCardType(userId);
-        return cards.stream().map(c -> {
-            CardResponse cr = new CardResponse();
-            cr.setId(c.getId() == null ? null : c.getId().toString());
-            cr.setName(c.getCardType() != null ? c.getCardType().getName() : "Card");
-            // INSERTED: use MaskUtil to mask PAN for dashboard list
-            cr.setNumber(MaskUtil.maskCardNumber(c.getCardNumber()));
-            // END INSERT
-            cr.setTotalLimit(c.getCreditLimit() == null ? 0.0 : c.getCreditLimit());
-            cr.setAvailableLimit(c.getAvailableLimit() == null ? 0.0 : c.getAvailableLimit());
-            cr.setStatus(c.getCardStatus() == null ? null : c.getCardStatus().name());
-            return cr;
-        }).collect(Collectors.toList());
-    }
-
 }

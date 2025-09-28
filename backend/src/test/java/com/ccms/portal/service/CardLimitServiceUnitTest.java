@@ -18,10 +18,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Unit tests aligned to updateLimit(Long, UpdateCardLimitRequest, String).
- * Uses user.email for ownership check (matches isOwner implementation).
- */
 class CardLimitServiceUnitTest {
 
     @InjectMocks
@@ -35,7 +31,6 @@ class CardLimitServiceUnitTest {
         MockitoAnnotations.openMocks(this);
     }
 
-    /** Helper: create card whose user.email == ownerEmail (used by isOwner) */
     private CreditCardEntity makeCard(Long id,
                                       double creditLimit,
                                       double availableLimit,
@@ -53,7 +48,7 @@ class CardLimitServiceUnitTest {
         card.setCardType(cardType);
 
         UserEntity user = new UserEntity();
-        user.setEmail(ownerEmail);          // <-- important: isOwner checks email
+        user.setEmail(ownerEmail);
         card.setUser(user);
 
         return card;
@@ -85,7 +80,6 @@ class CardLimitServiceUnitTest {
     @Test
     void decreaseBelowOutstanding_throwsCardLimitException() {
         String ownerEmail = "bob@example.com";
-        // outstanding = oldLimit - available = 3000 - 1000 = 2000
         CreditCardEntity card = makeCard(2L, 3000.0, 1000.0, 500.0, 8000.0, ownerEmail);
 
         when(creditCardRepository.findById(2L)).thenReturn(Optional.of(card));
@@ -135,7 +129,6 @@ class CardLimitServiceUnitTest {
         UpdateCardLimitRequest req = new UpdateCardLimitRequest();
         req.setNewCreditLimit(4500.0);
 
-        // caller is someone else -> should be unauthorized
         UnauthorizedApplicationActionException ex = assertThrows(UnauthorizedApplicationActionException.class,
                 () -> cardLimitService.updateLimit(4L, req, "eve@example.com"));
 

@@ -26,16 +26,6 @@ public class CreditCardController {
         }
         return ResponseEntity.ok(userCards);
     }
-
-    @GetMapping("/{cardId}")
-    public ResponseEntity<?> getCardDetail(@PathVariable Long cardId) {
-        CardDetailResponse resp = cardService.getCardDetail(cardId);
-        if (resp == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(resp);
-    }
-
     @PutMapping("/{cardId}/status")
     public ResponseEntity<?> updateCardStatus(@RequestBody UpdateCardStatusRequest cardStatusRequest, @PathVariable Long cardId){
         CreditCardResponse updatedCard = cardService.updateCardStatus(cardStatusRequest, cardId);
