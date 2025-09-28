@@ -177,10 +177,12 @@ export default {
 }
 
 .card-options {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* ✅ 3 cards per row */
   gap: 20px;
   margin-top: 20px;
 }
+
 
 .option-card {
   flex: 1;

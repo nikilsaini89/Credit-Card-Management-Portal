@@ -30,7 +30,6 @@ router.isReady().then(() => {
       const userRole = store.getters["auth/userRole"];
       console.log('User role:', userRole);
       if (userRole === 'ADMIN') {
-        console.log('User role2:', userRole);
         router.push({ name: "AdminDashboard" });
       } else {
         router.push({ name: "Dashboard" });
