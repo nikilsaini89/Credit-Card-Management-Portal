@@ -7,5 +7,8 @@ public enum TransactionStatus {
   PENDING,
   COMPLETED,
   FAILED,
-  REFUNDED
+  REFUNDED,
+  BNPL_ACTIVE,
+  BNPL_COMPLETED,
+  BNPL_DEFAULTED
 }
