@@ -40,9 +40,17 @@ export interface User {
 }
 
 export interface AuthState {
-  user: User | null
-  token: string | null
-  isAuthenticated: boolean
-  loading: boolean
-  error: string | null
+  token: string | null;
+  user: User | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+  error: string | null;
+}
+
+
+
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: UserResponse;
 }
