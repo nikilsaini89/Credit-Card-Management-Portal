@@ -43,41 +43,44 @@
               </div>
               <div class="text-right">
                 <div class="text-sm font-medium text-gray-600">Statement Date</div>
-                <div class="text-lg font-bold" style="color: #0b2540;">14 Oct 2024</div>
+                <div class="text-lg font-bold" style="color: #0b2540;">{{ billSummary.statementDate }}</div>
               </div>
             </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Total Statement Amount</div>
-                <div class="text-2xl font-bold" style="color: #0b2540;">₹ 34,948.00</div>
+                <div class="text-2xl font-bold" style="color: #0b2540;">{{ formatCurrency(billSummary.totalStatementAmount) }}</div>
               </div>
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Amount Due</div>
-                <div class="text-2xl font-bold text-red-600">₹ 34,948.00</div>
-                <div class="text-xs text-gray-500 mt-1">Due on 08 Nov 2024</div>
+                <div class="text-2xl font-bold text-red-600">{{ formatCurrency(billSummary.amountDue) }}</div>
+                <div class="text-xs text-gray-500 mt-1">Due on {{ billSummary.dueDate }}</div>
+                <div v-if="billSummary.paidAmount > 0" class="text-xs text-green-600 mt-1">
+                  Paid: {{ formatCurrency(billSummary.paidAmount) }}
+                </div>
               </div>
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Available Credit</div>
-                <div class="text-2xl font-bold text-green-600">₹ 15,052.00</div>
-                <div class="text-xs text-gray-500 mt-1">Out of ₹50,000 limit</div>
+                <div class="text-2xl font-bold text-green-600">{{ formatCurrency(billSummary.availableCredit) }}</div>
+                <div class="text-xs text-gray-500 mt-1">Out of {{ formatCurrency(billSummary.creditLimit) }} limit</div>
               </div>
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Credit Limit Usage</div>
                 <div class="flex items-center justify-between mb-2">
-                  <div class="text-2xl font-bold" style="color: #0b2540;">68%</div>
-                  <div class="text-xs text-gray-500">₹34,948 / ₹50,000</div>
+                  <div class="text-2xl font-bold" style="color: #0b2540;">{{ billSummary.usagePercentage }}%</div>
+                  <div class="text-xs text-gray-500">{{ formatCurrency(billSummary.usedAmount) }} / {{ formatCurrency(billSummary.creditLimit) }}</div>
                 </div>
                 <!-- Gauge Meter -->
                 <div class="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden">
                   <div class="absolute top-0 left-0 h-full rounded-full transition-all duration-1000" 
                        :style="{ 
-                         width: '68%', 
+                         width: billSummary.usagePercentage + '%', 
                          background: 'linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%)' 
                        }">
                   </div>
                 </div>
-                <div class="text-xs text-gray-500 mt-1">You spent 15% more than last month</div>
+                <div class="text-xs text-gray-500 mt-1">{{ billSummary.spendingComparison }}</div>
               </div>
             </div>
             
@@ -88,9 +91,14 @@
                 </svg>
                 Post bill payment updated amount due will get reflected after 1-2 hours.
               </div>
-              <button @click="handleBillPayment" class="px-6 py-2 text-sm font-medium text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200" style="background: #0b2540;">
-                PAY NOW
-              </button>
+              <div class="flex space-x-2">
+                <button @click="resetPayments" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all duration-200">
+                  Reset Payments
+                </button>
+                <button @click="handleBillPayment" class="px-6 py-2 text-sm font-medium text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200" style="background: #0b2540;">
+                  PAY NOW
+                </button>
+              </div>
             </div>
           </div>
 
@@ -282,7 +290,9 @@
                             class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
                           >
                             <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-3"></span>
-                            <span class="text-gray-700 font-medium">{{ card.cardType }} ****{{ card.lastFour }}</span>
+                            <span class="text-gray-700 font-medium">
+                              {{ card.cardType?.networkType || card.cardType || 'VISA' }} ****{{ card.lastFour || card.cardNumber?.slice(-4) || '****' }}
+                            </span>
                           </button>
                         </div>
                       </div>
@@ -340,6 +350,27 @@
                             <span class="text-gray-700 font-medium">Entertainment</span>
                           </button>
                           <button
+                            @click="selectCategory('electronics')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="text-lg mr-3">📱</span>
+                            <span class="text-gray-700 font-medium">Electronics</span>
+                          </button>
+                          <button
+                            @click="selectCategory('healthcare')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="text-lg mr-3">🏥</span>
+                            <span class="text-gray-700 font-medium">Healthcare</span>
+                          </button>
+                          <button
+                            @click="selectCategory('education')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="text-lg mr-3">📚</span>
+                            <span class="text-gray-700 font-medium">Education</span>
+                          </button>
+                          <button
                             @click="selectCategory('other')"
                             class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
                           >
@@ -394,6 +425,34 @@
                             <span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-3"></span>
                             <span class="text-red-700 font-medium">Failed</span>
                           </button>
+                          <button
+                            @click="selectStatus('refunded')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-3"></span>
+                            <span class="text-blue-700 font-medium">Refunded</span>
+                          </button>
+                          <button
+                            @click="selectStatus('BNPL_ACTIVE')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="inline-block w-3 h-3 rounded-full bg-purple-500 mr-3"></span>
+                            <span class="text-purple-700 font-medium">BNPL Active</span>
+                          </button>
+                          <button
+                            @click="selectStatus('BNPL_COMPLETED')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-3"></span>
+                            <span class="text-green-700 font-medium">BNPL Completed</span>
+                          </button>
+                          <button
+                            @click="selectStatus('BNPL_DEFAULTED')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-3"></span>
+                            <span class="text-red-700 font-medium">BNPL Defaulted</span>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -446,6 +505,43 @@
       </div>
     </div>
 
+    <!-- Payment Amount Input Modal -->
+    <div v-if="showPaymentInput" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Payment Amount</h3>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Amount Due: {{ formatCurrency(billSummary.amountDue) }}
+          </label>
+          <input
+            v-model.number="customPaymentAmount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            :max="billSummary.amountDue"
+            placeholder="Enter payment amount"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        
+        <div class="flex space-x-3">
+          <button
+            @click="cancelPayment"
+            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          >
+            Cancel
+          </button>
+          <button
+            @click="confirmPaymentAmount"
+            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Proceed to Pay
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Payment Flow Modal -->
     <PaymentFlow 
       :show-payment="showPayment"
@@ -477,6 +573,7 @@ interface Transaction {
   transactionId?: string
   serialNo?: number
   merchant: string
+  merchantName?: string
   category: string
   cardId: number
   cardType: string
@@ -485,6 +582,49 @@ interface Transaction {
   status: string
   isBnpl: boolean
   createdAt: string
+  transactionDate?: string
+}
+
+interface Statement {
+  id: number
+  cardId: number
+  statementDate: string
+  dueDate: string
+  statementAmount: string
+  paidAmount: string
+  amountDue: string
+  status: string
+  isPaid: boolean
+  isOverdue: boolean
+}
+
+interface BnplPlan {
+  id: string
+  merchant: string
+  status: string
+  tenureMonths: number
+  totalAmount: number
+  paidAmount: number
+  remainingAmount: number
+  monthlyEmi: number
+  paidInstallments: number
+  startDate: string
+  nextDueDate: string
+  // Additional fields from API
+  transactionId?: number
+  merchantName?: string
+  progressPercentage?: number
+  totalInstallments?: number
+  remainingInstallments?: number
+}
+
+interface BnplOverview {
+  outstandingAmount: number
+  totalPaidAmount: number
+  totalAmount: number
+  progressPercentage: number
+  activePlansCount: number
+  activePlans: BnplPlan[]
 }
 
 const store = useStore()
@@ -498,6 +638,11 @@ const showPayment = ref(false)
 const paymentAmount = ref(0)
 const paymentType = ref('')
 const dueDate = ref('')
+// Statement data from API
+const currentStatement = ref<Statement | null>(null)
+const paidAmount = ref(0)
+const customPaymentAmount = ref(0) // For custom payment input
+const showPaymentInput = ref(false) // Show payment amount input
 
 // Filters
 const filters = ref({
@@ -517,83 +662,162 @@ const showCategoryDropdown = ref(false)
 // Computed properties
 const transactions = computed(() => store.state?.transactions?.transactions || [])
 const cards = computed(() => store.state?.cards?.cards || [])
-const bnplPlans = computed(() => store.state?.bnpl?.plans || [
-  {
-    id: '1',
-    merchant: 'Amazon',
-    status: 'ACTIVE',
-    tenureMonths: 6,
-    totalAmount: 2045000, 
-    paidAmount: 1022500,  
-    remainingAmount: 1022500,
-    monthlyEmi: 340833,  
-    paidInstallments: 3,
-    startDate: '2023-11-15',
-    nextDueDate: '2024-02-15'
-  },
-  {
-    id: '2',
-    merchant: 'Flipkart',
-    status: 'ACTIVE',
-    tenureMonths: 12,
-    totalAmount: 899000, 
-    paidAmount: 180000,   
-    remainingAmount: 719000, 
-    monthlyEmi: 75000,   
-    paidInstallments: 2,
-    startDate: '2023-11-20',
-    nextDueDate: '2024-01-20'
-  },
-  {
-    id: '3',
-    merchant: 'Myntra',
-    status: 'ACTIVE',
-    tenureMonths: 9,
-    totalAmount: 1250000,
-    paidAmount: 416667,
-    remainingAmount: 833333,
-    monthlyEmi: 138889,
-    paidInstallments: 3,
-    startDate: '2023-12-01',
-    nextDueDate: '2024-03-01'
-  },
-  {
-    id: '4',
-    merchant: 'Croma',
-    status: 'ACTIVE',
-    tenureMonths: 18,
-    totalAmount: 3500000,
-    paidAmount: 583333,
-    remainingAmount: 2916667,
-    monthlyEmi: 194444,
-    paidInstallments: 3,
-    startDate: '2023-10-15',
-    nextDueDate: '2024-01-15'
+// BNPL data from API
+const bnplOverview = ref<BnplOverview | null>(null)
+const bnplPlans = computed(() => {
+  if (!bnplOverview.value?.activePlans) return []
+  
+  return bnplOverview.value.activePlans.map(plan => ({
+    id: `bnpl-${plan.transactionId}`,
+    merchant: plan.merchantName || 'Unknown Merchant',
+    status: plan.status,
+    tenureMonths: plan.totalInstallments || 6,
+    totalAmount: plan.totalAmount,
+    paidAmount: plan.paidAmount,
+    remainingAmount: plan.remainingAmount,
+    monthlyEmi: plan.monthlyEmi,
+    paidInstallments: plan.paidInstallments,
+    startDate: plan.startDate,
+    nextDueDate: plan.nextDueDate,
+    // Keep additional fields for compatibility
+    transactionId: plan.transactionId,
+    merchantName: plan.merchantName,
+    progressPercentage: plan.progressPercentage,
+    totalInstallments: plan.totalInstallments,
+    remainingInstallments: plan.remainingInstallments
+  }))
+})
+const analytics = computed(() => {
+  const totalSpent = transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  const now = new Date()
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+  
+  // Calculate current month spending
+  const currentMonthTransactions = transactions.value.filter((t: Transaction) => {
+    const transactionDate = new Date(t.transactionDate || t.createdAt)
+    return transactionDate >= currentMonth
+  })
+  
+  // Calculate last month spending
+  const lastMonthTransactions = transactions.value.filter((t: Transaction) => {
+    const transactionDate = new Date(t.transactionDate || t.createdAt)
+    return transactionDate >= lastMonth && transactionDate <= lastDayOfLastMonth
+  })
+  
+  const thisMonthSpent = currentMonthTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  const lastMonthSpent = lastMonthTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  const change = lastMonthSpent > 0 ? ((thisMonthSpent - lastMonthSpent) / lastMonthSpent) * 100 : 0
+  
+  return {
+    thisMonth: thisMonthSpent,
+    lastMonth: lastMonthSpent,
+    change: Math.round(change * 10) / 10,
+    categoryBreakdown: [],
+    topMerchants: []
   }
-])
-const analytics = computed(() => store.state?.analytics?.data || {
-  thisMonth: 1250000,
-  lastMonth: 980000,
-  change: 27.6,
-  categoryBreakdown: [],
-  topMerchants: []
 })
 
-const categoryBreakdown = computed(() => [
-  { name: 'Shopping', percentage: 45, color: 'bg-yellow-500' },
-  { name: 'Food', percentage: 30, color: 'bg-orange-500' },
-  { name: 'Travel', percentage: 25, color: 'bg-blue-900' }
-])
+const categoryBreakdown = computed(() => {
+  // Calculate actual category breakdown from transactions
+  const categoryTotals: Record<string, number> = {}
+  const totalSpent = transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  
+  transactions.value.forEach((t: Transaction) => {
+    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount
+  })
+  
+  const colors = ['bg-yellow-500', 'bg-orange-500', 'bg-blue-900', 'bg-green-500', 'bg-purple-500']
+  let colorIndex = 0
+  
+  return Object.entries(categoryTotals)
+    .map(([category, amount]) => ({
+      name: category.charAt(0).toUpperCase() + category.slice(1),
+      percentage: totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0,
+      color: colors[colorIndex++ % colors.length]
+    }))
+    .sort((a, b) => b.percentage - a.percentage)
+    .slice(0, 5) // Show top 5 categories
+})
 
 
-const summary = computed(() => ({
-  totalTransactions: transactions.value.length || 5,
-  totalSpent: transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 25000000,
-  bnplTransactions: transactions.value.filter((t: Transaction) => t.isBnpl).length || 2,
-  avgTransaction: transactions.value.length > 0 
-    ? transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0) / transactions.value.length 
-    : 5000000
-}))
+const summary = computed(() => {
+  const totalTransactions = transactions.value.length
+  const totalSpent = transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  const bnplTransactions = transactions.value.filter((t: Transaction) => t.isBnpl).length
+  const avgTransaction = totalTransactions > 0 ? totalSpent / totalTransactions : 0
+  
+  return {
+    totalTransactions,
+    totalSpent,
+    bnplTransactions,
+    avgTransaction
+  }
+})
+
+// Bill summary computed property
+const billSummary = computed(() => {
+  const currentCard = cards.value[0] // Get the first card
+  
+  if (!currentCard || !currentStatement.value) {
+    // Fallback values if no card or statement data
+    return {
+      totalStatementAmount: 0,
+      amountDue: 0,
+      availableCredit: 0,
+      creditLimit: 0,
+      usedAmount: 0,
+      usagePercentage: 0,
+      statementDate: 'N/A',
+      dueDate: 'N/A',
+      spendingComparison: 'No statement data available',
+      paidAmount: 0
+    }
+  }
+  
+  const creditLimit = currentCard.creditLimit || 0
+  const statement = currentStatement.value
+  
+  // Calculate actual available limit based on current spending
+  const totalSpent = parseFloat(statement.statementAmount) || 0
+  const availableLimit = Math.max(0, creditLimit - totalSpent)
+  
+  // Calculate spending comparison with previous month
+  const now = new Date()
+  const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const lastDayOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+  
+  const previousMonthTransactions = transactions.value.filter((t: Transaction) => {
+    const transactionDate = new Date(t.transactionDate || t.createdAt)
+    return transactionDate >= previousMonth && transactionDate <= lastDayOfPreviousMonth
+  })
+  
+  const previousMonthSpent = previousMonthTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  const spendingChange = previousMonthSpent > 0 ? Math.round(((totalSpent - previousMonthSpent) / previousMonthSpent) * 100) : 0
+  
+  return {
+    totalStatementAmount: totalSpent,
+    amountDue: parseFloat(statement.amountDue) || 0,
+    availableCredit: availableLimit,
+    creditLimit: creditLimit,
+    usedAmount: creditLimit - availableLimit,
+    usagePercentage: creditLimit > 0 ? Math.round(((creditLimit - availableLimit) / creditLimit) * 100) : 0,
+    statementDate: new Date(statement.statementDate).toLocaleDateString('en-IN', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    }),
+    dueDate: new Date(statement.dueDate).toLocaleDateString('en-IN', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    }),
+    spendingComparison: `You spent ${Math.abs(spendingChange)}% ${spendingChange >= 0 ? 'more' : 'less'} than last month`,
+    paidAmount: parseFloat(statement.paidAmount) || 0,
+    monthlyTransactions: transactions.value.length
+  }
+})
 
 const filteredTransactions = computed(() => {
   let filtered = transactions.value
@@ -601,9 +825,10 @@ const filteredTransactions = computed(() => {
   if (filters.value.search) {
     const search = filters.value.search.toLowerCase()
     filtered = filtered.filter((t: Transaction) => 
-      t.merchant.toLowerCase().includes(search) ||
+      (t.merchantName || t.merchant || '').toLowerCase().includes(search) ||
       (t.transactionId && t.transactionId.toLowerCase().includes(search)) ||
-      t.amount.toString().includes(search)
+      t.amount.toString().includes(search) ||
+      t.category.toLowerCase().includes(search)
     )
   }
 
@@ -632,15 +857,8 @@ const formatNumber = (num: number) => {
 }
 
 const formatCurrency = (amount: number) => {
-  if (amount >= 10000000) { // 1 Crore
-    return `₹${(amount / 10000000).toFixed(1)}Cr`
-  } else if (amount >= 100000) { // 1 Lakh
-    return `₹${(amount / 100000).toFixed(1)}L`
-  } else if (amount >= 1000) { // 1 Thousand
-    return `₹${(amount / 1000).toFixed(1)}K`
-  } else {
-    return `₹${amount.toFixed(0)}`
-  }
+  // Always show full amount with proper formatting
+  return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 const getAmountSize = (amount: number) => {
@@ -685,7 +903,19 @@ const getStatusDisplayText = () => {
   const statusMap: Record<string, string> = {
     completed: 'Completed',
     pending: 'Pending',
-    failed: 'Failed'
+    failed: 'Failed',
+    refunded: 'Refunded',
+    bnpl_active: 'BNPL Active',
+    bnpl_completed: 'BNPL Completed',
+    bnpl_defaulted: 'BNPL Defaulted',
+    // Backend enum values
+    COMPLETED: 'Completed',
+    PENDING: 'Pending',
+    FAILED: 'Failed',
+    REFUNDED: 'Refunded',
+    BNPL_ACTIVE: 'BNPL Active',
+    BNPL_COMPLETED: 'BNPL Completed',
+    BNPL_DEFAULTED: 'BNPL Defaulted'
   }
   return statusMap[filters.value.status] || 'Select status'
 }
@@ -719,7 +949,13 @@ const selectCategory = (category: string) => {
 const getCardDisplayText = () => {
   if (!filters.value.cardId) return 'Select card'
   const selectedCard = cards.value.find((card: any) => card.id === filters.value.cardId)
-  return selectedCard ? `${selectedCard.cardType} ****${selectedCard.lastFour}` : 'Select card'
+  if (!selectedCard) return 'Select card'
+  
+  // Handle different card object structures
+  const cardType = selectedCard.cardType?.networkType || selectedCard.cardType || 'VISA'
+  const lastFour = selectedCard.lastFour || selectedCard.cardNumber?.slice(-4) || '****'
+  
+  return `${cardType} ****${lastFour}`
 }
 
 const getCategoryDisplayText = () => {
@@ -729,6 +965,9 @@ const getCategoryDisplayText = () => {
     food: '🍔 Food & Dining',
     travel: '✈️ Travel',
     entertainment: '🎬 Entertainment',
+    electronics: '📱 Electronics',
+    healthcare: '🏥 Healthcare',
+    education: '📚 Education',
     other: '📦 Other'
   }
   return categoryMap[filters.value.category] || 'Select category'
@@ -924,27 +1163,207 @@ const handleEmiPayment = (planId: string, amount: number) => {
 }
 
 const handleBillPayment = () => {
-  paymentAmount.value = 34948
+  if (billSummary.value.amountDue <= 0) {
+    alert('No amount due to pay!')
+    return
+  }
+  
+  // Show payment amount input first
+  showPaymentInput.value = true
+  customPaymentAmount.value = billSummary.value.amountDue // Default to full amount
+}
+
+const confirmPaymentAmount = () => {
+  if (customPaymentAmount.value <= 0) {
+    alert('Please enter a valid payment amount!')
+    return
+  }
+  
+  if (customPaymentAmount.value > billSummary.value.amountDue) {
+    alert('Payment amount cannot exceed amount due!')
+    return
+  }
+  
+  // Proceed with payment
+  paymentAmount.value = customPaymentAmount.value
   paymentType.value = 'Credit Card Bill Payment'
-  dueDate.value = '2024-11-08'
+  dueDate.value = billSummary.value.dueDate
+  showPaymentInput.value = false
   showPayment.value = true
+}
+
+const cancelPayment = () => {
+  showPaymentInput.value = false
+  customPaymentAmount.value = 0
+}
+
+// Function to reset payments (for testing)
+const resetPayments = () => {
+  paidAmount.value = 0
+  currentStatement.value = null
+  alert('Payments reset successfully! Please refresh the page to reload statement data.')
 }
 
 const closePayment = () => {
   showPayment.value = false
 }
 
-const onPaymentSuccess = (transactionId: string, amount: number) => {
+const onPaymentSuccess = async (transactionId: string, amount: number) => {
   console.log('Payment successful:', transactionId, amount)
+  
+  // Check if this is a BNPL payment or regular statement payment
+  const isBnplPayment = customPaymentAmount.value > 0 && bnplOverview.value?.activePlans && bnplOverview.value.activePlans.length > 0
+  
+  if (isBnplPayment && bnplOverview.value) {
+    // Handle BNPL payment
+    const selectedPlan = bnplOverview.value.activePlans[0] // For now, use first plan
+    const success = await makeBnplPayment(selectedPlan.transactionId || 0, amount)
+    if (success) {
+      // Refresh BNPL overview
+      const cards = await store.dispatch('cards/fetchCards')
+      if (cards && cards.length > 0) {
+        await fetchBnplOverview(cards[0].id)
+      }
+      alert(`BNPL payment of ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} successful!`)
+    } else {
+      alert('BNPL payment failed. Please try again.')
+      return
+    }
+  } else {
+    // Handle regular statement payment
+    if (currentStatement.value) {
+      const success = await makePayment(currentStatement.value.id, amount)
+      if (success) {
+        alert(`Payment of ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} successful!`)
+      } else {
+        alert('Payment failed. Please try again.')
+        return
+      }
+    }
+  }
+  
   setTimeout(() => {
     showPayment.value = false
   }, 2000) 
 }
 
+// API functions for statement management
+const fetchCurrentStatement = async (cardId: number) => {
+  try {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`http://localhost:8080/api/statements/card/${cardId}/current`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (response.ok) {
+      const statement = await response.json()
+      currentStatement.value = statement
+      paidAmount.value = parseFloat(statement.paidAmount) || 0
+    } else {
+      console.error('Failed to fetch statement:', response.statusText)
+    }
+  } catch (error) {
+    console.error('Error fetching statement:', error)
+  }
+}
+
+const makePayment = async (statementId: number, paymentAmount: number) => {
+  try {
+    const token = localStorage.getItem('token')
+    const response = await fetch('http://localhost:8080/api/statements/payment', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        statementId: statementId,
+        paymentAmount: paymentAmount,
+        paymentMethod: 'CARD',
+        notes: 'Online payment'
+      })
+    })
+    
+    if (response.ok) {
+      const updatedStatement = await response.json()
+      currentStatement.value = updatedStatement
+      paidAmount.value = parseFloat(updatedStatement.paidAmount) || 0
+      return true
+    } else {
+      console.error('Payment failed:', response.statusText)
+      return false
+    }
+  } catch (error) {
+    console.error('Error making payment:', error)
+    return false
+  }
+}
+
+// BNPL API functions
+const fetchBnplOverview = async (cardId: number) => {
+  try {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`http://localhost:8080/api/bnpl/overview/card/${cardId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (response.ok) {
+      bnplOverview.value = await response.json()
+    } else {
+      console.error('Failed to fetch BNPL overview:', response.statusText)
+    }
+  } catch (error) {
+    console.error('Error fetching BNPL overview:', error)
+  }
+}
+
+const makeBnplPayment = async (transactionId: number, paymentAmount: number) => {
+  try {
+    const token = localStorage.getItem('token')
+    const response = await fetch('http://localhost:8080/api/bnpl/payment', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        transactionId: transactionId,
+        paymentAmount: paymentAmount,
+        paymentMethod: 'CARD',
+        notes: 'BNPL installment payment'
+      })
+    })
+    
+    if (response.ok) {
+      return true
+    } else {
+      console.error('BNPL payment failed:', response.statusText)
+      return false
+    }
+  } catch (error) {
+    console.error('Error making BNPL payment:', error)
+    return false
+  }
+}
+
 const fetchTransactions = async () => {
   loading.value = true
   try {
-    await store.dispatch('transactions/fetchTransactions', 1) 
+    // First get user's cards, then fetch transactions, statement, and BNPL overview
+    const cards = await store.dispatch('cards/fetchCards')
+    if (cards && cards.length > 0) {
+      await store.dispatch('transactions/fetchTransactions', { cardId: cards[0].id })
+      await fetchCurrentStatement(cards[0].id)
+      await fetchBnplOverview(cards[0].id)
+    } else {
+      console.warn('No cards found for user')
+    }
   } catch (error) {
     console.error('Error fetching transactions:', error)
   } finally {
@@ -1048,10 +1467,11 @@ const initTrendsChart = () => {
 
 onMounted(async () => {
   await fetchTransactions()
-  store.dispatch('cards/fetchCards', 1)
-  store.dispatch('merchants/fetchMerchants')
-  store.dispatch('bnpl/fetchActivePlans')
-  store.dispatch('analytics/fetchAnalytics')
+  // Note: These endpoints may not exist in the backend yet
+  // store.dispatch('cards/fetchCards', 1)
+  // store.dispatch('merchants/fetchMerchants')
+  // store.dispatch('bnpl/fetchActivePlans')
+  // store.dispatch('analytics/fetchAnalytics')
   
   // Initialize charts after DOM is ready
   await nextTick()
