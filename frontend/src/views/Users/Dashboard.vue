@@ -14,73 +14,78 @@
 
           <div class="kpi">
             <div class="kpi-title">Total Credit Limit</div>
-            <div class="kpi-main">₹{{ formatNumber(summary.totalLimit) }}</div>
-            <div class="kpi-sub">Across all cards</div>
+            <div class="kpi-main">${{ formatCurrency(summary.totalLimit) }}</div>
+            <div class="kpi-sub">across all cards</div>
           </div>
 
           <div class="kpi">
             <div class="kpi-title">Available Credit</div>
-            <div class="kpi-main success">₹{{ formatNumber(summary.availableCredit) }}</div>
-            <div class="kpi-sub">Ready to spend</div>
+            <div class="kpi-main">${{ formatCurrency(summary.availableCredit) }}</div>
+            <div class="kpi-sub">ready to use</div>
           </div>
 
           <div class="kpi">
             <div class="kpi-title">Outstanding Balance</div>
-            <div class="kpi-main danger">₹{{ formatNumber(summary.outstanding) }}</div>
-            <div class="kpi-sub">Total dues</div>
+            <div class="kpi-main">${{ formatCurrency(summary.outstanding) }}</div>
+            <div class="kpi-sub">current balance</div>
           </div>
         </div>
       </section>
 
-      <section class="content-grid">
-        <div class="left-col">
-          <div class="section-header">
-            <h3 class="section-title">My Cards</h3>
-            <RouterLink to="/cards" class="view-all">View All</RouterLink>
-          </div>
-
-          <div class="card-list">
-            <Card
-              v-for="cardItem in cards"
-              :key="cardItem.id"
-              :card="cardItem"
-              :userName="user.name"
-              :showMenu="true"
-              :actions="cardActions(cardItem)"
-              @action="onCardAction"
-              @block="onToggleBlock"
-            />
-          </div>
+      <!-- My Cards Section -->
+      <section class="cards-section">
+        <div class="section-header">
+          <h2>My Cards</h2>
+          <router-link to="/my-cards" class="view-all-link">View All</router-link>
         </div>
 
-        <aside class="right-col">
-          <div class="activity">
-            <div class="activity-header">
-              <h3>Latest Transactions</h3>
-              <RouterLink to="/transactions" class="view-all">View All</RouterLink>
-            </div>
+        <div v-if="loading" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Loading cards...</p>
+        </div>
 
-            <ul class="tx-list">
-              <li v-for="tx in transactions" :key="tx.id" class="tx">
-                <div>
-                  <div class="tx-title">{{ tx.merchant }} <span v-if="tx.mode" class="pill">{{ tx.mode }}</span></div>
-                  <div class="tx-sub">{{ tx.category }} • {{ formatDate(tx.date) }}</div>
-                </div>
-                <div :class="['tx-amount', tx.amount < 0 ? 'danger' : '']">
-                  {{ tx.amount < 0 ? '-' : '' }}₹{{ formatNumber(Math.abs(tx.amount)) }}
-                </div>
-              </li>
-            </ul>
-          </div>
+        <div v-else-if="myCards.length === 0" class="empty-state">
+          <p>No cards found. Apply for a new card to get started!</p>
+        </div>
 
-          <div class="quick-actions">
-            <h4>Quick Actions</h4>
-            <div class="actions">
-              <RouterLink to="/apply-card" class="action">+ Apply Card</RouterLink>
-              <RouterLink to="/new-transaction" class="action">↗ New Transaction</RouterLink>
+        <div v-else class="cards-grid">
+          <Card
+            v-for="card in myCards.slice(0, 3)"
+            :key="card.id"
+            :card="card"
+            :showFull="showFull[card.id]"
+            @toggle="toggleCard"
+            @action="onCardAction"
+          />
+        </div>
+      </section>
+
+      <!-- Recent Transactions Section -->
+      <section class="transactions-section">
+        <div class="section-header">
+          <h2>Recent Transactions</h2>
+          <router-link to="/transactions" class="view-all-link">View All</router-link>
+        </div>
+
+        <div v-if="transactions.length === 0" class="empty-state">
+          <p>No recent transactions found.</p>
+        </div>
+
+        <div v-else class="transactions-list">
+          <div
+            v-for="transaction in transactions.slice(0, 5)"
+            :key="transaction.id"
+            class="transaction-item"
+          >
+            <div class="transaction-info">
+              <div class="transaction-merchant">{{ transaction.merchant }}</div>
+              <div class="transaction-date">{{ formatDate(transaction.date) }}</div>
+            </div>
+            <div class="transaction-amount" :class="{ 'negative': transaction.amount < 0 }">
+              {{ transaction.amount < 0 ? '-' : '+' }}${{ Math.abs(transaction.amount).toFixed(2) }}
             </div>
           </div>
-        </aside>
+        </div>
       </section>
     </main>
   </div>
@@ -94,11 +99,16 @@ import { mapGetters, mapActions } from 'vuex';
 import { LOCAL_STORAGE } from '../../constants/constants';
 
 export default {
-  name: "DashboardView",
-  components: { Card },
+  name: "Dashboard",
+  components: {
+    Card,
+  },
   data() {
     return {
-      user: { name: "User" },
+      user: {
+        name: "John Doe",
+        email: "john.doe@example.com",
+      },
       summary: {
         activeCards: 0,
         totalCards: 0,
@@ -112,11 +122,9 @@ export default {
     };
   },
   computed: {
-    ...mapGetters('cards', [
-      'cards',
-      'loading',
-      'activeCardsCount',
-      'blockedCardsCount'
+    ...mapGetters('myCards', [
+      'myCards',
+      'loading'
     ])
   },
   async created() {
@@ -127,7 +135,7 @@ export default {
     document.removeEventListener("click", this.globalClick);
   },
   methods: {
-    ...mapActions('cards', ['fetchCards']),
+    ...mapActions('myCards', ['fetchCards']),
     
     async loadDashboard() {
       try {
@@ -142,13 +150,13 @@ export default {
         this.transactions = data.transactions || [];
 
         // Update summary based on store cards
-        this.summary.activeCards = this.activeCardsCount;
-        this.summary.totalCards = this.cards.length;
-        this.summary.totalLimit = this.sum(this.cards, "creditLimit");
-        this.summary.availableCredit = this.sum(this.cards, "availableLimit");
+        this.summary.activeCards = this.myCards.filter(card => card.cardStatus === 'ACTIVE').length;
+        this.summary.totalCards = this.myCards.length;
+        this.summary.totalLimit = this.sum(this.myCards, "creditLimit");
+        this.summary.availableCredit = this.sum(this.myCards, "availableLimit");
         this.summary.outstanding = this.summary.totalLimit - this.summary.availableCredit;
 
-        this.cards.forEach((cardItem) => {
+        this.myCards.forEach((cardItem) => {
           this.$set(this.showFull, cardItem.id, false);
         });
       } catch (err) {
@@ -156,48 +164,30 @@ export default {
       }
     },
 
-    maskNumber(cardNumber) {
-      if (!cardNumber) return "";
-      const onlyDigits = cardNumber.toString();
-      const lastFour = onlyDigits.slice(-4);
-      return "**** **** **** " + lastFour;
-    },
-    formatNumber(value) {
-      if (value == null) return "0";
-      return value.toLocaleString("en-IN");
-    },
-    sum(list = [], key) {
-      return list.reduce((accumulator, item) => accumulator + (Number(item[key]) || 0), 0);
-    },
-    formatDate(isoString) {
-      try {
-        const dateObj = new Date(isoString);
-        const options = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
-        return dateObj.toLocaleString("en-US", options);
-      } catch {
-        return isoString;
-      }
+    sum(items, property) {
+      return items.reduce((total, item) => total + (item[property] || 0), 0);
     },
 
-    toggleCardNumber(cardId) {
+    formatCurrency(amount) {
+      return new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    },
+
+    formatDate(dateString) {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    },
+
+    toggleCard(cardId) {
       this.$set(this.showFull, cardId, !this.showFull[cardId]);
     },
-    toggleMenu(cardId) {
-      this.openMenu = this.openMenu === cardId ? null : cardId;
-    },
-    onToggleBlock(card) {
-      card.status = card.status === "BLOCKED" ? "ACTIVE" : "BLOCKED";
-      this.openMenu = null;
-    },
-    globalClick(event) {
-      const clickedOutside = !event.target.closest(".card-menu");
-      if (clickedOutside) this.openMenu = null;
-    },
-    isImageString(source) {
-      return typeof source === "string" && /\.(png|jpe?g|svg|webp)$/.test(source);
-    },
 
-    cardActions(card) {
+    getCardMenuItems(card) {
       return [
         { label: "View Details", to: { name: "CardDetail", params: { id: card.id } } },
         { label: card.cardStatus === "BLOCKED" ? "Unblock" : "Block", value: { type: "toggle-block" } }
@@ -214,18 +204,37 @@ export default {
       
       if (action.to) {
         if (this.$router) this.$router.push(action.to);
-        else {
-          const router = useRouter ? useRouter() : null;
-          if (router) router.push(action.to);
-          else console.warn("Router not available to navigate to", action.to);
-        }
-      } else if (action.value?.type === "toggle-block") {
-        console.log("toggle-block action received; update your onCardAction to include card id if needed", action);
-      } else {
-        console.log("Unhandled card action", action);
+      } else if (action.value) {
+        this.handleCardAction(card, action.value);
       }
-    }
-  }
+    },
+
+    handleCardAction(card, action) {
+      if (action.type === "toggle-block") {
+        this.toggleCardBlock(card);
+      }
+    },
+
+    async toggleCardBlock(card) {
+      try {
+        const newStatus = card.cardStatus === "BLOCKED" ? "ACTIVE" : "BLOCKED";
+        await this.$store.dispatch('myCards/updateCardStatus', {
+          cardId: card.id,
+          newStatus: newStatus
+        });
+        
+        // Show success message
+        this.$toast?.success(`Card ${newStatus === "ACTIVE" ? "unblocked" : "blocked"} successfully`);
+      } catch (error) {
+        console.error("Failed to update card status:", error);
+        this.$toast?.error("Failed to update card status");
+      }
+    },
+
+    globalClick() {
+      this.openMenu = null;
+    },
+  },
 };
 </script>
 
