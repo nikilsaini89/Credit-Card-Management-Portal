@@ -554,7 +554,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useStore } from 'vuex'
 // @ts-ignore
 import { useRouter } from 'vue-router'
@@ -643,6 +643,7 @@ const currentStatement = ref<Statement | null>(null)
 const paidAmount = ref(0)
 const customPaymentAmount = ref(0) // For custom payment input
 const showPaymentInput = ref(false) // Show payment amount input
+const currentPlanId = ref('') // Store current BNPL plan ID for payment
 
 // Filters
 const filters = ref({
@@ -779,9 +780,9 @@ const billSummary = computed(() => {
   const creditLimit = currentCard.creditLimit || 0
   const statement = currentStatement.value
   
-  // Calculate actual available limit based on current spending
+  // Use the actual available limit from the card data
   const totalSpent = parseFloat(statement.statementAmount) || 0
-  const availableLimit = Math.max(0, creditLimit - totalSpent)
+  const availableLimit = currentCard.availableLimit || 0
   
   // Calculate spending comparison with previous month
   const now = new Date()
@@ -796,9 +797,13 @@ const billSummary = computed(() => {
   const previousMonthSpent = previousMonthTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
   const spendingChange = previousMonthSpent > 0 ? Math.round(((totalSpent - previousMonthSpent) / previousMonthSpent) * 100) : 0
   
+  // Calculate amount due (statement amount - paid amount)
+  const paidAmount = parseFloat(statement.paidAmount) || 0
+  const amountDue = Math.max(0, totalSpent - paidAmount)
+  
   return {
     totalStatementAmount: totalSpent,
-    amountDue: parseFloat(statement.amountDue) || 0,
+    amountDue: amountDue,
     availableCredit: availableLimit,
     creditLimit: creditLimit,
     usedAmount: creditLimit - availableLimit,
@@ -814,7 +819,7 @@ const billSummary = computed(() => {
       year: 'numeric' 
     }),
     spendingComparison: `You spent ${Math.abs(spendingChange)}% ${spendingChange >= 0 ? 'more' : 'less'} than last month`,
-    paidAmount: parseFloat(statement.paidAmount) || 0,
+    paidAmount: paidAmount,
     monthlyTransactions: transactions.value.length
   }
 })
@@ -1160,6 +1165,9 @@ const handleEmiPayment = (planId: string, amount: number) => {
   paymentType.value = 'BNPL EMI Payment'
   dueDate.value = new Date().toISOString()
   showPayment.value = true
+  
+  // Store the plan ID for later use in payment success
+  currentPlanId.value = planId
 }
 
 const handleBillPayment = () => {
@@ -1212,17 +1220,24 @@ const onPaymentSuccess = async (transactionId: string, amount: number) => {
   console.log('Payment successful:', transactionId, amount)
   
   // Check if this is a BNPL payment or regular statement payment
-  const isBnplPayment = customPaymentAmount.value > 0 && bnplOverview.value?.activePlans && bnplOverview.value.activePlans.length > 0
+  const isBnplPayment = paymentType.value === 'BNPL EMI Payment'
   
-  if (isBnplPayment && bnplOverview.value) {
-    // Handle BNPL payment
-    const selectedPlan = bnplOverview.value.activePlans[0] // For now, use first plan
+  if (isBnplPayment && bnplOverview.value?.activePlans && bnplOverview.value.activePlans.length > 0) {
+    // Handle BNPL payment - find the plan that matches the current plan ID
+    const selectedPlan = bnplOverview.value.activePlans.find(plan => 
+      plan.transactionId === parseInt(currentPlanId.value)
+    ) || bnplOverview.value.activePlans[0] // Fallback to first plan
+    
     const success = await makeBnplPayment(selectedPlan.transactionId || 0, amount)
     if (success) {
-      // Refresh BNPL overview
+      // Refresh all data
       const cards = await store.dispatch('cards/fetchCards')
       if (cards && cards.length > 0) {
-        await fetchBnplOverview(cards[0].id)
+        await Promise.all([
+          fetchBnplOverview(cards[0].id),
+          fetchCurrentStatement(cards[0].id),
+          store.dispatch('transactions/fetchTransactions', { cardId: cards[0].id })
+        ])
       }
       alert(`BNPL payment of ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} successful!`)
     } else {
@@ -1234,6 +1249,11 @@ const onPaymentSuccess = async (transactionId: string, amount: number) => {
     if (currentStatement.value) {
       const success = await makePayment(currentStatement.value.id, amount)
       if (success) {
+        // Refresh statement data
+        const cards = await store.dispatch('cards/fetchCards')
+        if (cards && cards.length > 0) {
+          await fetchCurrentStatement(cards[0].id)
+        }
         alert(`Payment of ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} successful!`)
       } else {
         alert('Payment failed. Please try again.')
@@ -1325,6 +1345,7 @@ const fetchBnplOverview = async (cardId: number) => {
 
 const makeBnplPayment = async (transactionId: number, paymentAmount: number) => {
   try {
+    console.log('Making BNPL payment:', { transactionId, paymentAmount })
     const token = localStorage.getItem('token')
     const response = await fetch('http://localhost:8080/api/bnpl/payment', {
       method: 'POST',
@@ -1341,9 +1362,11 @@ const makeBnplPayment = async (transactionId: number, paymentAmount: number) => 
     })
     
     if (response.ok) {
+      console.log('BNPL payment successful')
       return true
     } else {
-      console.error('BNPL payment failed:', response.statusText)
+      const errorText = await response.text()
+      console.error('BNPL payment failed:', response.status, errorText)
       return false
     }
   } catch (error) {
@@ -1417,13 +1440,29 @@ const initTrendsChart = () => {
   const currentMonth = new Date().getMonth()
   const last6Months = months.slice(currentMonth - 5, currentMonth + 1)
   
+  // Calculate actual spending for each month
+  const monthlyData = last6Months.map((month, index) => {
+    const monthIndex = currentMonth - 5 + index
+    const year = new Date().getFullYear()
+    const monthStart = new Date(year, monthIndex, 1)
+    const monthEnd = new Date(year, monthIndex + 1, 0)
+    
+    const monthTransactions = transactions.value.filter((t: Transaction) => {
+      const transactionDate = new Date(t.transactionDate || t.createdAt)
+      return transactionDate >= monthStart && transactionDate <= monthEnd
+    })
+    
+    const monthSpent = monthTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+    return Math.round(monthSpent / 1000) // Convert to thousands
+  })
+  
   new Chart(ctx, {
     type: 'line',
     data: {
       labels: last6Months,
       datasets: [{
         label: 'Spending',
-        data: [45000, 52000, 48000, 61000, 55000, analytics.value.thisMonth / 1000],
+        data: monthlyData,
         borderColor: '#ffd60a',
         backgroundColor: 'rgba(255, 214, 10, 0.1)',
         borderWidth: 3,
@@ -1478,5 +1517,13 @@ onMounted(async () => {
   initCategoryChart()
   initTrendsChart()
 })
+
+// Watch for transaction changes to update charts
+watch([transactions, analytics], () => {
+  nextTick(() => {
+    initTrendsChart()
+    initCategoryChart()
+  })
+}, { deep: true })
 </script>
 

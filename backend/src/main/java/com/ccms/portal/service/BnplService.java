@@ -4,6 +4,7 @@ import com.ccms.portal.dto.request.BnplPaymentRequest;
 import com.ccms.portal.dto.response.BnplOverviewResponse;
 import com.ccms.portal.entity.BnplPayment;
 import com.ccms.portal.entity.Transaction;
+import com.ccms.portal.entity.CreditCardEntity;
 import com.ccms.portal.exception.ResourceNotFoundException;
 import com.ccms.portal.exception.UnauthorizedException;
 import com.ccms.portal.repository.BnplPaymentRepository;
@@ -67,7 +68,7 @@ public class BnplService {
       // If there's an error querying payments, assume 30% paid
       totalPaidAmount = totalAmount.multiply(BigDecimal.valueOf(0.3));
     }
-    
+
     // If no payments found, assume 30% paid
     if (totalPaidAmount.compareTo(BigDecimal.ZERO) == 0) {
       totalPaidAmount = totalAmount.multiply(BigDecimal.valueOf(0.3));
@@ -110,9 +111,15 @@ public class BnplService {
 
     // Get payment summary
     Object[] summary = bnplPaymentRepository.getPaymentSummary(transaction.getId());
-    BigDecimal totalAmount = (BigDecimal) summary[1];
-    BigDecimal paidAmount = (BigDecimal) summary[2];
-    BigDecimal remainingAmount = (BigDecimal) summary[3];
+    BigDecimal totalAmount = transaction.getAmount(); // Use transaction amount as fallback
+    BigDecimal paidAmount = BigDecimal.ZERO;
+    BigDecimal remainingAmount = transaction.getAmount();
+
+    if (summary != null && summary.length >= 4) {
+      totalAmount = (BigDecimal) summary[1];
+      paidAmount = (BigDecimal) summary[2];
+      remainingAmount = (BigDecimal) summary[3];
+    }
 
     // Validate payment amount
     if (request.getPaymentAmount().compareTo(remainingAmount) > 0) {
@@ -121,6 +128,9 @@ public class BnplService {
 
     // Get next installment number
     Integer installmentNumber = bnplPaymentRepository.getNextInstallmentNumber(transaction.getId());
+    if (installmentNumber == null) {
+      installmentNumber = 1; // Start with installment 1 if no payments exist
+    }
 
     // Create payment record
     BnplPayment payment = BnplPayment.builder()
@@ -142,6 +152,29 @@ public class BnplService {
       transactionRepository.save(transaction);
     }
 
+    // Note: Credit card statement will be updated by the frontend after BNPL
+    // payment
+    log.info("BNPL payment of {} made - credit card statement should be updated separately",
+        request.getPaymentAmount());
+
+    // Deduct from credit limit when BNPL payment is made
+    try {
+      CreditCardEntity card = creditCardRepository.findById(transaction.getCard().getId()).orElse(null);
+      if (card != null) {
+        BigDecimal currentAvailableLimit = BigDecimal.valueOf(card.getAvailableLimit());
+        BigDecimal newAvailableLimit = currentAvailableLimit.subtract(request.getPaymentAmount());
+        if (newAvailableLimit.compareTo(BigDecimal.ZERO) < 0) {
+          newAvailableLimit = BigDecimal.ZERO;
+        }
+        card.setAvailableLimit(newAvailableLimit.doubleValue());
+        creditCardRepository.save(card);
+        log.info("Deducted {} from credit limit for BNPL payment, new limit: {}", request.getPaymentAmount(),
+            newAvailableLimit);
+      }
+    } catch (Exception e) {
+      log.warn("Failed to update credit limit for BNPL payment: {}", e.getMessage());
+    }
+
     log.info("BNPL payment of {} made for transaction {}", request.getPaymentAmount(), transaction.getId());
 
     return payment;
@@ -153,22 +186,30 @@ public class BnplService {
     BigDecimal remainingAmount = totalAmount;
     Long totalPayments = 0L;
     Long completedPayments = 0L;
-    
+
     try {
-      Object[] summary = bnplPaymentRepository.getPaymentSummary(transaction.getId());
-      if (summary != null && summary.length >= 6) {
-        totalAmount = (BigDecimal) summary[1];
-        paidAmount = (BigDecimal) summary[2];
-        remainingAmount = (BigDecimal) summary[3];
-        totalPayments = (Long) summary[4];
-        completedPayments = (Long) summary[5];
+      // Get paid amount directly from bnpl_payments table
+      paidAmount = bnplPaymentRepository.getTotalPaidAmount(transaction.getId());
+      if (paidAmount == null) {
+        paidAmount = BigDecimal.ZERO;
       }
-    } catch (Exception e) {
-      // If there's an error querying payments, assume 30% paid
-      paidAmount = totalAmount.multiply(BigDecimal.valueOf(0.3));
       remainingAmount = totalAmount.subtract(paidAmount);
-      completedPayments = 1L;
-      totalPayments = 6L;
+
+      // Get payment counts
+      List<BnplPayment> allPayments = bnplPaymentRepository
+          .findByTransactionIdOrderByInstallmentNumberAsc(transaction.getId());
+      totalPayments = (long) allPayments.size();
+      completedPayments = allPayments.stream()
+          .filter(p -> p.getStatus() == BnplPayment.PaymentStatus.COMPLETED)
+          .count();
+
+    } catch (Exception e) {
+      log.warn("Error getting payment summary for transaction {}: {}", transaction.getId(), e.getMessage());
+      // If there's an error, use transaction amount as fallback
+      paidAmount = BigDecimal.ZERO;
+      remainingAmount = totalAmount;
+      completedPayments = 0L;
+      totalPayments = 0L;
     }
 
     Double progressPercentage = totalAmount.compareTo(BigDecimal.ZERO) > 0
@@ -178,8 +219,25 @@ public class BnplService {
 
     // Determine status
     String status = "ACTIVE";
-    if (remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
+
+    // Check if all installments are paid OR remaining amount is very small (within
+    // rounding tolerance)
+    boolean allInstallmentsPaid = completedPayments >= 6;
+    boolean remainingAmountSmall = remainingAmount.compareTo(BigDecimal.valueOf(10)) <= 0; // Within ₹10 tolerance
+    boolean transactionCompleted = transaction.getStatus() == com.ccms.portal.enums.TransactionStatus.BNPL_COMPLETED;
+
+    if (allInstallmentsPaid || remainingAmountSmall || transactionCompleted) {
       status = "COMPLETED";
+      // Ensure remaining amount is 0 when completed
+      remainingAmount = BigDecimal.ZERO;
+      paidAmount = totalAmount;
+
+      // Update transaction status if not already completed
+      if (transaction.getStatus() != com.ccms.portal.enums.TransactionStatus.BNPL_COMPLETED) {
+        transaction.setStatus(com.ccms.portal.enums.TransactionStatus.BNPL_COMPLETED);
+        transactionRepository.save(transaction);
+        log.info("Updated transaction {} status to BNPL_COMPLETED", transaction.getId());
+      }
     } else if (transaction.getStatus() == com.ccms.portal.enums.TransactionStatus.BNPL_DEFAULTED) {
       status = "DEFAULTED";
     }
