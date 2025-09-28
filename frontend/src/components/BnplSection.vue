@@ -50,7 +50,7 @@
           <div class="flex items-center justify-between">
             <div>
               <div class="text-sm font-medium mb-1" style="color: #0b2540;">Progress</div>
-              <div class="text-2xl font-bold" style="color: #0b2540;">{{ Math.round((totalPaid / (totalPaid + outstandingBalance)) * 100) }}%</div>
+              <div class="text-2xl font-bold" style="color: #0b2540;">{{ calculateProgress() }}%</div>
             </div>
             <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: rgba(11, 37, 64, 0.1);">
               <svg class="w-4 h-4" style="color: #0b2540;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -147,11 +147,11 @@
                         stroke="#10b981"
                         stroke-width="3"
                         stroke-linecap="round"
-                        :stroke-dasharray="`${(plan.paidAmount / plan.totalAmount) * 100}, 100`"
+                        :stroke-dasharray="`${calculatePlanProgress(plan)}, 100`"
                       />
                     </svg>
                     <div class="absolute inset-0 flex items-center justify-center">
-                      <span class="text-xs font-bold" style="color: #0b2540;">{{ Math.round((plan.paidAmount / plan.totalAmount) * 100) }}%</span>
+                      <span class="text-xs font-bold" style="color: #0b2540;">{{ calculatePlanProgress(plan) }}%</span>
                     </div>
                   </div>
                   <div class="flex-1">
@@ -208,7 +208,7 @@
             <div class="w-full bg-gray-200 rounded-full h-2">
               <div 
                 class="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-500"
-                :style="{ width: `${(plan.paidInstallments / plan.tenureMonths) * 100}%` }"
+                :style="{ width: `${calculateInstallmentProgress(plan)}%` }"
               ></div>
             </div>
           </div>
@@ -319,6 +319,22 @@ const getPlanBorderColor = (index: number) => {
 const getPlanIconBg = (index: number) => {
   const colors = ['bg-gradient-to-br from-blue-100 to-blue-200', 'bg-gradient-to-br from-green-100 to-green-200', 'bg-gradient-to-br from-purple-100 to-purple-200', 'bg-gradient-to-br from-orange-100 to-orange-200', 'bg-gradient-to-br from-pink-100 to-pink-200', 'bg-gradient-to-br from-indigo-100 to-indigo-200']
   return colors[index % colors.length]
+}
+
+const calculateProgress = () => {
+  const total = totalPaid.value + outstandingBalance.value
+  if (total === 0) return 0
+  return Math.round((totalPaid.value / total) * 100)
+}
+
+const calculatePlanProgress = (plan: BnplPlan) => {
+  if (plan.totalAmount === 0) return 0
+  return Math.round((plan.paidAmount / plan.totalAmount) * 100)
+}
+
+const calculateInstallmentProgress = (plan: BnplPlan) => {
+  if (plan.tenureMonths === 0) return 0
+  return Math.round((plan.paidInstallments / plan.tenureMonths) * 100)
 }
 
 const getPlanIconColor = (index: number) => {

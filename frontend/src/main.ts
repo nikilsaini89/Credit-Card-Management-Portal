@@ -6,8 +6,16 @@ import "./style.css";
 
 import Vue3Toastify from "vue3-toastify";
 import "vue3-toastify/dist/index.css";
+import { initializeAuth } from "./utils/initializeAuth";
+import { logout } from "./services/authService";
 
 const app = createApp(App);
+initializeAuth().then(auth => {
+  if (!auth) {
+    logout();
+    router.push("/login");
+  }
+});
 app.use(router);
 app.use(store);
 app.use(Vue3Toastify, {
