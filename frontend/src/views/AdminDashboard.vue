@@ -122,18 +122,18 @@ const adminName = computed(() => {
 
 const totalApplications = computed(() => applications.value.length)
 const pendingApplications = computed(() => 
-  applications.value.filter(app => app.status === APPLICATION_STATUS.PENDING).length
+  applications.value.filter((app: CardApplication) => app.status === APPLICATION_STATUS.PENDING).length
 )
 const rejectedApplications = computed(() => 
-  applications.value.filter(app => app.status === APPLICATION_STATUS.REJECTED).length
+  applications.value.filter((app: CardApplication) => app.status === APPLICATION_STATUS.REJECTED).length
 )
 const acceptedApplications = computed(() => 
-  applications.value.filter(app => app.status === APPLICATION_STATUS.ACCEPTED).length
+  applications.value.filter((app: CardApplication) => app.status === APPLICATION_STATUS.ACCEPTED).length
 )
 
 const recentApplications = computed(() => {
   return applications.value
-    .sort((a, b) => new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime())
+    .sort((a: CardApplication, b: CardApplication) => new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime())
     .slice(0, 2)
 })
 
