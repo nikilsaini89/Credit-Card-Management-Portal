@@ -14,7 +14,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -102,10 +101,11 @@ class AuthControllerTest {
         when(tokenblackList.isBlacklisted(refreshToken)).thenReturn(false);
         when(authService.refreshAccessToken(refreshToken)).thenReturn(authResponse);
 
-        AuthResponse response = authController.refreshToken(refreshToken);
+        AuthResponse response = authController.refreshToken(refreshToken, httpServletResponse);
 
         assertNotNull(response);
         assertEquals("new-access-token", response.getToken());
+        verify(httpServletResponse).addHeader(eq(HttpHeaders.SET_COOKIE), anyString());
     }
 
     @Test
@@ -114,11 +114,13 @@ class AuthControllerTest {
 
         when(tokenblackList.isBlacklisted(refreshToken)).thenReturn(true);
 
-        assertThrows(RuntimeException.class, () -> authController.refreshToken(refreshToken));
+        assertThrows(RuntimeException.class,
+                () -> authController.refreshToken(refreshToken, httpServletResponse));
     }
 
     @Test
     void refreshToken_nullToken() {
-        assertThrows(RuntimeException.class, () -> authController.refreshToken(null));
+        assertThrows(RuntimeException.class,
+                () -> authController.refreshToken(null, httpServletResponse));
     }
 }
