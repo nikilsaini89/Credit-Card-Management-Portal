@@ -6,15 +6,19 @@ import com.ccms.portal.dto.response.TransactionHistoryResponse;
 import com.ccms.portal.dto.response.TransactionResponse;
 import com.ccms.portal.entity.CreditCardEntity;
 import com.ccms.portal.entity.Transaction;
+import com.ccms.portal.entity.UserProfileEntity;
 import com.ccms.portal.enums.TransactionStatus;
+import com.ccms.portal.exception.BnplNotEligibleException;
 import com.ccms.portal.exception.CreditCardNotFoundException;
 import com.ccms.portal.exception.InsufficientLimitException;
 import com.ccms.portal.exception.InvalidTransactionException;
 import com.ccms.portal.exception.TransactionNotFoundException;
 import com.ccms.portal.exception.UnauthorizedException;
+import com.ccms.portal.exception.UserNotFoundException;
 import com.ccms.portal.util.JwtUserDetails;
 import com.ccms.portal.repository.CreditCardRepository;
 import com.ccms.portal.repository.TransactionRepository;
+import com.ccms.portal.repository.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,6 +43,7 @@ public class TransactionService {
         private final TransactionRepository transactionRepository;
         private final CreditCardRepository creditCardRepository;
         private final CreditCardStatementService creditCardStatementService;
+        private final UserProfileRepository userProfileRepository;
 
         /**
          * Create a new transaction
@@ -62,6 +67,19 @@ public class TransactionService {
                 // Validate transaction amount
                 if (request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
                         throw new InvalidTransactionException("Transaction amount must be greater than 0");
+                }
+
+                // Validate BNPL eligibility if transaction is BNPL
+                if (request.getIsBnpl()) {
+                        UserProfileEntity userProfile = userProfileRepository.findByUser(card.getUser())
+                                        .orElseThrow(() -> new UserNotFoundException("User profile not found"));
+
+                        if (!userProfile.isEligibleBnpl()) {
+                                throw new BnplNotEligibleException(
+                                                "You are not eligible for BNPL transactions. Please contact support to check your eligibility or try a regular transaction instead.");
+                        }
+
+                        log.info("BNPL eligibility validated for user: {}", card.getUser().getId());
                 }
 
                 // Create transaction

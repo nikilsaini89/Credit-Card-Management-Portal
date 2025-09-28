@@ -102,6 +102,12 @@ public class GlobalExceptionHandler {
         return buildErrorResponse("Unauthorized Action", ex.getMessage(), HttpStatus.FORBIDDEN, null);
     }
 
+    @ExceptionHandler(BnplNotEligibleException.class)
+    public ResponseEntity<ApiErrorResponse> handleBnplNotEligible(BnplNotEligibleException ex) {
+        log.error("BNPL not eligible: {}", ex.getMessage());
+        return buildErrorResponse("BNPL Not Available", ex.getMessage(), HttpStatus.FORBIDDEN, null);
+    }
+
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(
             String error, String message, HttpStatus status, Map<String, String> fieldErrors) {
 

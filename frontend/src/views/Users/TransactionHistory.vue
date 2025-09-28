@@ -282,39 +282,16 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                   <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Payment Card</label>
-                    <div class="relative">
-                      <button
-                        @click="toggleCardDropdown"
-                        class="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:bg-gray-50 text-left flex items-center justify-between"
-                      >
-                        <span class="text-gray-500">{{ getCardDisplayText() }}</span>
-                        <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': showCardDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                      </button>
-                      
-                      <!-- Custom Card Dropdown Overlay -->
-                      <div v-if="showCardDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                        <div class="p-2 space-y-1">
-                          <button
-                            @click="selectCard('')"
-                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200"
-                          >
-                            All Cards
-                          </button>
-                          <button
-                            v-for="card in cards"
-                            :key="card.id"
-                            @click="selectCard(card.id)"
-                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
-                          >
-                            <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-3"></span>
-                            <span class="text-gray-700 font-medium">
-                              {{ card.cardType?.networkType || card.cardType || 'VISA' }} ****{{ card.lastFour || card.cardNumber?.slice(-4) || '****' }}
-                            </span>
-                          </button>
-                        </div>
-                      </div>
+                    <CardSwitcher
+                      :cards="cards"
+                      :selected-card-id="selectedCardId"
+                      :show-all-option="true"
+                      @card-selected="selectCard"
+                    />
+                    <!-- Selected Card Info -->
+                    <div v-if="selectedCard" class="text-xs text-blue-600 font-medium mt-1">
+                      ✓ {{ selectedCard.cardType?.networkType || selectedCard.cardType || 'VISA' }} ****{{ selectedCard.lastFour || selectedCard.cardNumber?.slice(-4) || '****' }} 
+                      (₹{{ formatNumber(selectedCard.availableLimit || 0) }} available)
                     </div>
                   </div>
 
@@ -580,6 +557,7 @@ import { useRouter } from 'vue-router'
 import TransactionTable from '../../components/TransactionTable.vue'
 import BnplSection from '../../components/BnplSection.vue'
 import PaymentFlow from '../../components/PaymentFlow.vue'
+import CardSwitcher from '../../components/CardSwitcher.vue'
 import { Chart, registerables } from 'chart.js'
 import jsPDF from 'jspdf'
 
@@ -676,12 +654,21 @@ const filters = ref({
 })
 
 const showStatusDropdown = ref(false)
-const showCardDropdown = ref(false)
 const showCategoryDropdown = ref(false)
 
 // Computed properties
 const transactions = computed(() => store.state?.transactions?.transactions || [])
 const cards = computed(() => store.state?.cards?.cards || [])
+
+// Selected card state
+const selectedCardId = ref<number | null>(null)
+
+// Computed property for selected card
+const selectedCard = computed(() => {
+  if (!selectedCardId.value) return null
+  return cards.value.find((card: any) => card.id === selectedCardId.value) || null
+})
+
 // BNPL data from API
 const bnplOverview = ref<BnplOverview | null>(null)
 const bnplPlans = computed(() => {
@@ -970,13 +957,11 @@ const clearAllFilters = () => {
     dateRangeTo: ''
   }
   showStatusDropdown.value = false
-  showCardDropdown.value = false
   showCategoryDropdown.value = false
 }
 
 const toggleStatusDropdown = () => {
   showStatusDropdown.value = !showStatusDropdown.value
-  showCardDropdown.value = false
   showCategoryDropdown.value = false
 }
 
@@ -1011,21 +996,31 @@ const toggleBnpl = () => {
   filters.value.bnplOnly = !filters.value.bnplOnly
 }
 
-const toggleCardDropdown = () => {
-  showCardDropdown.value = !showCardDropdown.value
-  showCategoryDropdown.value = false
-  showStatusDropdown.value = false
-}
+// Removed toggleCardDropdown - now handled by CardSwitcher component
 
 const toggleCategoryDropdown = () => {
   showCategoryDropdown.value = !showCategoryDropdown.value
-  showCardDropdown.value = false
   showStatusDropdown.value = false
 }
 
-const selectCard = (cardId: string) => {
-  filters.value.cardId = cardId
-  showCardDropdown.value = false
+const selectCard = async (cardId: string) => {
+  if (cardId === '') {
+    // Show all cards - fetch data for first card as default
+    filters.value.cardId = ''
+    selectedCardId.value = null
+    const userCards = await store.dispatch('cards/fetchCards')
+    if (userCards && userCards.length > 0) {
+      await fetchTransactions(userCards[0].id)
+    }
+  } else {
+    // Select specific card
+    const cardIdNum = parseInt(cardId)
+    selectedCardId.value = cardIdNum
+    filters.value.cardId = cardId
+    
+    // Fetch data for selected card
+    await fetchTransactions(cardIdNum)
+  }
 }
 
 const selectCategory = (category: string) => {
@@ -1033,17 +1028,7 @@ const selectCategory = (category: string) => {
   showCategoryDropdown.value = false
 }
 
-const getCardDisplayText = () => {
-  if (!filters.value.cardId) return 'Select card'
-  const selectedCard = cards.value.find((card: any) => card.id === filters.value.cardId)
-  if (!selectedCard) return 'Select card'
-  
-  // Handle different card object structures
-  const cardType = selectedCard.cardType?.networkType || selectedCard.cardType || 'VISA'
-  const lastFour = selectedCard.lastFour || selectedCard.cardNumber?.slice(-4) || '****'
-  
-  return `${cardType} ****${lastFour}`
-}
+// Removed getCardDisplayText - now handled by CardSwitcher component
 
 const getCategoryDisplayText = () => {
   if (!filters.value.category) return 'Select category'
@@ -1350,13 +1335,12 @@ const onPaymentSuccess = async (transactionId: string, amount: number) => {
     
     const success = await makeBnplPayment(selectedPlan.transactionId || 0, amount)
     if (success) {
-      // Refresh all data
-      const cards = await store.dispatch('cards/fetchCards')
-      if (cards && cards.length > 0) {
+      // Refresh all data for the currently selected card
+      if (selectedCardId.value) {
         await Promise.all([
-          fetchBnplOverview(cards[0].id),
-          fetchCurrentStatement(cards[0].id),
-          store.dispatch('transactions/fetchTransactions', { cardId: cards[0].id })
+          fetchBnplOverview(selectedCardId.value),
+          fetchCurrentStatement(selectedCardId.value),
+          store.dispatch('transactions/fetchTransactions', { cardId: selectedCardId.value })
         ])
       }
       alert(`BNPL payment of ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} successful!`)
@@ -1369,10 +1353,9 @@ const onPaymentSuccess = async (transactionId: string, amount: number) => {
     if (currentStatement.value) {
       const success = await makePayment(currentStatement.value.id, amount)
       if (success) {
-        // Refresh statement data
-        const cards = await store.dispatch('cards/fetchCards')
-        if (cards && cards.length > 0) {
-          await fetchCurrentStatement(cards[0].id)
+        // Refresh statement data for the currently selected card
+        if (selectedCardId.value) {
+          await fetchCurrentStatement(selectedCardId.value)
         }
         alert(`Payment of ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} successful!`)
       } else {
@@ -1382,9 +1365,24 @@ const onPaymentSuccess = async (transactionId: string, amount: number) => {
     }
   }
   
+  // Refresh the current view after payment
+  await refreshCurrentView()
+  
   setTimeout(() => {
     showPayment.value = false
   }, 2000) 
+}
+
+// Method to refresh the current view
+const refreshCurrentView = async () => {
+  if (selectedCardId.value) {
+    await fetchTransactions(selectedCardId.value)
+  } else {
+    const userCards = await store.dispatch('cards/fetchCards')
+    if (userCards && userCards.length > 0) {
+      await fetchTransactions(userCards[0].id)
+    }
+  }
 }
 
 // API functions for statement management
@@ -1495,15 +1493,30 @@ const makeBnplPayment = async (transactionId: number, paymentAmount: number) => 
   }
 }
 
-const fetchTransactions = async () => {
+const fetchTransactions = async (cardId?: number) => {
   loading.value = true
   try {
-    // First get user's cards, then fetch transactions, statement, and BNPL overview
-    const cards = await store.dispatch('cards/fetchCards')
-    if (cards && cards.length > 0) {
-      await store.dispatch('transactions/fetchTransactions', { cardId: cards[0].id })
-      await fetchCurrentStatement(cards[0].id)
-      await fetchBnplOverview(cards[0].id)
+    // First get user's cards
+    const userCards = await store.dispatch('cards/fetchCards')
+    
+    if (userCards && userCards.length > 0) {
+      if (cardId) {
+        // Fetch data for specific card
+        await store.dispatch('transactions/fetchTransactions', { cardId })
+        await fetchCurrentStatement(cardId)
+        await fetchBnplOverview(cardId)
+      } else if (selectedCardId.value) {
+        // Fetch data for selected card
+        await store.dispatch('transactions/fetchTransactions', { cardId: selectedCardId.value })
+        await fetchCurrentStatement(selectedCardId.value)
+        await fetchBnplOverview(selectedCardId.value)
+      } else {
+        // Show all cards - fetch data for first card as default
+        selectedCardId.value = userCards[0].id
+        await store.dispatch('transactions/fetchTransactions', { cardId: userCards[0].id })
+        await fetchCurrentStatement(userCards[0].id)
+        await fetchBnplOverview(userCards[0].id)
+      }
     } else {
       console.warn('No cards found for user')
     }
