@@ -7,7 +7,7 @@ import com.ccms.portal.enums.CardApplicationStatus;
 import com.ccms.portal.entity.CardApplicationEntity;
 import com.ccms.portal.exception.CardApplicationNotFoundException;
 import com.ccms.portal.exception.UnauthorizedApplicationActionException;
-import com.ccms.portal.repository.  CardApplicationRepository;
+import com.ccms.portal.repository.CardApplicationRepository;
 import com.ccms.portal.util.JwtUserDetails;
 import com.ccms.portal.util.JwtUtil;
 import org.slf4j.Logger;
