@@ -170,7 +170,15 @@ const handleRegister = async () => {
   if (validateRegister()) {
     try {
       await store.dispatch("auth/register", registerForm);
-      router.push("/");
+       Object.assign(registerForm, {
+        name: "",
+        email: "",
+        password: "",
+        phoneNumber: "",
+        address: "",
+        annualIncome: null
+      });
+      router.push("/login");
       toast.success("Registration successful! 🎉");
       toast.success("Login with your credentials now!");
     } catch (err) {
