@@ -79,9 +79,10 @@
                   <div v-if="tx.processorName" class="processor-badge">{{ tx.processorName }}</div>
                 </div>
 
-                <div :class="['tx-amount', tx.amount < 0 ? 'danger' : '']">
-                  {{ tx.amount < 0 ? '-' : '' }}₹{{ formatNumber(Math.abs(tx.amount)) }}
+                <div :class="['tx-amount', tx.amount > 0 ? 'danger' : '']">
+                  -₹{{ formatNumber(Math.abs(tx.amount)) }}
                 </div>
+
               </li>
 
               <li v-if="transactions.length === 0" class="tx">
@@ -98,7 +99,7 @@
             <h4>Quick Actions</h4>
             <div class="actions">
               <RouterLink to="/apply-card" class="action">+ Apply Card</RouterLink>
-              <RouterLink to="/new-transaction" class="action">↗ New Transaction</RouterLink>
+              <RouterLink to="/transactions" class="action">↗ New Transaction</RouterLink>
             </div>
           </div>
         </aside>
@@ -213,7 +214,7 @@ export default {
       const category = tx.category ?? tx.modeCategory ?? tx.categoryName ?? null;
       const isBnpl = Boolean(tx.isBnpl ?? tx.is_bnpl ?? false);
 
-      let merchantName = 'Merchant';
+      let merchantName = tx.merchantName;
       let accountNumber = null;
       if (tx.merchant) {
         if (typeof tx.merchant === 'string') {
