@@ -2,7 +2,7 @@
   <div class="apply-card">
     <main class="container">
 
-      <!-- Hero Section -->
+    
       <section class="hero">
         <div class="hero-header">
           <h1>Apply for Credit Card</h1>
@@ -12,16 +12,16 @@
         </div>
       </section>
 
-      <!-- Card Selection Section -->
+     
       <section class="card-selection">
         <h2>Select Your Card</h2>
         <p class="muted">Choose the credit card that best fits your lifestyle</p>
 
-        <!-- Loading / Error States -->
+  
         <div v-if="isLoading">Loading card types...</div>
         <div v-else-if="error" class="error">{{ error }}</div>
 
-        <!-- Card Options -->
+
         <div v-else class="card-options">
           <div
             v-for="card in allCardTypes"
@@ -47,7 +47,7 @@
         </div>
       </section>
 
-      <!-- Application Form Section -->
+   
       <section v-if="selectedCard" class="application-form">
         <h2>{{ selectedCard.name }} Application</h2>
         <p class="muted">Complete your application details</p>
@@ -106,14 +106,13 @@ export default {
 
   async created() {
     try {
-      // Fetch logged-in user profile
+     
       const userId = getUserIdFromToken();
       if (userId) {
         const { data } = await getUserProfile(userId);
         this.user = data;
       }
 
-      // Fetch card types from Vuex store if not already loaded
       if (this.allCardTypes.length === 0) {
         await this.fetchCardTypes();
       }
@@ -132,11 +131,6 @@ export default {
     },
 
     async submitApplication() {
-      if (!this.user) {
-        alert("User profile not loaded. Please log in again.");
-        return;
-      }
-
       const cardApplication = {
         userId: this.user.id,
         cardTypeId: this.selectedCard.id,
@@ -146,15 +140,25 @@ export default {
       try {
         await applyForCard(cardApplication);
         await this.fetchAll();
+
         alert(
-          `Applied for ${this.selectedCard.name} with credit limit ₹${this.form.creditLimit}`
+          ` Applied for ${this.selectedCard.name} with credit limit ₹${this.form.creditLimit}`
         );
+
         this.$router.push("/my-applications");
       } catch (err) {
         console.error("Application failed:", err);
-        alert("Something went wrong while submitting your application.");
+
+        const backendMessage =
+          err.response?.data?.message ||        
+          err.response?.data?.error ||           
+          err.response?.data?.message?.message || 
+          "Something went wrong while submitting your application.";
+
+        alert(`❗ ${backendMessage}`);
       }
-    },
+    }
+
   },
 };
 </script>
