@@ -141,7 +141,7 @@ const handleLogout = async () => {
   } catch (err) {
     console.error('Logout failed:', err);
     alert('logout failed');
-    toast.err("Error logging out. 🎉");
+    toast.error("Error logging out. 🎉");
 
  
   }
