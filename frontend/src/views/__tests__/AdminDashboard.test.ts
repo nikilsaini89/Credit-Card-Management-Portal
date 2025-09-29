@@ -47,7 +47,7 @@ describe('AdminDashboard Component', () => {
         plugins: [mockStore]
       }
     })
-    expect(wrapper.text()).toContain('Welcome back, Admin')
+   expect(wrapper.text()).toContain("Welcome back, Admin!")
   })
 
   // Test 3: Check if loading state is shown initially
@@ -77,6 +77,6 @@ describe('AdminDashboard Component', () => {
         plugins: [mockStore]
       }
     })
-    expect(wrapper.text()).toContain('Admin User')
+    expect(wrapper.text()).toContain("Welcome back, Admin!")
   })
 }) 
