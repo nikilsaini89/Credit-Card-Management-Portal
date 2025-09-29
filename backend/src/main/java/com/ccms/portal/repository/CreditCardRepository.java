@@ -27,7 +27,6 @@ public interface CreditCardRepository extends JpaRepository<CreditCardEntity, Lo
     @Query("SELECT COUNT(c) FROM CreditCardEntity c WHERE c.user.id = :userId AND c.cardStatus = :status")
     long countByUserIdAndStatus(@Param("userId") Long userId, @Param("status") CardStatus status);
 
-}
     @Query("SELECT COUNT(c) > 0 FROM CreditCardEntity c WHERE c.id = :cardId AND c.user.id = :userId")
     boolean existsByIdAndUserId(@Param("cardId") Long cardId, @Param("userId") Long userId);
 }

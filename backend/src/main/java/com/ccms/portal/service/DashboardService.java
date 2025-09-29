@@ -18,9 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 @Service
 public class DashboardService {
@@ -73,22 +75,39 @@ public class DashboardService {
         summary.setOutstanding(outstanding);
 
         List<Transaction> txEntities = txRepo.findTop10ByUserId(userId);
+
         List<TransactionResponse> transactions = txEntities.stream()
                 .map(t -> {
                     TransactionResponse tr = new TransactionResponse();
-                    tr.setId(t.getId() != null ? t.getId().toString() : null);
-                    tr.setCardId(t.getCard() != null && t.getCard().getId() != null
-                            ? String.valueOf(t.getCard().getId()) : null);
-                    tr.setAmount(t.getAmount() != null ? t.getAmount().doubleValue() : 0.0);
-                    tr.setMerchant(t.getMerchantAccount() != null ? String.valueOf(t.getMerchantAccount()) : null);
-                    tr.setCategory(t.getNetwork());
-                    tr.setMode(t.getProcessor() != null ? String.valueOf(t.getProcessor()) : null);
-                    tr.setDate(t.getCreatedAt() != null
-                            ? t.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant()
-                            : null);
+
+                    tr.setId(t.getId());
+
+                    if (t.getCard() != null && t.getCard().getId() != null) {
+                        tr.setCardId(t.getCard().getId());
+                    } else {
+                        tr.setCardId(null);
+                    }
+
+                    tr.setMerchantName(t.getMerchantName());
+
+                    BigDecimal amt = t.getAmount();
+                    tr.setAmount(amt != null ? amt : BigDecimal.ZERO);
+
+                    tr.setTransactionDate(t.getTransactionDate());
+
+                    tr.setCategory(t.getCategory());
+
+                    tr.setIsBnpl(t.getIsBnpl());
+
+                    tr.setCardType(t.getCardType());
+                    tr.setLastFour(t.getLastFour());
+
+                    tr.setStatus(t.getStatus());
+                    tr.setCreatedAt(t.getCreatedAt());
+
                     return tr;
                 })
-                .sorted(Comparator.comparing(TransactionResponse::getDate,
+                .sorted(Comparator.comparing(TransactionResponse::getCreatedAt,
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(10)
                 .collect(Collectors.toList());
