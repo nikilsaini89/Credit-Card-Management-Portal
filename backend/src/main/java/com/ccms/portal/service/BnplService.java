@@ -4,7 +4,6 @@ import com.ccms.portal.dto.request.BnplPaymentRequest;
 import com.ccms.portal.dto.response.BnplOverviewResponse;
 import com.ccms.portal.entity.BnplPayment;
 import com.ccms.portal.entity.Transaction;
-import com.ccms.portal.entity.CreditCardEntity;
 import com.ccms.portal.exception.ResourceNotFoundException;
 import com.ccms.portal.exception.UnauthorizedException;
 import com.ccms.portal.repository.BnplPaymentRepository;
@@ -30,6 +29,7 @@ public class BnplService {
   private final BnplPaymentRepository bnplPaymentRepository;
   private final TransactionRepository transactionRepository;
   private final CreditCardRepository creditCardRepository;
+  private final CreditLimitService creditLimitService;
 
   public BnplOverviewResponse getBnplOverview(Long cardId) {
     // Verify user owns the card
@@ -132,13 +132,20 @@ public class BnplService {
       installmentNumber = 1; // Start with installment 1 if no payments exist
     }
 
+    // Get tenure from transaction or default to 6 months
+    Integer tenureMonths = transaction.getTenureMonths();
+    if (tenureMonths == null || tenureMonths <= 0) {
+      tenureMonths = 6; // Default tenure if not set
+      log.warn("Transaction {} has invalid tenure {}, using default 6 months", transaction.getId(), tenureMonths);
+    }
+
     // Create payment record
     BnplPayment payment = BnplPayment.builder()
         .transaction(transaction)
         .paymentAmount(request.getPaymentAmount())
         .paymentDate(LocalDate.now())
         .installmentNumber(installmentNumber)
-        .totalInstallments(6) // Default 6 months
+        .totalInstallments(tenureMonths) // Use actual tenure from transaction
         .remainingAmount(remainingAmount.subtract(request.getPaymentAmount()))
         .status(BnplPayment.PaymentStatus.COMPLETED)
         .build();
@@ -152,27 +159,16 @@ public class BnplService {
       transactionRepository.save(transaction);
     }
 
-    // Note: Credit card statement will be updated by the frontend after BNPL
-    // payment
-    log.info("BNPL payment of {} made - credit card statement should be updated separately",
-        request.getPaymentAmount());
-
-    // Deduct from credit limit when BNPL payment is made
+    // Recalculate available limit after BNPL payment
+    // BNPL payments only affect BNPL outstanding, not statement amount due
     try {
-      CreditCardEntity card = creditCardRepository.findById(transaction.getCard().getId()).orElse(null);
-      if (card != null) {
-        BigDecimal currentAvailableLimit = BigDecimal.valueOf(card.getAvailableLimit());
-        BigDecimal newAvailableLimit = currentAvailableLimit.subtract(request.getPaymentAmount());
-        if (newAvailableLimit.compareTo(BigDecimal.ZERO) < 0) {
-          newAvailableLimit = BigDecimal.ZERO;
-        }
-        card.setAvailableLimit(newAvailableLimit.doubleValue());
-        creditCardRepository.save(card);
-        log.info("Deducted {} from credit limit for BNPL payment, new limit: {}", request.getPaymentAmount(),
-            newAvailableLimit);
-      }
+      log.info("Recalculating available limit for card {} after BNPL EMI payment of {}",
+          transaction.getCard().getId(), request.getPaymentAmount());
+      creditLimitService.recalculateAvailableLimit(transaction.getCard().getId());
+      log.info("Updated available limit for card {} after BNPL EMI payment of {}",
+          transaction.getCard().getId(), request.getPaymentAmount());
     } catch (Exception e) {
-      log.warn("Failed to update credit limit for BNPL payment: {}", e.getMessage());
+      log.warn("Failed to recalculate available limit for BNPL payment: {}", e.getMessage());
     }
 
     log.info("BNPL payment of {} made for transaction {}", request.getPaymentAmount(), transaction.getId());
@@ -184,7 +180,6 @@ public class BnplService {
     BigDecimal totalAmount = transaction.getAmount();
     BigDecimal paidAmount = BigDecimal.ZERO;
     BigDecimal remainingAmount = totalAmount;
-    Long totalPayments = 0L;
     Long completedPayments = 0L;
 
     try {
@@ -198,7 +193,6 @@ public class BnplService {
       // Get payment counts
       List<BnplPayment> allPayments = bnplPaymentRepository
           .findByTransactionIdOrderByInstallmentNumberAsc(transaction.getId());
-      totalPayments = (long) allPayments.size();
       completedPayments = allPayments.stream()
           .filter(p -> p.getStatus() == BnplPayment.PaymentStatus.COMPLETED)
           .count();
@@ -209,7 +203,6 @@ public class BnplService {
       paidAmount = BigDecimal.ZERO;
       remainingAmount = totalAmount;
       completedPayments = 0L;
-      totalPayments = 0L;
     }
 
     Double progressPercentage = totalAmount.compareTo(BigDecimal.ZERO) > 0
@@ -217,12 +210,19 @@ public class BnplService {
             .doubleValue()
         : 0.0;
 
+    // Get tenure from transaction or default to 6 months
+    Integer tenureMonths = transaction.getTenureMonths();
+    if (tenureMonths == null || tenureMonths <= 0) {
+      tenureMonths = 6; // Default tenure if not set
+      log.warn("Transaction {} has invalid tenure {}, using default 6 months", transaction.getId(), tenureMonths);
+    }
+
     // Determine status
     String status = "ACTIVE";
 
     // Check if all installments are paid OR remaining amount is very small (within
     // rounding tolerance)
-    boolean allInstallmentsPaid = completedPayments >= 6;
+    boolean allInstallmentsPaid = completedPayments >= tenureMonths;
     boolean remainingAmountSmall = remainingAmount.compareTo(BigDecimal.valueOf(10)) <= 0; // Within ₹10 tolerance
     boolean transactionCompleted = transaction.getStatus() == com.ccms.portal.enums.TransactionStatus.BNPL_COMPLETED;
 
@@ -242,8 +242,8 @@ public class BnplService {
       status = "DEFAULTED";
     }
 
-    // Calculate monthly EMI (assuming 6 months tenure)
-    BigDecimal monthlyEmi = remainingAmount.divide(BigDecimal.valueOf(6), 2, java.math.RoundingMode.HALF_UP);
+    // Calculate EMI: Total amount / tenure months (no interest)
+    BigDecimal monthlyEmi = totalAmount.divide(BigDecimal.valueOf(tenureMonths), 2, java.math.RoundingMode.HALF_UP);
 
     return BnplOverviewResponse.BnplPlanResponse.builder()
         .transactionId(transaction.getId())
@@ -252,9 +252,9 @@ public class BnplService {
         .paidAmount(paidAmount)
         .remainingAmount(remainingAmount)
         .progressPercentage(progressPercentage)
-        .totalInstallments(6)
+        .totalInstallments(tenureMonths)
         .paidInstallments(completedPayments.intValue())
-        .remainingInstallments(6 - completedPayments.intValue())
+        .remainingInstallments(tenureMonths - completedPayments.intValue())
         .status(status)
         .startDate(transaction.getTransactionDate().toString())
         .nextDueDate(LocalDate.now().plusDays(30).toString()) // Next month

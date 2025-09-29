@@ -58,6 +58,11 @@ public class Transaction {
   @Column(name = "last_four", length = 4)
   private String lastFour;
 
+  @Min(value = 1, message = "Tenure must be at least 1 month")
+  @Max(value = 24, message = "Tenure must not exceed 24 months")
+  @Column(name = "tenure_months")
+  private Integer tenureMonths;
+
   @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false, length = 30)
   private TransactionStatus status = TransactionStatus.COMPLETED;
