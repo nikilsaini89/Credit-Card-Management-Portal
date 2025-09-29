@@ -163,8 +163,9 @@ export default {
 
     async loadCards() {
       try {
-        const list = await getCards();
-        this.cards = list.map(c => ({
+          const list = await getCards();
+          const activeList = list.filter(c => (c.cardStatus || "").toUpperCase() === "ACTIVE");
+          this.cards = activeList.map(c => ({
           id: c.id,
           cardNumber: c.cardNumber,
           cardHolderName: c.cardHolderName,
@@ -172,7 +173,6 @@ export default {
           availableLimit: c.availableLimit,
           cardStatus: c.cardStatus,
           expiryDate: c.expiryDate,
-          cvv: c.cvv,
           cardType: c.cardType,
         }));
 
@@ -246,7 +246,6 @@ export default {
     }
   }
 };
-
 </script>
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap");

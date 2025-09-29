@@ -19,8 +19,9 @@
         <div class="left">
           <Card
             v-if="card"
+            :key="card.id + '-' + card.creditLimit"
             :card="mergedCard"
-            :userName="userName"
+            :userName="card?.cardHolderName"  
             :showMenu="false"
             :actions="cardActionsMenu"
             @action="handleCardAction"
@@ -123,40 +124,40 @@
       v-model="isLimitModalOpen"
       :currentLimit="Number(totalLimit)"
       :outstanding="outstanding"
+      :min-limit="minLimit"
+      :max-limit="maxLimit"
       @next="handleLimitNext"
     />
   </div>
 </template>
 
 <script>
-console.log("checking card detail entered");
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Card from '../../components/Card.vue'
 import UpdateCreditLimitModal from '../../components/UpdateCreditLimitModal.vue'
-import { getCards, updateCardLimit as csUpdateCardLimit } from '../../services/cards-service'
+import {
+  getCards,
+  getCardTypes,
+  updateCardLimit as csUpdateCardLimit
+} from '../../services/cards-service'
 import { getDashboard } from '../../services/dashboardService'
-
-console.log("checking card detail all import");
 
 export default {
   name: 'CardDetail',
   components: { Card, UpdateCreditLimitModal },
-  setup() {
+  setup () {
     const route = useRoute()
     const router = useRouter()
 
     const card = ref(null)
     const transactions = ref([])
-    const userName = ref('')
     const loading = ref(false)
-    const error = ref(null)
+
+    const minLimit = ref(0)
+    const maxLimit = ref(0)
 
     const isLimitModalOpen = ref(false)
-    const pendingLimit = ref(0)
-    const updating = ref(false)
-
-    const fullPan = ref(null)
 
     const totalLimit = computed(() => Number(card.value?.creditLimit || 0))
     const availableCredit = computed(() => Number(card.value?.availableLimit || 0))
@@ -179,7 +180,7 @@ export default {
       if (!card.value) return null
       return {
         ...card.value,
-        fullPan: fullPan.value || null,
+        fullPan: null,
         cvv: card.value.cvv ?? null
       }
     })
@@ -192,7 +193,7 @@ export default {
       })).slice(0, 6)
     })
 
-    function extractMerchantName(raw) {
+    function extractMerchantName (raw) {
       if (!raw) return 'Unknown'
       if (typeof raw === 'object' && raw.name) return raw.name
       const m = String(raw).match(/name=([^,)\n]+)/)
@@ -202,7 +203,7 @@ export default {
       return String(raw)
     }
 
-    function extractProcessorName(raw) {
+    function extractProcessorName (raw) {
       if (!raw) return null
       if (typeof raw === 'object' && raw.name) return raw.name
       const m = String(raw).match(/name=([^,)\n]+)/)
@@ -210,17 +211,17 @@ export default {
       return String(raw)
     }
 
-    function formatINR(amount) {
+    function formatINR (amount) {
       return Number(amount || 0).toLocaleString('en-IN')
     }
 
-    function formatCurrency(amount) {
+    function formatCurrency (amount) {
       const numericValue = Number(amount || 0)
       const sign = numericValue < 0 ? '-' : ''
       return sign + '₹' + Math.abs(numericValue).toLocaleString('en-IN')
     }
 
-    function formatDateTime(timestamp) {
+    function formatDateTime (timestamp) {
       if (!timestamp) return ''
       const dateObj = new Date(timestamp)
       return dateObj.toLocaleString('en-GB', {
@@ -244,73 +245,85 @@ export default {
       ]
     })
 
-    function handleCardAction({ action }) {
+    function handleCardAction ({ action }) {
       if (action?.to) router.push(action.to)
     }
 
-    function handleCardBlock(payload) {
+    function handleCardBlock (payload) {
       if (payload?.card) {
         payload.card.status = payload.newStatus
       }
     }
 
-    function openLimitModal() {
-      if (card.value) isLimitModalOpen.value = true
+    function openLimitModal () {
+      if (card.value) {
+        isLimitModalOpen.value = true
+      }
     }
 
-    async function handleLimitNext(payload) {
+    async function handleLimitNext (payload) {
       const selectedNewLimit = Number(payload?.newLimit || 0)
       if (!selectedNewLimit) return
-      pendingLimit.value = selectedNewLimit
+
       isLimitModalOpen.value = false
-      updating.value = true
+      loading.value = true
 
       const id = card.value?.id || route.params.id
       if (!id) {
+        loading.value = false
         alert('Invalid card id')
-        updating.value = false
         return
       }
 
       try {
-        await csUpdateCardLimit(id, pendingLimit.value)
+        await csUpdateCardLimit(id, selectedNewLimit)
+
         await loadCard()
+
+        if (card.value) card.value = { ...card.value }
+
+        await nextTick()
+
         alert('Limit updated successfully')
       } catch (err) {
         console.error('Failed to update limit', err)
         alert('Failed to update limit')
       } finally {
-        updating.value = false
+        loading.value = false
       }
     }
 
-    async function loadCard() {
+    async function loadCard () {
       loading.value = true
-      error.value = null
-      fullPan.value = null
       try {
         const id = route.params.id
-        if (!id) {
-          error.value = 'No card id provided'
-          return
-        }
+        if (!id) return
 
         const cardsList = await getCards()
         const matched = (cardsList || []).find(c => String(c.id) === String(id))
+
         if (matched) {
-          card.value = matched
-          fullPan.value = matched.cardNumber
+          card.value = { ...matched }
+
+          const types = await getCardTypes()
+          const typeMatch = types.find(t => String(t.name).trim().toLowerCase() === String(matched.cardType?.name || '').trim().toLowerCase())
+          if (typeMatch) {
+            minLimit.value = typeMatch.minCardLimit
+            maxLimit.value = typeMatch.maxCardLimit
+          } else {
+            minLimit.value = 0
+            maxLimit.value = 0
+          }
         }
 
         const dash = await getDashboard()
         if (dash?.transactions) {
-          transactions.value = dash.transactions.filter(
-            tx => String(tx.cardId) === String(id)
-          )
+          transactions.value = dash.transactions.filter(tx => String(tx.cardId) === String(id))
+        } else {
+          transactions.value = []
         }
       } catch (err) {
         console.error('loadCard failed', err)
-        error.value = err.message || 'Server error while loading card'
       } finally {
         loading.value = false
       }
@@ -321,14 +334,16 @@ export default {
     return {
       card,
       transactions,
-      userName,
       loading,
-      error,
       isLimitModalOpen,
-      pendingLimit,
-      updating,
+      minLimit,
+      maxLimit,
       cardLastFour,
+      totalLimit,
+      availableCredit,
+      outstanding,
       utilizationPercentage,
+      mergedCard,
       recentTransactionsList,
       formatINR,
       formatCurrency,
@@ -338,20 +353,11 @@ export default {
       handleCardBlock,
       openLimitModal,
       handleLimitNext,
-      fullPan,
-      mergedCard,
-      totalLimit,
-      availableCredit,
-      outstanding,
       loadCard
     }
   }
 }
 </script>
-
-
-
-
 <style scoped>
 .link-btn {
   background: none;
@@ -394,7 +400,7 @@ export default {
   justify-content:space-between;
   flex-wrap:wrap;
 }
-.back{ color:var(--muted); text-decoration:none; padding:6px 8px; white-space:nowrap; }
+.back{ border: 1px solid #eee;padding: 6px 10px;border-radius: 8px;  font-size: 14px;color:var(--muted); text-decoration:none; padding:6px 8px; white-space:nowrap; background-color: #ffd60a;}
 .title-block{ display:flex; flex-direction:column; min-width:0; }
 .page-title{ margin:0; font-size:28px; font-weight:800; word-break:break-word; }
 .page-sub{ color:var(--muted); margin-top:6px; font-size:14px }
@@ -510,7 +516,7 @@ export default {
 .util-value{ font-weight:800; font-size:15px; color:#0f1724; }
 .util-danger{ color:#ef4444 !important; }
 .progress.util-danger {
-  background: #ef4444 !important; /* bright red */
+  background: #ef4444 !important; 
 }
 
 button, a, input, select, textarea{ max-width:100%; }

@@ -23,13 +23,14 @@
             <input
               type="number"
               v-model.number="proposedLimit"
-              :min="currentOutstanding"
-              :max="maxLimit"
+              :min="currentOutstanding + props.minLimit"
+              :max="props.maxLimit"
               class="input-control"
             />
             <div class="hint-text">
-              Range: ₹{{ formatINR(currentOutstanding) }} – ₹{{ formatINR(maxLimit) }}
+              Range: ₹{{ formatINR(currentOutstanding + props.minLimit) }} – ₹{{ formatINR(props.maxLimit) }}
             </div>
+
           </div>
         </div>
 
@@ -44,6 +45,7 @@
   </transition>
 </template>
 
+
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 
@@ -51,12 +53,14 @@ const props = withDefaults(defineProps<{
   modelValue?: boolean
   currentLimit?: number
   outstanding?: number
+  minLimit?: number
   maxLimit?: number
 }>(), {
   modelValue: false,
   currentLimit: 0,
   outstanding: 0,
-  maxLimit: 100000 // default max limit
+  minLimit: 0,
+  maxLimit: 0,
 })
 
 const emit = defineEmits<{
@@ -67,19 +71,22 @@ const emit = defineEmits<{
 const localVisible = ref<boolean>(props.modelValue ?? false)
 const proposedLimit = ref<number>(props.currentLimit ?? 0)
 
-watch(() => props.modelValue, (newVal) => { localVisible.value = !!newVal })
-watch(localVisible, (newVal) => emit('update:modelValue', newVal))
+watch(() => props.modelValue, (newVal) => {
+  localVisible.value = !!newVal
+  emit('update:modelValue', newVal)
+})
 
 const displayCurrentLimit = props.currentLimit ?? 0
 const currentOutstanding = props.outstanding ?? 0
-const maxLimit = props.maxLimit ?? 100000
 
 const isSubmittable = computed(() =>
-  proposedLimit.value >= currentOutstanding && proposedLimit.value <= maxLimit
+  proposedLimit.value >= (currentOutstanding + (props.minLimit ?? 0)) &&
+  proposedLimit.value <= (props.maxLimit ?? 0)
 )
 
 function cancel() {
   localVisible.value = false
+  emit('update:modelValue', false) 
 }
 
 function updateLimit() {
@@ -92,6 +99,9 @@ function formatINR(value?: number) {
   return Number(value || 0).toLocaleString('en-IN')
 }
 </script>
+
+
+
 
 <style scoped>
 .backdrop-modal {
