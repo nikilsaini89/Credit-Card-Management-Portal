@@ -41,7 +41,7 @@
           <div class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{{ pendingApplications }}</div>
           <div class="text-sm text-gray-500">Require review</div>
         </div>
-
+        <!-- Rejected Applications -->
         <div class="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 transition-all duration-200 hover:shadow-md">
           <div class="flex justify-between items-start mb-4">
             <h3 class="text-sm font-medium text-gray-600">Rejected Applications</h3>
@@ -54,7 +54,7 @@
           <div class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{{ rejectedApplications }}</div>
           <div class="text-sm text-gray-500">Declined applications</div>
         </div>
-
+        <!-- Accepted Applications -->
         <div class="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 transition-all duration-200 hover:shadow-md">
           <div class="flex justify-between items-start mb-4">
             <h3 class="text-sm font-medium text-gray-600">Accepted Applications</h3>
@@ -69,9 +69,8 @@
         </div>
       </div>
 
-      <!-- Detail Sections Row -->
+      <!-- Recent Applications Section -->
       <div class="grid grid-cols-1 lg:grid-cols-1 gap-6">
-        <!-- Recent Applications Section -->
         <div class="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
           <h2 class="text-lg font-semibold text-gray-900 mb-4">Recent Applications</h2>
           <div class="space-y-4">
@@ -80,19 +79,27 @@
               :key="application.id"
               class="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0"
             >
+              <!-- Application Details -->
               <div class="flex-1">
                 <h4 class="text-sm font-medium text-gray-900">{{ application.cardNetworkType }} Application</h4>
                 <p class="text-sm text-gray-500">₹{{ application.requestedLimit.toLocaleString() }} limit</p>
               </div>
-              <span 
+              <!-- Application Status -->
+              <span
                 class="px-2 py-1 rounded-full text-xs font-medium uppercase tracking-wide"
                 :class="{
-                  'bg-gray-800 text-white': application.status === APPLICATION_STATUS.PENDING,
-                  'bg-green-100 text-green-800': application.status === APPLICATION_STATUS.ACCEPTED,
-                  'bg-red-100 text-red-800': application.status === APPLICATION_STATUS.REJECTED
+                  'bg-gray-800 text-white':
+                    application.status === APPLICATION_STATUS.PENDING,
+                  'bg-green-100 text-green-800':
+                    application.status === APPLICATION_STATUS.ACCEPTED,
+                  'bg-red-100 text-red-800':
+                    application.status === APPLICATION_STATUS.REJECTED
                 }"
               >
-                {{ APPLICATION_STATUS_LABELS[application.status as keyof typeof APPLICATION_STATUS_LABELS] || application.status }}
+                {{
+                  APPLICATION_STATUS_LABELS[application.status] ||
+                  application.status
+                }}
               </span>
             </div>
           </div>
@@ -102,59 +109,108 @@
   </div>
 </template>
 
-<script lang="ts" setup>
-import { ref, computed, onMounted } from "vue"
-import { useStore } from 'vuex'
-import { APPLICATION_STATUS, APPLICATION_STATUS_LABELS } from '../constants/constants'
+<script lang="ts">
+import { mapGetters } from 'vuex'
+import { APPLICATION_STATUS, APPLICATION_STATUS_LABELS, USER_ROLE } from '../constants/constants'
 import type { CardApplication } from '../types/cardApplication'
 
-const store = useStore()
+export default {
+  name: 'AdminDashboard',
 
-// Reactive data
-const loading = ref(true)
+  /* Component State */
+  data() {
+    return {
+      /** Loading indicator for dashboard API calls */
+      loading: true as boolean,
 
-// Computed properties
-const applications = computed(() => store.getters['applications/applications'] || [])
-const user = computed(() => store.getters['auth/user'])
-const adminName = computed(() => {
-  if (user.value && user.value.name) {
-    return user.value.name
-  }
-  const email = store.getters['auth/userRole'] ? 'Admin' : 'User'
-  return email
-})
+      /** Status constants for applications */
+      APPLICATION_STATUS,
 
-const totalApplications = computed(() => applications.value.length)
-const pendingApplications = computed(() => 
-  applications.value.filter((app: CardApplication) => app.status === APPLICATION_STATUS.PENDING).length
-)
-const rejectedApplications = computed(() => 
-  applications.value.filter((app: CardApplication) => app.status === APPLICATION_STATUS.REJECTED).length
-)
-const acceptedApplications = computed(() => 
-  applications.value.filter((app: CardApplication) => app.status === APPLICATION_STATUS.ACCEPTED).length
-)
+      /** Human-readable labels for statuses */
+      APPLICATION_STATUS_LABELS,
+    }
+  },
 
-const recentApplications = computed(() => {
-  return applications.value
-    .sort((a: CardApplication, b: CardApplication) => new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime())
-    .slice(0, 2)
-})
+  /* Vuex Getters (State Mapping)*/
+  computed: {
+    ...mapGetters({
+      applications: 'applications/applications',
+      user: 'auth/user',
+    }),
 
-// Methods
-const loadApplications = async () => {
-  try {
-    loading.value = true
-    await store.dispatch('applications/fetchApplications')
-  } catch (error) {
-    console.error('Error loading applications:', error)
-  } finally {
-    loading.value = false
-  }
+    /**
+     * Get admin name if available, otherwise fall back
+     * to role detection (Admin/User).
+     */
+    adminName(): string {
+      if (this.user && this.user.name) {
+        return this.user.name
+      }
+      return this.$store.getters['auth/userRole'] ? USER_ROLE.ADMIN : USER_ROLE.USER
+    },
+
+    /** Total number of applications */
+    totalApplications(): number {
+      return (this.applications as CardApplication[]).length
+    },
+
+    /** Applications in pending status */
+    pendingApplications(): number {
+      return (this.applications as CardApplication[]).filter(
+        (app) => app.status === APPLICATION_STATUS.PENDING
+      ).length
+    },
+
+    /** Applications that have been rejected */
+    rejectedApplications(): number {
+      return (this.applications as CardApplication[]).filter(
+        (app) => app.status === APPLICATION_STATUS.REJECTED
+      ).length
+    },
+
+    /** Applications that have been accepted */
+    acceptedApplications(): number {
+      return (this.applications as CardApplication[]).filter(
+        (app) => app.status === APPLICATION_STATUS.ACCEPTED
+      ).length
+    },
+
+    /**
+     * Recent applications sorted by applicationDate
+     * Limited to latest 2 records.
+     */
+    recentApplications(): CardApplication[] {
+      return [...(this.applications as CardApplication[])]
+        .sort(
+          (a, b) =>
+            new Date(b.applicationDate).getTime() -
+            new Date(a.applicationDate).getTime()
+        )
+        .slice(0, 2)
+    },
+  },
+
+  /* Methods */
+  methods: {
+    /**
+     * Fetches applications from backend and
+     * updates local state.
+     */
+    async loadApplications(): Promise<void> {
+      try {
+        this.loading = true
+        await this.$store.dispatch('applications/fetchApplications')
+      } catch (error) {
+        console.error('Error loading applications:', error)
+      } finally {
+        this.loading = false
+      }
+    },
+  },
+
+  /* Lifecycle Hook */
+  mounted() {
+    this.loadApplications()
+  },
 }
-
-// Load applications on component mount
-onMounted(() => {
-  loadApplications()
-})
-</script> 
+</script>
