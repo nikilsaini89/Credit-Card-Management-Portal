@@ -2,7 +2,9 @@ package com.ccms.portal.service;
 
 import com.ccms.portal.dto.request.CreateCardRequest;
 import com.ccms.portal.dto.request.UpdateCardStatusRequest;
+
 import com.ccms.portal.dto.response.CreditCardResponse;
+
 import com.ccms.portal.enums.CardStatus;
 import com.ccms.portal.exception.CardTypeNotFoundException;
 import com.ccms.portal.exception.CreditCardNotFoundException;
@@ -14,6 +16,7 @@ import com.ccms.portal.entity.CreditCardEntity;
 import com.ccms.portal.entity.UserEntity;
 import com.ccms.portal.repository.CreditCardRepository;
 import com.ccms.portal.repository.CardTypeRepository;
+import com.ccms.portal.repository.TransactionRepository;
 import com.ccms.portal.repository.UserRepository;
 import com.ccms.portal.util.JwtUserDetails;
 import org.slf4j.Logger;
@@ -21,8 +24,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
+
 
 @Service
 public class CardService {
@@ -40,6 +43,9 @@ public class CardService {
 
     @Autowired
     CreditCardUtil cardHelper;
+
+    @Autowired
+    TransactionRepository transactionRepository;
 
     public List<CreditCardResponse> getAllCardsByUserId(){
         JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder

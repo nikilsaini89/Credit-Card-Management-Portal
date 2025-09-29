@@ -25,7 +25,7 @@ class AuthControllerTest {
     private AuthService authService;
 
     @Mock
-    private TokenblackList tokenblackList;
+    private TokenblackList tokenBlackList;
 
     @Mock
     private HttpServletRequest httpServletRequest;
@@ -52,6 +52,7 @@ class AuthControllerTest {
 
         assertNotNull(actualResponse);
         assertEquals("anchal@example.com", actualResponse.getEmail());
+        verify(authService).register(request);
     }
 
     @Test
@@ -72,23 +73,26 @@ class AuthControllerTest {
     }
 
     @Test
-    void logout_withValidToken() {
+    void logout_withAuthAndRefreshToken() {
         when(httpServletRequest.getHeader("Authorization")).thenReturn("Bearer valid-token");
 
-        String result = authController.logout(httpServletRequest);
+        String result = authController.logout(httpServletRequest, httpServletResponse, "valid-refresh");
 
         assertEquals("Successfully logged out.", result);
-        verify(tokenblackList).blacklist("valid-token");
+        verify(tokenBlackList).blacklist("valid-token");
+        verify(tokenBlackList).blacklist("valid-refresh");
+        verify(httpServletResponse).addHeader(eq(HttpHeaders.SET_COOKIE), contains("Max-Age=0"));
     }
 
     @Test
-    void logout_withoutToken() {
+    void logout_withoutTokens() {
         when(httpServletRequest.getHeader("Authorization")).thenReturn(null);
 
-        String result = authController.logout(httpServletRequest);
+        String result = authController.logout(httpServletRequest, httpServletResponse, null);
 
-        assertEquals("No token provided.", result);
-        verify(tokenblackList, never()).blacklist(anyString());
+        assertEquals("Successfully logged out.", result);
+        verify(tokenBlackList, never()).blacklist(anyString());
+        verify(httpServletResponse).addHeader(eq(HttpHeaders.SET_COOKIE), contains("Max-Age=0"));
     }
 
     @Test
@@ -98,21 +102,21 @@ class AuthControllerTest {
         AuthResponse authResponse = new AuthResponse("new-access-token", "new-refresh-token",
                 UserResponse.builder().email("anchal@example.com").build());
 
-        when(tokenblackList.isBlacklisted(refreshToken)).thenReturn(false);
+        when(tokenBlackList.isBlacklisted(refreshToken)).thenReturn(false);
         when(authService.refreshAccessToken(refreshToken)).thenReturn(authResponse);
 
         AuthResponse response = authController.refreshToken(refreshToken, httpServletResponse);
 
         assertNotNull(response);
         assertEquals("new-access-token", response.getToken());
+        assertEquals("new-refresh-token", response.getRefreshToken());
         verify(httpServletResponse).addHeader(eq(HttpHeaders.SET_COOKIE), anyString());
     }
 
     @Test
     void refreshToken_blacklisted() {
         String refreshToken = "blacklisted-token";
-
-        when(tokenblackList.isBlacklisted(refreshToken)).thenReturn(true);
+        when(tokenBlackList.isBlacklisted(refreshToken)).thenReturn(true);
 
         assertThrows(RuntimeException.class,
                 () -> authController.refreshToken(refreshToken, httpServletResponse));
@@ -123,4 +127,11 @@ class AuthControllerTest {
         assertThrows(RuntimeException.class,
                 () -> authController.refreshToken(null, httpServletResponse));
     }
+
+    @Test
+    void home_shouldReturnWelcomeMessage() {
+        String result = authController.home();
+        assertEquals("Welcome to home page, ", result);
+    }
 }
+ 

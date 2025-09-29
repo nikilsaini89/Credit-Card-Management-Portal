@@ -5,8 +5,8 @@ import store from "../store";
 import Login from "../views/Login.vue";
 import CardApplicationPage from "../views/Users/CardApplicationPage.vue";
 import CardApplicationHistoryPage from "../views/Users/CardApplicationHistoryPage.vue";
-
-
+ 
+ 
 const Dashboard = () => import("../views/Users/Dashboard.vue");
 const CardDetail = () => import("../views/Users/CardDetail.vue");
 const TransactionHistory = () => import("../views/Users/TransactionHistory.vue");
@@ -16,6 +16,10 @@ const routes = [
     path: "/",
     name: "Login",
     component: Login,
+  },
+  {
+    path: "/login",
+    redirect: "/"
   },
     {
     path: "/register",
@@ -97,12 +101,12 @@ const routes = [
     meta: { requiresAuth: true, requiresUser: true }
   }
 ];
-
+ 
 const router = createRouter({
   history: createWebHistory(),
   routes,
 });
-
+ 
 // Function to check if user should be redirected based on role
 const getInitialRoute = () => {
   const token = localStorage.getItem('token');
@@ -110,10 +114,9 @@ const getInitialRoute = () => {
   if (!token) {
     return { name: "Login" };
   }
-
+ 
   try {
     const decoded = store.getters["auth/userRole"];
-    console.log('Decoded role:', decoded);
     if (decoded === 'ADMIN') {
       return { name: "AdminDashboard" };
     } else {
@@ -124,39 +127,39 @@ const getInitialRoute = () => {
     return { name: "Login" };
   }
 };
-
+ 
 router.beforeEach((to, from, next) => {
   console.log("heavy coder here");
   const isAuthenticated = store.getters["auth/isAuthenticated"];
   const isAdmin = store.getters["auth/isAdmin"];
   const userRole = store.getters["auth/userRole"];
-
+ 
   // If trying to access admin route but not admin
   if (to.meta.requiresAdmin && !isAdmin) {
     next({ name: "Dashboard" });
     return;
   }
-
+ 
   // If trying to access user route but admin
   if (to.meta.requiresUser && isAdmin) {
     next({ name: "AdminDashboard" });
     return;
   }
-
+ 
   // If trying to access protected route but not authenticated
   if (to.meta.requiresAuth && !isAuthenticated) {
     next({ name: "Login" });
     return;
   }
-
+ 
   // If accessing root path, redirect based on role
   if (to.path === '/' && isAuthenticated) {
     const initialRoute = getInitialRoute();
     next(initialRoute);
     return;
   }
-
+ 
   next();
 });
-
+ 
 export default router;

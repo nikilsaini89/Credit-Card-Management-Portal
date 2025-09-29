@@ -8,15 +8,15 @@ import com.ccms.portal.exception.CreditCardNotFoundException;
 import com.ccms.portal.exception.UnauthorizedApplicationActionException;
 import com.ccms.portal.repository.CreditCardRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CardLimitService {
-    private final CreditCardRepository creditCardRepository;
 
-    public CardLimitService(CreditCardRepository creditCardRepository) {
-        this.creditCardRepository = creditCardRepository;
-    }
+
+    @Autowired
+    CreditCardRepository creditCardRepository;
 
     @Transactional
     public CardLimitResponse updateLimit(Long cardId, UpdateCardLimitRequest request, String callerUsername) {
