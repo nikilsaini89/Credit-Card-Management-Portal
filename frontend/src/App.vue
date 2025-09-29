@@ -2,27 +2,27 @@
 <template>
   <div id="app">
     <NavigationBar v-if="showLayout" />
-
+ 
     <div v-if="showLayout" class="main-container">
       <router-view />
     </div>
-
+ 
     <router-view v-else />
   </div>
 </template>
-
+ 
 <script lang="ts" setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import NavigationBar from './components/NavigationBar.vue'
-
+ 
 const route = useRoute()
-
+ 
 const showLayout = computed(() => {
-  return !['/', '/register'].includes(route.path)
+  return !['/', '/login','/register'].includes(route.path)
 })
 </script>
-
+ 
 <style>
 .main-container {
   max-width: 1180px;
@@ -31,3 +31,5 @@ const showLayout = computed(() => {
   font-family: "Inter", system-ui, Arial;
 }
 </style>
+ 
+ 
