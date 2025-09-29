@@ -95,7 +95,7 @@ export default {
   },
 
   created() {
-    this.fetchAll();
+    if(this.allApplications.length === 0) this.fetchAll();
   },
 
   methods: {

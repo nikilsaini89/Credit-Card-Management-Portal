@@ -74,7 +74,6 @@ public class CardService {
                 .availableLimit(cardRequest.getCreditLimit())
                 .cardStatus(CardStatus.ACTIVE)
                 .cardNumber(cardHelper.generateCardNumber())
-                .cvv(cardHelper.generateCvv())
                 .expiryDate(cardHelper.generateExpiryDate(5))
                 .build();
 
@@ -99,11 +98,19 @@ public class CardService {
             logger.warn("Unauthorized card update attempt for card ID: {} by user ID: {}", cardId, currentUser.getUserId());
             throw new UnauthorizedApplicationActionException("You are not allowed to update the status of this card");
         }
-        
-        creditCard.setCardStatus(cardStatusRequest.getCardStatus());
-        CreditCardEntity savedEntity = cardRepository.save(creditCard);
-        
+
+        CreditCardEntity savedEntity = creditCard;
+
+        if (!creditCard.getCardStatus().equals(cardStatusRequest.getCardStatus())) {
+            creditCard.setCardStatus(cardStatusRequest.getCardStatus());
+            savedEntity = cardRepository.save(creditCard); // save only if changed
+            logger.info("Card status updated successfully for card ID: {}", cardId);
+        } else {
+            logger.info("Card status is already '{}' for card ID: {}, skipping update", cardStatusRequest.getCardStatus(), cardId);
+        }
+
         return cardHelper.buildCreditCardResponse(savedEntity);
+
     }
 
     public List<CardTypeEntity> getCardTypes() {

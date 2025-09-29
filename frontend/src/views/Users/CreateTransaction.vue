@@ -64,45 +64,13 @@
               <!-- Card Selection -->
               <div class="w-[55%]">
                 <label class="block text-sm font-semibold text-gray-700 mb-3">Select Card</label>
-                <div class="relative">
-                  <button
-                    @click="toggleCardDropdown"
-                    class="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 bg-white hover:bg-gray-50 text-left flex items-center justify-between"
-                  >
-                    <div class="flex items-center">
-                      <svg class="h-5 w-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                      </svg>
-                      <span class="text-gray-500">{{ getCardDisplayText() }}</span>
-                    </div>
-                    <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': showCardDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                  </button>
-                  
-                  <!-- Custom Card Dropdown Overlay -->
-                  <div v-if="showCardDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                    <div class="p-2 space-y-1">
-                      <button
-                        @click="selectCard('')"
-                        class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200"
-                      >
-                        Choose your card
-                      </button>
-                      <button
-                        v-for="card in cards"
-                        :key="card.id"
-                        @click="selectCard(card.id)"
-                        class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
-                      >
-                        <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-3"></span>
-                        <span class="text-gray-700 font-medium">
-                          {{ card.cardType?.networkType || card.cardType || 'VISA' }} ****{{ card.lastFour || card.cardNumber?.slice(-4) || '****' }}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <CardSwitcher
+                  :cards="cards"
+                  :selected-card-id="form.cardId ? parseInt(form.cardId) : null"
+                  :show-available-limit="true"
+                  placeholder="Choose your card"
+                  @card-selected="selectCard"
+                />
               </div>
 
               <!-- Merchant Selection -->
@@ -169,7 +137,19 @@
                     {{ amountError }}
                   </div>
                   <!-- Available limit display -->
-                  <div v-if="selectedCardInfo" class="absolute -bottom-6 right-0 text-xs text-gray-500">
+                  <div v-if="selectedCardInfo && !amountError" class="absolute -bottom-6 right-0 text-xs text-green-600 font-medium">
+                    Available: ₹{{ formatNumber(selectedCardInfo.availableLimit) }}
+                  </div>
+                  <!-- Card selection indicator -->
+                  <div v-if="selectedCardInfo && !amountError" class="absolute -bottom-6 left-0 text-xs text-blue-600 font-medium">
+                    ✓ {{ selectedCardInfo.cardType?.networkType || selectedCardInfo.cardType || 'VISA' }} ****{{ selectedCardInfo.lastFour || selectedCardInfo.cardNumber?.slice(-4) || '****' }}
+                  </div>
+                  <!-- Card selection indicator when there's an error (positioned above error) -->
+                  <div v-if="selectedCardInfo && amountError" class="absolute -bottom-9 left-0 text-xs text-blue-600 font-medium">
+                    ✓ {{ selectedCardInfo.cardType?.networkType || selectedCardInfo.cardType || 'VISA' }} ****{{ selectedCardInfo.lastFour || selectedCardInfo.cardNumber?.slice(-4) || '****' }}
+                  </div>
+                  <!-- Available limit when there's an error (positioned above error) -->
+                  <div v-if="selectedCardInfo && amountError" class="absolute -bottom-9 right-0 text-xs text-green-600 font-medium">
                     Available: ₹{{ formatNumber(selectedCardInfo.availableLimit) }}
                   </div>
                 </div>
@@ -273,14 +253,20 @@
                       <p class="text-sm text-gray-600">Split your payment into monthly installments</p>
                     </div>
                   </div>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      v-model="form.isBnpl" 
-                      type="checkbox" 
-                      class="sr-only peer"
-                    />
-                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-yellow-500"></div>
-                  </label>
+                  <div class="flex flex-col items-end">
+                    <label class="relative inline-flex items-center cursor-pointer" :class="{ 'opacity-50 cursor-not-allowed': !isBnplEligible }">
+                      <input 
+                        v-model="form.isBnpl" 
+                        type="checkbox" 
+                        class="sr-only peer"
+                        :disabled="!isBnplEligible"
+                      />
+                      <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-yellow-500"></div>
+                    </label>
+                    <p v-if="!isBnplEligible" class="text-xs text-red-500 mt-1 text-right">
+                      BNPL not available for your account
+                    </p>
+                  </div>
                 </div>
 
                 <!-- BNPL Options -->
@@ -459,6 +445,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
+import CardSwitcher from '../../components/CardSwitcher.vue'
 
 interface Card {
   id: number
@@ -500,7 +487,7 @@ const successModalData = ref({
 })
 
 // Dropdown state
-const showCardDropdown = ref(false)
+// Removed showCardDropdown - now handled by CardSwitcher component
 const showMerchantDropdown = ref(false)
 const showCategoryDropdown = ref(false)
 const showTenureDropdown = ref(false)
@@ -511,7 +498,15 @@ const merchants = computed(() => store.state?.merchants?.merchants || [])
 
 const selectedCardInfo = computed(() => {
   if (!form.value.cardId) return null
-  return cards.value.find((card: any) => card.id === form.value.cardId)
+  const cardId = parseInt(form.value.cardId)
+  return cards.value.find((card: any) => card.id === cardId)
+})
+
+// Check if user is eligible for BNPL (this would need to be fetched from user profile)
+const isBnplEligible = computed(() => {
+  // For now, we'll assume all users are eligible unless we fetch this from the backend
+  // In a real implementation, this would come from the user profile API
+  return true
 })
 
 const monthlyEmi = computed(() => {
@@ -627,37 +622,28 @@ const fetchBnplOverview = async (cardId: number) => {
 }
 
 // Dropdown methods
-const toggleCardDropdown = () => {
-  showCardDropdown.value = !showCardDropdown.value
-  showMerchantDropdown.value = false
-  showCategoryDropdown.value = false
-  showTenureDropdown.value = false
-}
+// Removed toggleCardDropdown - now handled by CardSwitcher component
 
 const toggleMerchantDropdown = () => {
   showMerchantDropdown.value = !showMerchantDropdown.value
-  showCardDropdown.value = false
   showCategoryDropdown.value = false
   showTenureDropdown.value = false
 }
 
 const toggleCategoryDropdown = () => {
   showCategoryDropdown.value = !showCategoryDropdown.value
-  showCardDropdown.value = false
   showMerchantDropdown.value = false
   showTenureDropdown.value = false
 }
 
 const toggleTenureDropdown = () => {
   showTenureDropdown.value = !showTenureDropdown.value
-  showCardDropdown.value = false
   showMerchantDropdown.value = false
   showCategoryDropdown.value = false
 }
 
 const selectCard = (cardId: string) => {
   form.value.cardId = cardId
-  showCardDropdown.value = false
 }
 
 const selectMerchant = (merchantId: string) => {
@@ -678,17 +664,7 @@ const selectTenure = (tenure: string) => {
   console.log('Tenure selected:', tenure, 'EMI will be:', monthlyEmi.value)
 }
 
-const getCardDisplayText = () => {
-  if (!form.value.cardId) return 'Choose your card'
-  const selectedCard = cards.value.find((card: any) => card.id === form.value.cardId)
-  if (!selectedCard) return 'Choose your card'
-  
-  // Handle different card object structures
-  const cardType = selectedCard.cardType?.networkType || selectedCard.cardType || 'VISA'
-  const lastFour = selectedCard.lastFour || selectedCard.cardNumber?.slice(-4) || '****'
-  
-  return `${cardType} ****${lastFour}`
-}
+// Removed getCardDisplayText - now handled by CardSwitcher component
 
 const getMerchantDisplayText = () => {
   if (!form.value.merchantAccountId) return 'Select merchant'
@@ -734,6 +710,7 @@ const submitTransaction = async () => {
       amount: parseFloat(form.value.amount),
       category: form.value.category,
       isBnpl: form.value.isBnpl,
+      tenureMonths: form.value.isBnpl ? parseInt(form.value.tenureMonths) : null,
       transactionDate: new Date().toISOString().split('T')[0]
     }
     
@@ -770,9 +747,17 @@ const submitTransaction = async () => {
       isBnpl: false,
       tenureMonths: ''
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating transaction:', error)
-    showErrorNotification('Failed to create transaction. Please try again.')
+    
+    // Handle specific error types
+    if (error.response?.status === 403 && error.response?.data?.error === 'BNPL Not Available') {
+      showErrorNotification('You are not eligible for BNPL transactions. Please contact support to check your eligibility or try a regular transaction instead.')
+    } else if (error.response?.data?.message) {
+      showErrorNotification(error.response.data.message)
+    } else {
+      showErrorNotification('Failed to create transaction. Please try again.')
+    }
   } finally {
     loading.value = false
   }

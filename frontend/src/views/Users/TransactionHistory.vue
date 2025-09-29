@@ -32,8 +32,9 @@
         <div>
           <!-- Bill Cycle Information -->
           <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-4 sm:p-6 mb-6">
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center">
+            <!-- Card Selection Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+              <div class="flex items-center mb-4 sm:mb-0">
                 <div class="h-8 w-8 rounded-lg flex items-center justify-center mr-3" style="background: #ffd60a;">
                   <svg class="h-5 w-5" style="color: #0b2540;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -41,21 +42,90 @@
                 </div>
                 <h3 class="text-lg font-bold text-gray-900">Credit Card Bill</h3>
               </div>
-              <div class="text-right">
-                <div class="text-sm font-medium text-gray-600">Statement Date</div>
-                <div class="text-lg font-bold" style="color: #0b2540;">{{ billSummary.statementDate }}</div>
+              
+              <!-- Card Selection Dropdown -->
+              <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                <div class="w-full sm:w-auto">
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Select Card</label>
+                  <div class="relative card-dropdown-container">
+                    <button
+                      @click="toggleCardDropdown"
+                      class="w-full sm:w-64 px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:bg-gray-50 text-left flex items-center justify-between"
+                    >
+                      <span class="text-gray-500">{{ getCardDisplayText() }}</span>
+                      <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': showCardDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                      </svg>
+                    </button>
+                    
+                    <!-- Custom Card Dropdown Overlay -->
+                    <div v-if="showCardDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                      <div class="p-2 space-y-1">
+                        <button
+                          @click="selectCard('')"
+                          class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200"
+                        >
+                          Select a card...
+                        </button>
+                        <button
+                          v-for="card in cards"
+                          :key="card.id"
+                          @click="selectCard(card.id)"
+                          class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                        >
+                          <span class="text-lg mr-3">💳</span>
+                          <div class="flex-1">
+                            <div class="font-medium text-gray-700">
+                              {{ card.cardType?.networkType || card.cardType || 'VISA' }} ****{{ card.lastFour || card.cardNumber?.slice(-4) || '****' }}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                              ₹{{ formatNumber(card.availableLimit || 0) }} available
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Statement Date -->
+                <div class="text-right">
+                  <div class="text-sm font-medium text-gray-600">Statement Date</div>
+                  <div class="text-lg font-bold" style="color: #0b2540;">
+                    {{ selectedCard ? billSummary.statementDate : 'Select a card' }}
+                  </div>
+                </div>
               </div>
             </div>
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <!-- Empty State when no card selected -->
+            <div v-if="!selectedCard" class="text-center py-12">
+              <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                </svg>
+              </div>
+              <h4 class="text-xl font-semibold text-gray-700 mb-2">No Card Selected</h4>
+              <p class="text-gray-500 mb-6">Please select a credit card to view its bill details and statement information.</p>
+              <div class="text-sm text-gray-400">
+                <p>• View statement dates and due dates</p>
+                <p>• Check available credit and usage</p>
+                <p>• Make payments and manage your bill</p>
+              </div>
+            </div>
+
+            <!-- Financial Metrics when card is selected -->
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Total Statement Amount</div>
                 <div class="text-2xl font-bold" style="color: #0b2540;">{{ formatCurrency(billSummary.totalStatementAmount) }}</div>
+                <div v-if="billSummary.totalStatementAmount === 0" class="text-xs text-gray-500 mt-1">No transactions this month</div>
               </div>
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Amount Due</div>
                 <div class="text-2xl font-bold text-red-600">{{ formatCurrency(billSummary.amountDue) }}</div>
-                <div class="text-xs text-gray-500 mt-1">Due on {{ billSummary.dueDate }}</div>
+                <div v-if="billSummary.dueDate !== 'N/A'" class="text-xs text-gray-500 mt-1">Due on {{ billSummary.dueDate }}</div>
+                <div v-else class="text-xs text-gray-500 mt-1">No due date available</div>
                 <div v-if="billSummary.paidAmount > 0" class="text-xs text-green-600 mt-1">
                   Paid: {{ formatCurrency(billSummary.paidAmount) }}
                 </div>
@@ -80,11 +150,13 @@
                        }">
                   </div>
                 </div>
-                <div class="text-xs text-gray-500 mt-1">{{ billSummary.spendingComparison }}</div>
+                <div v-if="billSummary.spendingComparison !== 'No statement data available'" class="text-xs text-gray-500 mt-1">{{ billSummary.spendingComparison }}</div>
+                <div v-else class="text-xs text-gray-500 mt-1">No spending data available</div>
               </div>
             </div>
             
-            <div class="mt-4 flex justify-between items-center">
+            <!-- Action Buttons - Only show when card is selected -->
+            <div v-if="selectedCard" class="mt-4 flex justify-between items-center">
               <div class="flex items-center text-sm text-gray-600">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -282,39 +354,16 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                   <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Payment Card</label>
-                    <div class="relative">
-                      <button
-                        @click="toggleCardDropdown"
-                        class="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:bg-gray-50 text-left flex items-center justify-between"
-                      >
-                        <span class="text-gray-500">{{ getCardDisplayText() }}</span>
-                        <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': showCardDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                      </button>
-                      
-                      <!-- Custom Card Dropdown Overlay -->
-                      <div v-if="showCardDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                        <div class="p-2 space-y-1">
-                          <button
-                            @click="selectCard('')"
-                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200"
-                          >
-                            All Cards
-                          </button>
-                          <button
-                            v-for="card in cards"
-                            :key="card.id"
-                            @click="selectCard(card.id)"
-                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
-                          >
-                            <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-3"></span>
-                            <span class="text-gray-700 font-medium">
-                              {{ card.cardType?.networkType || card.cardType || 'VISA' }} ****{{ card.lastFour || card.cardNumber?.slice(-4) || '****' }}
-                            </span>
-                          </button>
-                        </div>
-                      </div>
+                    <CardSwitcher
+                      :cards="cards"
+                      :selected-card-id="selectedCardId"
+                      :show-all-option="true"
+                      @card-selected="selectCard"
+                    />
+                    <!-- Selected Card Info -->
+                    <div v-if="selectedCard" class="text-xs text-blue-600 font-medium mt-1">
+                      ✓ {{ selectedCard.cardType?.networkType || selectedCard.cardType || 'VISA' }} ****{{ selectedCard.lastFour || selectedCard.cardNumber?.slice(-4) || '****' }} 
+                      (₹{{ formatNumber(selectedCard.availableLimit || 0) }} available)
                     </div>
                   </div>
 
@@ -573,13 +622,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useStore } from 'vuex'
 // @ts-ignore
 import { useRouter } from 'vue-router'
 import TransactionTable from '../../components/TransactionTable.vue'
 import BnplSection from '../../components/BnplSection.vue'
 import PaymentFlow from '../../components/PaymentFlow.vue'
+import CardSwitcher from '../../components/CardSwitcher.vue'
 import { Chart, registerables } from 'chart.js'
 import jsPDF from 'jspdf'
 
@@ -676,12 +726,22 @@ const filters = ref({
 })
 
 const showStatusDropdown = ref(false)
-const showCardDropdown = ref(false)
 const showCategoryDropdown = ref(false)
+const showCardDropdown = ref(false)
 
 // Computed properties
 const transactions = computed(() => store.state?.transactions?.transactions || [])
 const cards = computed(() => store.state?.cards?.cards || [])
+
+// Selected card state
+const selectedCardId = ref<number | null>(null)
+
+// Computed property for selected card
+const selectedCard = computed(() => {
+  if (!selectedCardId.value) return null
+  return cards.value.find((card: any) => card.id === selectedCardId.value) || null
+})
+
 // BNPL data from API
 const bnplOverview = ref<BnplOverview | null>(null)
 const bnplPlans = computed(() => {
@@ -841,10 +901,10 @@ const summary = computed(() => {
 
 // Bill summary computed property
 const billSummary = computed(() => {
-  const currentCard = cards.value[0] // Get the first card
+  const currentCard = selectedCard.value || cards.value[0] // Use selected card or first card
   
-  if (!currentCard || !currentStatement.value) {
-    // Fallback values if no card or statement data
+  if (!currentCard) {
+    // Fallback values if no card selected
     return {
       totalStatementAmount: 0,
       amountDue: 0,
@@ -852,8 +912,24 @@ const billSummary = computed(() => {
       creditLimit: 0,
       usedAmount: 0,
       usagePercentage: 0,
-      statementDate: 'N/A',
-      dueDate: 'N/A',
+      statementDate: 'Select a card',
+      dueDate: 'Select a card',
+      spendingComparison: 'No card selected',
+      paidAmount: 0
+    }
+  }
+
+  if (!currentStatement.value) {
+    // Fallback values if no statement data for selected card
+    return {
+      totalStatementAmount: 0,
+      amountDue: 0,
+      availableCredit: currentCard.availableLimit || 0,
+      creditLimit: currentCard.creditLimit || 0,
+      usedAmount: (currentCard.creditLimit || 0) - (currentCard.availableLimit || 0),
+      usagePercentage: currentCard.creditLimit > 0 ? Math.round(((currentCard.creditLimit - (currentCard.availableLimit || 0)) / currentCard.creditLimit) * 100) : 0,
+      statementDate: 'No statement available',
+      dueDate: 'No due date available',
       spendingComparison: 'No statement data available',
       paidAmount: 0
     }
@@ -938,6 +1014,59 @@ const filteredTransactions = computed(() => {
   return filtered
 })
 
+// Card selection methods
+const toggleCardDropdown = () => {
+  showCardDropdown.value = !showCardDropdown.value
+}
+
+const getCardDisplayText = () => {
+  if (!selectedCardId.value) {
+    return 'Select a card...'
+  }
+  const card = cards.value.find((c: any) => c.id === selectedCardId.value)
+  if (!card) return 'Select a card...'
+  
+  return `${card.cardType?.networkType || card.cardType || 'VISA'} ****${card.lastFour || card.cardNumber?.slice(-4) || '****'} (₹${formatNumber(card.availableLimit || 0)} available)`
+}
+
+const selectCard = async (cardId: string | number) => {
+  if (cardId === '' || cardId === null || cardId === undefined) {
+    // Show all cards - fetch data for first card as default
+    filters.value.cardId = ''
+    selectedCardId.value = null
+    currentStatement.value = null
+    const userCards = await store.dispatch('cards/fetchCards')
+    if (userCards && userCards.length > 0) {
+      await fetchTransactions(userCards[0].id)
+    }
+  } else {
+    // Select specific card
+    const cardIdNum = Number(cardId)
+    selectedCardId.value = cardIdNum
+    filters.value.cardId = cardId.toString()
+    
+    // Fetch statement data for selected card
+    await fetchStatementForCard(cardIdNum)
+    // Fetch transactions for selected card
+    await fetchTransactions(cardIdNum)
+  }
+  
+  // Close dropdown
+  showCardDropdown.value = false
+}
+
+const onCardChange = () => {
+  if (selectedCardId.value) {
+    // Fetch statement data for selected card
+    fetchStatementForCard(selectedCardId.value)
+    // Refresh transactions for selected card
+    fetchTransactions()
+  } else {
+    // Clear statement data when no card selected
+    currentStatement.value = null
+  }
+}
+
 // Methods
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat('en-IN').format(num)
@@ -970,13 +1099,11 @@ const clearAllFilters = () => {
     dateRangeTo: ''
   }
   showStatusDropdown.value = false
-  showCardDropdown.value = false
   showCategoryDropdown.value = false
 }
 
 const toggleStatusDropdown = () => {
   showStatusDropdown.value = !showStatusDropdown.value
-  showCardDropdown.value = false
   showCategoryDropdown.value = false
 }
 
@@ -1011,39 +1138,20 @@ const toggleBnpl = () => {
   filters.value.bnplOnly = !filters.value.bnplOnly
 }
 
-const toggleCardDropdown = () => {
-  showCardDropdown.value = !showCardDropdown.value
-  showCategoryDropdown.value = false
-  showStatusDropdown.value = false
-}
+// Removed toggleCardDropdown - now handled by CardSwitcher component
 
 const toggleCategoryDropdown = () => {
   showCategoryDropdown.value = !showCategoryDropdown.value
-  showCardDropdown.value = false
   showStatusDropdown.value = false
 }
 
-const selectCard = (cardId: string) => {
-  filters.value.cardId = cardId
-  showCardDropdown.value = false
-}
 
 const selectCategory = (category: string) => {
   filters.value.category = category
   showCategoryDropdown.value = false
 }
 
-const getCardDisplayText = () => {
-  if (!filters.value.cardId) return 'Select card'
-  const selectedCard = cards.value.find((card: any) => card.id === filters.value.cardId)
-  if (!selectedCard) return 'Select card'
-  
-  // Handle different card object structures
-  const cardType = selectedCard.cardType?.networkType || selectedCard.cardType || 'VISA'
-  const lastFour = selectedCard.lastFour || selectedCard.cardNumber?.slice(-4) || '****'
-  
-  return `${cardType} ****${lastFour}`
-}
+// Removed getCardDisplayText - now handled by CardSwitcher component
 
 const getCategoryDisplayText = () => {
   if (!filters.value.category) return 'Select category'
@@ -1060,8 +1168,34 @@ const getCategoryDisplayText = () => {
   return categoryMap[filters.value.category] || 'Select category'
 }
 
+const fetchStatementForCard = async (cardId: number) => {
+  try {
+    // Fetch statement for the specific card
+    await fetchCurrentStatement(cardId)
+    console.log('Fetched statement for card:', cardId)
+  } catch (error) {
+    console.error('Failed to fetch statement for card:', error)
+  }
+}
+
 const exportTransactions = () => {
+  // Check if a card is selected
+  if (!selectedCard.value) {
+    alert('Please select a card to export its bill!')
+    return
+  }
+  
+  // Check if there are transactions to export
+  if (!filteredTransactions.value || filteredTransactions.value.length === 0) {
+    alert('No transactions to export for the selected card!')
+    return
+  }
+  
+  // Generate PDF for selected card
   exportTransactionsPDF()
+  
+  // Show success message
+  alert(`PDF exported successfully for ${selectedCard.value.cardType?.networkType || selectedCard.value.cardType || 'VISA'} ****${selectedCard.value.lastFour || selectedCard.value.cardNumber?.slice(-4) || '****'}!`)
 }
 
 const exportTransactionsPDF = () => {
@@ -1070,12 +1204,20 @@ const exportTransactionsPDF = () => {
   // Add header
   doc.setFontSize(20)
   doc.setTextColor(11, 37, 64) // #0b2540
-  doc.text('Transaction History Report', 14, 22)
+  doc.text('Credit Card Bill Statement', 14, 22)
+  
+  // Add card information
+  doc.setFontSize(12)
+  doc.setTextColor(11, 37, 64)
+  const cardInfo = selectedCard.value ? 
+    `${selectedCard.value.cardType?.networkType || selectedCard.value.cardType || 'VISA'} ****${selectedCard.value.lastFour || selectedCard.value.cardNumber?.slice(-4) || '****'}` : 
+    'No Card Selected'
+  doc.text(`Card: ${cardInfo}`, 14, 32)
   
   // Add date
   doc.setFontSize(10)
   doc.setTextColor(100, 100, 100)
-  doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, 30)
+  doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, 40)
   
   // Add filter information
   let filterText = 'All Transactions'
@@ -1350,13 +1492,12 @@ const onPaymentSuccess = async (transactionId: string, amount: number) => {
     
     const success = await makeBnplPayment(selectedPlan.transactionId || 0, amount)
     if (success) {
-      // Refresh all data
-      const cards = await store.dispatch('cards/fetchCards')
-      if (cards && cards.length > 0) {
+      // Refresh all data for the currently selected card
+      if (selectedCardId.value) {
         await Promise.all([
-          fetchBnplOverview(cards[0].id),
-          fetchCurrentStatement(cards[0].id),
-          store.dispatch('transactions/fetchTransactions', { cardId: cards[0].id })
+          fetchBnplOverview(selectedCardId.value),
+          fetchCurrentStatement(selectedCardId.value),
+          store.dispatch('transactions/fetchTransactions', { cardId: selectedCardId.value })
         ])
       }
       alert(`BNPL payment of ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} successful!`)
@@ -1369,10 +1510,9 @@ const onPaymentSuccess = async (transactionId: string, amount: number) => {
     if (currentStatement.value) {
       const success = await makePayment(currentStatement.value.id, amount)
       if (success) {
-        // Refresh statement data
-        const cards = await store.dispatch('cards/fetchCards')
-        if (cards && cards.length > 0) {
-          await fetchCurrentStatement(cards[0].id)
+        // Refresh statement data for the currently selected card
+        if (selectedCardId.value) {
+          await fetchCurrentStatement(selectedCardId.value)
         }
         alert(`Payment of ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} successful!`)
       } else {
@@ -1382,9 +1522,24 @@ const onPaymentSuccess = async (transactionId: string, amount: number) => {
     }
   }
   
+  // Refresh the current view after payment
+  await refreshCurrentView()
+  
   setTimeout(() => {
     showPayment.value = false
   }, 2000) 
+}
+
+// Method to refresh the current view
+const refreshCurrentView = async () => {
+  if (selectedCardId.value) {
+    await fetchTransactions(selectedCardId.value)
+  } else {
+    const userCards = await store.dispatch('cards/fetchCards')
+    if (userCards && userCards.length > 0) {
+      await fetchTransactions(userCards[0].id)
+    }
+  }
 }
 
 // API functions for statement management
@@ -1495,15 +1650,30 @@ const makeBnplPayment = async (transactionId: number, paymentAmount: number) => 
   }
 }
 
-const fetchTransactions = async () => {
+const fetchTransactions = async (cardId?: number) => {
   loading.value = true
   try {
-    // First get user's cards, then fetch transactions, statement, and BNPL overview
-    const cards = await store.dispatch('cards/fetchCards')
-    if (cards && cards.length > 0) {
-      await store.dispatch('transactions/fetchTransactions', { cardId: cards[0].id })
-      await fetchCurrentStatement(cards[0].id)
-      await fetchBnplOverview(cards[0].id)
+    // First get user's cards
+    const userCards = await store.dispatch('cards/fetchCards')
+    
+    if (userCards && userCards.length > 0) {
+      if (cardId) {
+        // Fetch data for specific card
+        await store.dispatch('transactions/fetchTransactions', { cardId })
+        await fetchCurrentStatement(cardId)
+        await fetchBnplOverview(cardId)
+      } else if (selectedCardId.value) {
+        // Fetch data for selected card
+        await store.dispatch('transactions/fetchTransactions', { cardId: selectedCardId.value })
+        await fetchCurrentStatement(selectedCardId.value)
+        await fetchBnplOverview(selectedCardId.value)
+      } else {
+        // Show all cards - fetch data for first card as default
+        selectedCardId.value = userCards[0].id
+        await store.dispatch('transactions/fetchTransactions', { cardId: userCards[0].id })
+        await fetchCurrentStatement(userCards[0].id)
+        await fetchBnplOverview(userCards[0].id)
+      }
     } else {
       console.warn('No cards found for user')
     }
@@ -1619,12 +1789,23 @@ const initTrendsChart = () => {
 }
 
 onMounted(async () => {
+  // Add click outside listener
+  document.addEventListener('click', handleClickOutside)
+  
   await fetchTransactions()
   // Note: These endpoints may not exist in the backend yet
   // store.dispatch('cards/fetchCards', 1)
   // store.dispatch('merchants/fetchMerchants')
   // store.dispatch('bnpl/fetchActivePlans')
   // store.dispatch('analytics/fetchAnalytics')
+  
+  // Initialize selected card to first card if available
+  if (cards.value.length > 0) {
+    selectedCardId.value = cards.value[0].id
+    if (selectedCardId.value) {
+      await fetchStatementForCard(selectedCardId.value)
+    }
+  }
   
   // Initialize charts after DOM is ready
   await nextTick()
@@ -1639,5 +1820,25 @@ watch([transactions, analytics], () => {
     initCategoryChart()
   })
 }, { deep: true })
+
+// Close dropdowns when clicking outside
+const handleClickOutside = (event: Event) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.card-dropdown-container')) {
+    showCardDropdown.value = false
+  }
+  if (!target.closest('.category-dropdown-container')) {
+    showCategoryDropdown.value = false
+  }
+  if (!target.closest('.status-dropdown-container')) {
+    showStatusDropdown.value = false
+  }
+}
+
+
+// Clean up event listener
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 

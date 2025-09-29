@@ -34,3 +34,8 @@ export const APPLICATION_MESSAGES = {
     REJECTED_BY: 'Rejected by',
     ON: 'on'
 } as const;
+
+export const USER_ROLE = {
+   ADMIN: 'Admin',
+   USER: 'User'
+} as const;

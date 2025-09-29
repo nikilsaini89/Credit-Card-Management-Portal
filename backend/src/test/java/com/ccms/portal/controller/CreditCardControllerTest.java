@@ -43,7 +43,6 @@ class CreditCardControllerTest {
                 .creditLimit(5000.0)
                 .availableLimit(4500.0)
                 .expiryDate(Date.valueOf(LocalDate.now().plusYears(5)))
-                .cvv(123)
                 .cardType(CreditCardResponse.CardTypeInfo.builder()
                         .name("Gold Card")
                         .networkType(NetworkType.VISA)
@@ -93,7 +92,6 @@ class CreditCardControllerTest {
                 .creditLimit(5000.0)
                 .availableLimit(4500.0)
                 .expiryDate(Date.valueOf(LocalDate.now().plusYears(5)))
-                .cvv(123)
                 .build();
 
         // Mock the service
