@@ -9,6 +9,7 @@ import com.ccms.portal.entity.UserEntity;
 import com.ccms.portal.enums.CardStatus;
 import com.ccms.portal.exception.CardTypeNotFoundException;
 import com.ccms.portal.exception.CreditCardNotFoundException;
+import com.ccms.portal.exception.UnauthorizedApplicationActionException;
 import com.ccms.portal.exception.UserNotFoundException;
 import com.ccms.portal.repository.CardTypeRepository;
 import com.ccms.portal.repository.CreditCardRepository;
@@ -16,6 +17,7 @@ import com.ccms.portal.repository.UserRepository;
 import com.ccms.portal.util.CreditCardUtil;
 import com.ccms.portal.util.JwtUserDetails;
 
+import org.checkerframework.checker.units.qual.C;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -27,6 +29,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.Date;
+import java.sql.Ref;
 import java.util.List;
 import java.util.Optional;
 
@@ -175,6 +178,26 @@ class CardServiceTest {
         assertNotNull(response);
         assertEquals(CardStatus.BLOCKED, card.getCardStatus());
         verify(cardRepository, never()).save(any(CreditCardEntity.class)); // no save call
+    }
+
+    @Test
+    void testUpdateCardStatus_NotAllowed() {
+       UserEntity userEntity = new UserEntity();
+       ReflectionTestUtils.setField(userEntity, "id", 2L);
+
+       CreditCardEntity cardEntity = new CreditCardEntity();
+       cardEntity.setUser(userEntity);
+       ReflectionTestUtils.setField(cardEntity, "id", 304L);
+       cardEntity.setCardStatus(CardStatus.BLOCKED);
+
+        UpdateCardStatusRequest request = new UpdateCardStatusRequest();
+        request.setCardStatus(CardStatus.ACTIVE);
+
+        when(cardRepository.findById(301L)).thenReturn(Optional.of(cardEntity));
+        when(cardHelper.buildCreditCardResponse(cardEntity))
+                .thenReturn(mock(CreditCardResponse.class));
+
+        assertThrows(UnauthorizedApplicationActionException.class,  () -> cardService.updateCardStatus(request, 301L));
     }
 
 
