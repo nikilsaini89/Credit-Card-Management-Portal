@@ -1,20 +1,30 @@
 package com.ccms.portal.dto.response;
 
-import lombok.*;
+import com.ccms.portal.enums.TransactionStatus;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.time.Instant;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
-@Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class TransactionResponse {
-    private String id;
-    private String cardId;
-    private Double amount;
-    private String merchant;
+
+    private Long id;
+    private Long cardId;
+    private String merchantName;
+    private BigDecimal amount;
+    private LocalDate transactionDate;
     private String category;
-    private String mode;
-    private Instant date;
+    private Boolean isBnpl;
+    private String cardType;
+    private String lastFour;
+    private TransactionStatus status;
+    private LocalDateTime createdAt;
 }

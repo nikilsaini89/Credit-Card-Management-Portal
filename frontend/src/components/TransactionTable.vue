@@ -59,7 +59,7 @@
           <tbody class="bg-white divide-y divide-gray-100">
             <tr v-for="transaction in transactions" :key="transaction.id" class="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 group">
               <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                {{ transaction.transactionId || transaction.serialNo }}
+                {{ formatTransactionId(transaction.id) }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
@@ -71,7 +71,7 @@
                     </div>
                   </div>
                   <div class="ml-4">
-                    <div class="text-sm font-semibold text-gray-900">{{ transaction.merchant }}</div>
+                    <div class="text-sm font-semibold text-gray-900">{{ transaction.merchantName || transaction.merchant }}</div>
                     <div v-if="transaction.isBnpl" class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full inline-block mt-1">BNPL</div>
                   </div>
                 </div>
@@ -117,8 +117,8 @@
                   </svg>
                 </div>
                 <div>
-                  <div class="text-lg font-semibold text-gray-900">{{ transaction.merchant }}</div>
-                  <div class="text-sm text-gray-500 font-mono">{{ transaction.transactionId || transaction.serialNo }}</div>
+                  <div class="text-lg font-semibold text-gray-900">{{ transaction.merchantName || transaction.merchant }}</div>
+                  <div class="text-sm text-gray-500 font-mono">{{ formatTransactionId(transaction.id) }}</div>
                   <div v-if="transaction.isBnpl" class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full inline-block mt-1">BNPL</div>
                 </div>
               </div>
@@ -187,10 +187,11 @@ import CategoryTag from './CategoryTag.vue'
 import StatusBadge from './StatusBadge.vue'
 
 interface Transaction {
-  id: string
+  id: string | number
   transactionId?: string
   serialNo?: number
   merchant: string
+  merchantName?: string
   category: string
   cardId: number
   cardType: string
@@ -199,6 +200,7 @@ interface Transaction {
   status: string
   isBnpl: boolean
   createdAt: string
+  transactionDate?: string
 }
 
 interface Props {
@@ -215,6 +217,11 @@ const emit = defineEmits<{
 // Methods
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat('en-IN').format(num)
+}
+
+const formatTransactionId = (id: string | number) => {
+  const numericId = typeof id === 'string' ? parseInt(id) : id
+  return `TXN-${numericId.toString().padStart(5, '0')}`
 }
 
 const formatDateTime = (dateString: string) => {

@@ -7,10 +7,10 @@
       </div>
 
       <button
-        class="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-[#2463ea] transition"
+        class="flex items-center gap-2 bg-[#ffd60a] text-black px-5 py-2.5 rounded-xl font-medium hover:bg-[#e5cd56] transition"
         @click="$router.push('/apply-card')"
       >
-        <img src="../../assets/plus-sign.svg" alt="icon" class="icon" />
+        <img src="../../assets/plus-sign.svg" alt="icon" />
         Apply for New Card
       </button>
     </div>
@@ -73,10 +73,10 @@
 
         <!-- Button -->
         <button
-          class="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-[#2463ea] transition"
+          class="flex items-center gap-2 bg-[#ffd60a] text-black px-5 py-2.5 rounded-xl font-medium hover:bg-[#e5cd56] transition"
           @click="$router.push('/apply-card')"
         >
-          <img src="../../assets/plus-sign.svg" alt="Add" class="w-4 h-4 icon" />
+          <img src="../../assets/plus-sign.svg" alt="Add" class="w-4 h-4" />
           Apply for New Card
         </button>
       </div>
@@ -88,6 +88,7 @@
 import Card from '../../components/Card.vue';
 import { LOCAL_STORAGE } from '../../constants/constants';
 import { getCards, updateCardStatus } from '../../services/cards-service';
+import { toast } from "vue3-toastify"; 
 
 export default {
   name: "MyCards",
@@ -126,15 +127,26 @@ export default {
 
   methods: {
     async handleBlock({ card, newStatus }) {
-      const cardIndex = this.creditCards.findIndex(currentCard => currentCard.id === card.id);
-      if (cardIndex !== -1) {
-        this.creditCards[cardIndex] = {
-            ...this.creditCards[cardIndex],
-            cardStatus: newStatus
-        };
-        await updateCardStatus(card.id, newStatus);
+      try {
+        const cardIndex = this.creditCards.findIndex(currentCard => currentCard.id === card.id);
+        if (cardIndex !== -1) {
+          this.creditCards[cardIndex] = {
+              ...this.creditCards[cardIndex],
+              cardStatus: newStatus
+          };
+          await updateCardStatus(card.id, newStatus);
+          
+          // Show success toast message
+          this.showToast(
+            newStatus === 'BLOCKED' ? 'Card blocked successfully' : 'Card unblocked successfully',
+            'success'
+          );
+        }
+      } catch (error) {
+        this.showToast('Failed to update card status. Please try again.', 'error');
       }
     },
+    
     goToCardDetails(cardId) {
       const card = this.creditCards.find(c => c.id === cardId);
       if (card) {
@@ -143,10 +155,19 @@ export default {
       if (cardId && this.$router) {
         this.$router.push({ name: 'CardDetail', params: { id: cardId } })
       }
+    },
+
+    showToast(message, type = 'info') {
+      if (type === 'success') {
+          toast.success(message);
+      } else if (type === 'error') {
+        toast.error(message);
+      } else {
+        toast.info(message);
+      }
     }
   }
 };
-
 </script>
 
 <style>

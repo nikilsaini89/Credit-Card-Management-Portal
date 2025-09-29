@@ -45,7 +45,7 @@
           </button>
 
           <button
-            class="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-[#2463ea] transition"
+            class="flex items-center gap-2 bg-[#ffd60a] text-black px-5 py-2.5 rounded-xl font-medium hover:bg-[#e5cd56] transition"
             @click="confirm"
           >
             Confirm
