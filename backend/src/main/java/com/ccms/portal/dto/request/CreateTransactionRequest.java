@@ -40,4 +40,8 @@ public class CreateTransactionRequest {
 
     @Size(max = 4, message = "Last four digits must not exceed 4 characters")
     private String lastFour;
+
+    @Min(value = 1, message = "Tenure must be at least 1 month")
+    @Max(value = 24, message = "Tenure must not exceed 24 months")
+    private Integer tenureMonths;
 }
