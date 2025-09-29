@@ -17,7 +17,7 @@ export const register = async (user: Omit<AuthResponse["user"], "id"> & { passwo
 };
 
 export const refreshToken = async (): Promise<string> => {
-  const response = await api.post<AuthResponse>("/auth/refresh");
+  const response = await api.post<AuthResponse>("/auth/refresh",{},{ withCredentials: true });
   const { token, user } = response.data;
 
   localStorage.setItem("token", token);
@@ -28,9 +28,15 @@ export const refreshToken = async (): Promise<string> => {
 
 export const logout = async (): Promise<void> => {
   try {
-    await api.post("/auth/logout");
+    await api.post("/auth/logout", {}, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+      },
+      withCredentials: true, 
+    });
   } finally {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
   }
 };
+
