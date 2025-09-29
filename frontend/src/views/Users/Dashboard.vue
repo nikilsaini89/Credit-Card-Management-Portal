@@ -98,7 +98,7 @@
             <h4>Quick Actions</h4>
             <div class="actions">
               <RouterLink to="/apply-card" class="action">+ Apply Card</RouterLink>
-              <RouterLink to="/new-transaction" class="action">↗ New Transaction</RouterLink>
+              <RouterLink to="/transactions" class="action">↗ New Transaction</RouterLink>
             </div>
           </div>
         </aside>
