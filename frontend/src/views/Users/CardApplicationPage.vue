@@ -124,6 +124,7 @@ export default {
 
   methods: {
     ...mapActions("cardTypes", ["fetchCardTypes"]),
+    ...mapActions("userApplications", ["fetchAll"]), 
 
     selectCard(card) {
       this.selectedCard = card;
@@ -144,6 +145,7 @@ export default {
 
       try {
         await applyForCard(cardApplication);
+        await this.fetchAll();
         alert(
           `Applied for ${this.selectedCard.name} with credit limit ₹${this.form.creditLimit}`
         );
