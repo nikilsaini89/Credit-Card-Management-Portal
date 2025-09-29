@@ -126,7 +126,6 @@ export default {
 <style scoped>
 .applications {
   font-family: "Inter", system-ui, Arial;
-  /* background: #f7f7f9; */
   min-height: 100vh;
 }
 
