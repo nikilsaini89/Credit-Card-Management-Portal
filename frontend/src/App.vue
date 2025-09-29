@@ -19,7 +19,7 @@ import NavigationBar from './components/NavigationBar.vue'
 const route = useRoute()
 
 const showLayout = computed(() => {
-  return !['/', '/register'].includes(route.path)
+  return !['/', '/login','/register'].includes(route.path)
 })
 </script>
 
