@@ -1,5 +1,25 @@
 <template>
   <div class="min-h-screen bg-gray-50">
+    <!-- Notification -->
+    <div v-if="showNotification" class="fixed top-4 right-4 z-50 animate-fadeIn">
+      <div :class="[
+        'px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3',
+        notificationType === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+      ]">
+        <svg v-if="notificationType === 'success'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        <span class="font-medium">{{ notificationMessage }}</span>
+        <button @click="showNotification = false" class="ml-4 text-white hover:text-gray-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
     <!-- Header Section -->
     <div class="bg-white border-b border-gray-100 shadow-sm">
       <div class="w-full py-4 sm:py-6">
@@ -44,43 +64,13 @@
               <!-- Card Selection -->
               <div class="w-[55%]">
                 <label class="block text-sm font-semibold text-gray-700 mb-3">Select Card</label>
-                <div class="relative">
-                  <button
-                    @click="toggleCardDropdown"
-                    class="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 bg-white hover:bg-gray-50 text-left flex items-center justify-between"
-                  >
-                    <div class="flex items-center">
-                      <svg class="h-5 w-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                      </svg>
-                      <span class="text-gray-500">{{ getCardDisplayText() }}</span>
-                    </div>
-                    <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': showCardDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                  </button>
-                  
-                  <!-- Custom Card Dropdown Overlay -->
-                  <div v-if="showCardDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                    <div class="p-2 space-y-1">
-                      <button
-                        @click="selectCard('')"
-                        class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200"
-                      >
-                        Choose your card
-                      </button>
-                      <button
-                        v-for="card in cards"
-                        :key="card.id"
-                        @click="selectCard(card.id)"
-                        class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
-                      >
-                        <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-3"></span>
-                        <span class="text-gray-700 font-medium">{{ card.cardType }} ****{{ card.lastFour }}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <CardSwitcher
+                  :cards="cards"
+                  :selected-card-id="form.cardId ? parseInt(form.cardId) : null"
+                  :show-available-limit="true"
+                  placeholder="Choose your card"
+                  @card-selected="selectCard"
+                />
               </div>
 
               <!-- Merchant Selection -->
@@ -104,23 +94,20 @@
                   
                   <!-- Custom Merchant Dropdown Overlay -->
                   <div v-if="showMerchantDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                    <div class="p-2 space-y-1">
-                      <button
-                        @click="selectMerchant('')"
-                        class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200"
-                      >
-                        Select merchant
-                      </button>
-                      <button
-                        v-for="merchant in merchants"
-                        :key="merchant.id"
-                        @click="selectMerchant(merchant.id)"
-                        class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
-                      >
-                        <span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-3"></span>
-                        <span class="text-gray-700 font-medium">{{ merchant.name }}</span>
-                      </button>
-                    </div>
+                    <button
+                      @click="selectMerchant('')"
+                      class="w-full px-4 py-3 text-sm text-left hover:bg-yellow-200 hover:text-gray-900 transition-colors duration-200 border-b border-gray-100 text-gray-500 font-medium"
+                    >
+                      Select merchant
+                    </button>
+                    <button
+                      v-for="merchant in merchants"
+                      :key="merchant.id"
+                      @click="selectMerchant(merchant.id)"
+                      class="w-full px-4 py-3 text-sm text-left hover:bg-yellow-200 hover:text-gray-900 transition-colors duration-200 border-b border-gray-100 last:border-b-0"
+                    >
+                      <span class="text-gray-700 font-medium">{{ merchant.name }}</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -134,13 +121,37 @@
                   </div>
                   <input
                     v-model="form.amount"
+                    @input="validateAmount"
                     type="number"
                     step="0.01"
                     min="0.01"
                     placeholder="0.00"
-                    class="block w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 bg-white"
+                    :class="[
+                      'block w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 bg-white',
+                      amountError ? 'border-red-300 focus:ring-red-400 focus:border-red-400' : 'border-gray-200 focus:ring-yellow-400 focus:border-yellow-400'
+                    ]"
                     required
                   />
+                  <!-- Amount validation message -->
+                  <div v-if="amountError" class="absolute -bottom-6 left-0 text-xs text-red-500">
+                    {{ amountError }}
+                  </div>
+                  <!-- Available limit display -->
+                  <div v-if="selectedCardInfo && !amountError" class="absolute -bottom-6 right-0 text-xs text-green-600 font-medium">
+                    Available: ₹{{ formatNumber(selectedCardInfo.availableLimit) }}
+                  </div>
+                  <!-- Card selection indicator -->
+                  <div v-if="selectedCardInfo && !amountError" class="absolute -bottom-6 left-0 text-xs text-blue-600 font-medium">
+                    ✓ {{ selectedCardInfo.cardType?.networkType || selectedCardInfo.cardType || 'VISA' }} ****{{ selectedCardInfo.lastFour || selectedCardInfo.cardNumber?.slice(-4) || '****' }}
+                  </div>
+                  <!-- Card selection indicator when there's an error (positioned above error) -->
+                  <div v-if="selectedCardInfo && amountError" class="absolute -bottom-9 left-0 text-xs text-blue-600 font-medium">
+                    ✓ {{ selectedCardInfo.cardType?.networkType || selectedCardInfo.cardType || 'VISA' }} ****{{ selectedCardInfo.lastFour || selectedCardInfo.cardNumber?.slice(-4) || '****' }}
+                  </div>
+                  <!-- Available limit when there's an error (positioned above error) -->
+                  <div v-if="selectedCardInfo && amountError" class="absolute -bottom-9 right-0 text-xs text-green-600 font-medium">
+                    Available: ₹{{ formatNumber(selectedCardInfo.availableLimit) }}
+                  </div>
                 </div>
               </div>
 
@@ -242,14 +253,20 @@
                       <p class="text-sm text-gray-600">Split your payment into monthly installments</p>
                     </div>
                   </div>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      v-model="form.isBnpl" 
-                      type="checkbox" 
-                      class="sr-only peer"
-                    />
-                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-yellow-500"></div>
-                  </label>
+                  <div class="flex flex-col items-end">
+                    <label class="relative inline-flex items-center cursor-pointer" :class="{ 'opacity-50 cursor-not-allowed': !isBnplEligible }">
+                      <input 
+                        v-model="form.isBnpl" 
+                        type="checkbox" 
+                        class="sr-only peer"
+                        :disabled="!isBnplEligible"
+                      />
+                      <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-yellow-500"></div>
+                    </label>
+                    <p v-if="!isBnplEligible" class="text-xs text-red-500 mt-1 text-right">
+                      BNPL not available for your account
+                    </p>
+                  </div>
                 </div>
 
                 <!-- BNPL Options -->
@@ -309,13 +326,33 @@
                     </div>
                   </div>
 
-                  <div v-if="form.tenureMonths && form.amount" class="bg-white rounded-xl p-4 border border-yellow-200">
-                    <div class="flex justify-between items-center">
+                  <div v-if="form.tenureMonths && form.amount" class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-200">
+                    <div class="flex justify-between items-center mb-3">
                       <span class="text-lg font-semibold text-gray-700">Monthly EMI:</span>
-                      <span class="text-2xl font-bold" style="color: #0b2540;">₹{{ formatNumber(monthlyEmi) }}</span>
+                      <span class="text-2xl font-bold text-green-600">₹{{ formatNumber(monthlyEmi) }}</span>
                     </div>
-                    <div class="mt-2 text-sm text-gray-600">
-                      Total amount: ₹{{ formatNumber(parseFloat(form.amount) || 0) }} over {{ form.tenureMonths }} months
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span class="text-gray-600">Total Amount:</span>
+                        <span class="font-semibold text-gray-800">₹{{ formatNumber(parseFloat(form.amount) || 0) }}</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600">Tenure:</span>
+                        <span class="font-semibold text-gray-800">{{ form.tenureMonths }} months</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600">Interest Rate:</span>
+                        <span class="font-semibold text-gray-800">0% (No Interest)</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600">Total Payable:</span>
+                        <span class="font-semibold text-gray-800">₹{{ formatNumber(parseFloat(form.amount) || 0) }}</span>
+                      </div>
+                    </div>
+                    <div class="mt-3 p-2 bg-green-100 rounded-lg">
+                      <p class="text-sm text-green-800">
+                        <span class="font-semibold">✓ Interest-free EMI</span> - No additional charges for {{ form.tenureMonths }} months
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -336,7 +373,7 @@
                   class="flex-1 px-6 py-3 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
                   style="background: #ffd60a; color: #0b2540;"
                 >
-                  <span v-if="!loading">Create Transaction</span>
+                  <span v-if="!loading">{{ form.isBnpl ? `Create BNPL Transaction (₹${formatNumber(monthlyEmi)}/month)` : 'Create Transaction' }}</span>
                   <span v-else class="flex items-center justify-center">
                     <svg class="animate-spin -ml-1 mr-3 h-5 w-5" style="color: #0b2540;" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -349,14 +386,66 @@
             </form>
           </div>
         </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div v-if="showSuccessModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+      <!-- Success Icon -->
+      <div class="flex justify-center mb-6">
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+          <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Success Message -->
+      <div class="text-center mb-6">
+        <h3 class="text-2xl font-bold text-gray-900 mb-2">Transaction Created Successfully!</h3>
+        <p class="text-gray-600 mb-4">
+          Your {{ successModalData.isBnpl ? 'BNPL' : 'regular' }} transaction of 
+          <span class="font-semibold text-green-600">₹{{ formatNumber(successModalData.amount) }}</span> 
+          has been processed.
+        </p>
+        
+        <div v-if="successModalData.isBnpl" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-sm text-blue-800">
+              Your BNPL plan is now active. You can manage your installments from the BNPL overview section.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button
+          @click="createAnotherTransaction"
+          class="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors duration-200"
+        >
+          Create Another Transaction
+        </button>
+        <button
+          @click="goToTransactions"
+          class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200"
+        >
+          View Transactions
+        </button>
       </div>
     </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
+import CardSwitcher from '../../components/CardSwitcher.vue'
 
 interface Card {
   id: number
@@ -384,9 +473,21 @@ const form = ref({
 })
 
 const loading = ref(false)
+const amountError = ref('')
+const showNotification = ref(false)
+const notificationMessage = ref('')
+const notificationType = ref('success')
+
+// Success modal state
+const showSuccessModal = ref(false)
+const successModalData = ref({
+  amount: 0,
+  isBnpl: false,
+  transactionId: null as number | null
+})
 
 // Dropdown state
-const showCardDropdown = ref(false)
+// Removed showCardDropdown - now handled by CardSwitcher component
 const showMerchantDropdown = ref(false)
 const showCategoryDropdown = ref(false)
 const showTenureDropdown = ref(false)
@@ -394,6 +495,19 @@ const showTenureDropdown = ref(false)
 // Computed properties
 const cards = computed(() => store.state?.cards?.cards || [])
 const merchants = computed(() => store.state?.merchants?.merchants || [])
+
+const selectedCardInfo = computed(() => {
+  if (!form.value.cardId) return null
+  const cardId = parseInt(form.value.cardId)
+  return cards.value.find((card: any) => card.id === cardId)
+})
+
+// Check if user is eligible for BNPL (this would need to be fetched from user profile)
+const isBnplEligible = computed(() => {
+  // For now, we'll assume all users are eligible unless we fetch this from the backend
+  // In a real implementation, this would come from the user profile API
+  return true
+})
 
 const monthlyEmi = computed(() => {
   if (!form.value.amount || !form.value.tenureMonths) return 0
@@ -415,38 +529,121 @@ const formatNumber = (value: number) => {
   }).format(value)
 }
 
-// Dropdown methods
-const toggleCardDropdown = () => {
-  showCardDropdown.value = !showCardDropdown.value
-  showMerchantDropdown.value = false
-  showCategoryDropdown.value = false
-  showTenureDropdown.value = false
+const validateAmount = () => {
+  const amount = parseFloat(form.value.amount)
+  const selectedCard = selectedCardInfo.value
+  
+  if (!amount || amount <= 0) {
+    amountError.value = 'Please enter a valid amount'
+    return false
+  }
+  
+  if (selectedCard && amount > selectedCard.availableLimit) {
+    amountError.value = `Amount exceeds available limit of ₹${formatNumber(selectedCard.availableLimit)}`
+    return false
+  }
+  
+  amountError.value = ''
+  return true
 }
+
+const showSuccessNotification = (message: string) => {
+  notificationMessage.value = message
+  notificationType.value = 'success'
+  showNotification.value = true
+  setTimeout(() => {
+    showNotification.value = false
+  }, 3000)
+}
+
+const showErrorNotification = (message: string) => {
+  notificationMessage.value = message
+  notificationType.value = 'error'
+  showNotification.value = true
+  setTimeout(() => {
+    showNotification.value = false
+  }, 3000)
+}
+
+const showSuccessModalFunc = (amount: number, isBnpl: boolean) => {
+  successModalData.value = {
+    amount,
+    isBnpl,
+    transactionId: Date.now() // Simple ID for display
+  }
+  showSuccessModal.value = true
+}
+
+const closeSuccessModal = () => {
+  showSuccessModal.value = false
+}
+
+const goToTransactions = () => {
+  closeSuccessModal()
+  router.push('/transactions')
+}
+
+const createAnotherTransaction = () => {
+  closeSuccessModal()
+  // Form is already reset, user can create another transaction
+}
+
+// Add missing functions for data refresh
+const fetchCurrentStatement = async (cardId: number) => {
+  try {
+    const response = await fetch(`http://localhost:8080/api/statements/current/${cardId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    if (response.ok) {
+      const statement = await response.json()
+      console.log('Statement refreshed:', statement)
+    }
+  } catch (error) {
+    console.error('Error fetching statement:', error)
+  }
+}
+
+const fetchBnplOverview = async (cardId: number) => {
+  try {
+    const response = await fetch(`http://localhost:8080/api/bnpl/overview/card/${cardId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    if (response.ok) {
+      const overview = await response.json()
+      console.log('BNPL overview refreshed:', overview)
+    }
+  } catch (error) {
+    console.error('Error fetching BNPL overview:', error)
+  }
+}
+
+// Dropdown methods
+// Removed toggleCardDropdown - now handled by CardSwitcher component
 
 const toggleMerchantDropdown = () => {
   showMerchantDropdown.value = !showMerchantDropdown.value
-  showCardDropdown.value = false
   showCategoryDropdown.value = false
   showTenureDropdown.value = false
 }
 
 const toggleCategoryDropdown = () => {
   showCategoryDropdown.value = !showCategoryDropdown.value
-  showCardDropdown.value = false
   showMerchantDropdown.value = false
   showTenureDropdown.value = false
 }
 
 const toggleTenureDropdown = () => {
   showTenureDropdown.value = !showTenureDropdown.value
-  showCardDropdown.value = false
   showMerchantDropdown.value = false
   showCategoryDropdown.value = false
 }
 
 const selectCard = (cardId: string) => {
   form.value.cardId = cardId
-  showCardDropdown.value = false
 }
 
 const selectMerchant = (merchantId: string) => {
@@ -462,13 +659,12 @@ const selectCategory = (category: string) => {
 const selectTenure = (tenure: string) => {
   form.value.tenureMonths = tenure
   showTenureDropdown.value = false
+  
+  // Don't auto-submit, let user review the EMI calculation first
+  console.log('Tenure selected:', tenure, 'EMI will be:', monthlyEmi.value)
 }
 
-const getCardDisplayText = () => {
-  if (!form.value.cardId) return 'Choose your card'
-  const selectedCard = cards.value.find((card: any) => card.id === form.value.cardId)
-  return selectedCard ? `${selectedCard.cardType} ****${selectedCard.lastFour}` : 'Choose your card'
-}
+// Removed getCardDisplayText - now handled by CardSwitcher component
 
 const getMerchantDisplayText = () => {
   if (!form.value.merchantAccountId) return 'Select merchant'
@@ -499,11 +695,47 @@ const getTenureDisplayText = () => {
 const submitTransaction = async () => {
   if (loading.value) return
   
+  // Validate form
+  if (!validateForm()) {
+    return
+  }
+  
   loading.value = true
   
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Prepare transaction data
+    const transactionData = {
+      cardId: parseInt(form.value.cardId),
+      merchantName: getMerchantDisplayText(),
+      amount: parseFloat(form.value.amount),
+      category: form.value.category,
+      isBnpl: form.value.isBnpl,
+      transactionDate: new Date().toISOString().split('T')[0]
+    }
+    
+    console.log('Creating transaction:', transactionData)
+    
+    // Call the transaction service
+    const newTransaction = await store.dispatch('transactions/createTransaction', transactionData)
+    
+    console.log('Transaction created successfully:', newTransaction)
+    
+    // Show success modal instead of immediate redirect
+    showSuccessModalFunc(parseFloat(form.value.amount), form.value.isBnpl)
+    
+    // Refresh all data after transaction creation
+    if (form.value.cardId) {
+      await Promise.all([
+        store.dispatch('transactions/fetchTransactions', { 
+          cardId: parseInt(form.value.cardId), 
+          page: 0, 
+          size: 10 
+        }),
+        store.dispatch('cards/fetchCards'), // Refresh card data to get updated available limit
+        fetchCurrentStatement(parseInt(form.value.cardId)), // Refresh statement
+        fetchBnplOverview(parseInt(form.value.cardId)) // Refresh BNPL data
+      ])
+    }
     
     // Reset form
     form.value = {
@@ -514,14 +746,65 @@ const submitTransaction = async () => {
       isBnpl: false,
       tenureMonths: ''
     }
-    
-    // Navigate back to transactions page
-    router.push('/transactions')
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating transaction:', error)
+    
+    // Handle specific error types
+    if (error.response?.status === 403 && error.response?.data?.error === 'BNPL Not Available') {
+      showErrorNotification('You are not eligible for BNPL transactions. Please contact support to check your eligibility or try a regular transaction instead.')
+    } else if (error.response?.data?.message) {
+      showErrorNotification(error.response.data.message)
+    } else {
+      showErrorNotification('Failed to create transaction. Please try again.')
+    }
   } finally {
     loading.value = false
   }
+}
+
+const validateForm = () => {
+  if (!form.value.cardId) {
+    showErrorNotification('Please select a card')
+    return false
+  }
+  
+  if (!form.value.merchantAccountId) {
+    showErrorNotification('Please select a merchant')
+    return false
+  }
+  
+  if (!form.value.amount || parseFloat(form.value.amount) <= 0) {
+    showErrorNotification('Please enter a valid amount')
+    return false
+  }
+  
+  if (!form.value.category) {
+    showErrorNotification('Please select a category')
+    return false
+  }
+  
+  // Check if amount exceeds card limit
+  const selectedCard = cards.value.find((card: any) => card.id === form.value.cardId)
+  if (selectedCard && parseFloat(form.value.amount) > selectedCard.availableLimit) {
+    showErrorNotification(`Amount exceeds available limit of ₹${formatNumber(selectedCard.availableLimit)}`)
+    return false
+  }
+  
+  // BNPL specific validations
+  if (form.value.isBnpl) {
+    if (!form.value.tenureMonths) {
+      showErrorNotification('Please select tenure for BNPL transaction')
+      return false
+    }
+    
+    const emi = parseFloat(form.value.amount) / parseInt(form.value.tenureMonths)
+    if (emi < 100) {
+      showErrorNotification('EMI amount should be at least ₹100')
+      return false
+    }
+  }
+  
+  return true
 }
 
 onMounted(() => {

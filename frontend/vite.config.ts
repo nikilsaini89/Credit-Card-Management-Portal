@@ -1,9 +1,10 @@
-// vite.config.ts
-import { defineConfig } from "vite"
-import vue from "@vitejs/plugin-vue"
+import { defineConfig } from 'vitest/config'
+import vue from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
+import path from 'path'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), tailwindcss()],
   server: {
     proxy: {
       "/api": {
@@ -15,9 +16,14 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    globals: false,
-    setupFiles: "./tests/setup.ts",
+    globals: true,
+    setupFiles: ['./src/test/setup.ts','./tests/setup.ts'],
     include: ["tests/unit/**/*.spec.ts","src/**/*.spec.ts"],
     watch: false
-  }
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src')
+    }
+  },
 })

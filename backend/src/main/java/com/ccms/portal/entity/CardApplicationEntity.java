@@ -7,10 +7,9 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-
 @Data
 @Entity
-@Table(name="credit_card_application")
+@Table(name = "credit_card_application")
 public class CardApplicationEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,4 +31,17 @@ public class CardApplicationEntity {
 
     private Long reviewerId;
     private LocalDateTime reviewDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cardTypeId", insertable = false, updatable = false)
+    private CardTypeEntity cardType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewerId", insertable = false, updatable = false)
+    private UserEntity reviewer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "userId", insertable = false, updatable = false)
+    private UserEntity user;
+
 }

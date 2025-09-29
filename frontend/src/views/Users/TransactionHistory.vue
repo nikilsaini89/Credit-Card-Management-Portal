@@ -43,41 +43,44 @@
               </div>
               <div class="text-right">
                 <div class="text-sm font-medium text-gray-600">Statement Date</div>
-                <div class="text-lg font-bold" style="color: #0b2540;">14 Oct 2024</div>
+                <div class="text-lg font-bold" style="color: #0b2540;">{{ billSummary.statementDate }}</div>
               </div>
             </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Total Statement Amount</div>
-                <div class="text-2xl font-bold" style="color: #0b2540;">₹ 34,948.00</div>
+                <div class="text-2xl font-bold" style="color: #0b2540;">{{ formatCurrency(billSummary.totalStatementAmount) }}</div>
               </div>
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Amount Due</div>
-                <div class="text-2xl font-bold text-red-600">₹ 34,948.00</div>
-                <div class="text-xs text-gray-500 mt-1">Due on 08 Nov 2024</div>
+                <div class="text-2xl font-bold text-red-600">{{ formatCurrency(billSummary.amountDue) }}</div>
+                <div class="text-xs text-gray-500 mt-1">Due on {{ billSummary.dueDate }}</div>
+                <div v-if="billSummary.paidAmount > 0" class="text-xs text-green-600 mt-1">
+                  Paid: {{ formatCurrency(billSummary.paidAmount) }}
+                </div>
               </div>
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Available Credit</div>
-                <div class="text-2xl font-bold text-green-600">₹ 15,052.00</div>
-                <div class="text-xs text-gray-500 mt-1">Out of ₹50,000 limit</div>
+                <div class="text-2xl font-bold text-green-600">{{ formatCurrency(billSummary.availableCredit) }}</div>
+                <div class="text-xs text-gray-500 mt-1">Out of {{ formatCurrency(billSummary.creditLimit) }} limit</div>
               </div>
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="text-sm font-medium text-gray-600 mb-1">Credit Limit Usage</div>
                 <div class="flex items-center justify-between mb-2">
-                  <div class="text-2xl font-bold" style="color: #0b2540;">68%</div>
-                  <div class="text-xs text-gray-500">₹34,948 / ₹50,000</div>
+                  <div class="text-2xl font-bold" style="color: #0b2540;">{{ billSummary.usagePercentage }}%</div>
+                  <div class="text-xs text-gray-500">{{ formatCurrency(billSummary.usedAmount) }} / {{ formatCurrency(billSummary.creditLimit) }}</div>
                 </div>
                 <!-- Gauge Meter -->
                 <div class="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden">
                   <div class="absolute top-0 left-0 h-full rounded-full transition-all duration-1000" 
                        :style="{ 
-                         width: '68%', 
+                         width: billSummary.usagePercentage + '%', 
                          background: 'linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%)' 
                        }">
                   </div>
                 </div>
-                <div class="text-xs text-gray-500 mt-1">You spent 15% more than last month</div>
+                <div class="text-xs text-gray-500 mt-1">{{ billSummary.spendingComparison }}</div>
               </div>
             </div>
             
@@ -88,9 +91,14 @@
                 </svg>
                 Post bill payment updated amount due will get reflected after 1-2 hours.
               </div>
-              <button @click="handleBillPayment" class="px-6 py-2 text-sm font-medium text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200" style="background: #0b2540;">
-                PAY NOW
-              </button>
+              <div class="flex space-x-2">
+                <button @click="resetPayments" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all duration-200">
+                  Reset Payments
+                </button>
+                <button @click="handleBillPayment" class="px-6 py-2 text-sm font-medium text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200" style="background: #0b2540;">
+                  PAY NOW
+                </button>
+              </div>
             </div>
           </div>
 
@@ -176,17 +184,27 @@
               
               <!-- Chart Container -->
               <div class="h-64 flex items-center justify-center">
-                <canvas ref="categoryChart" class="w-full h-full"></canvas>
+                <div v-if="!hasCategoryData" class="text-center">
+                  <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
+                    </svg>
+                  </div>
+                  <h4 class="text-lg font-semibold text-gray-700 mb-2">No Spending Data</h4>
+                  <p class="text-sm text-gray-500">Start making transactions to see your spending breakdown by category</p>
+                </div>
+                <canvas v-else ref="categoryChart" class="w-full h-full"></canvas>
               </div>
               
               <!-- Legend -->
-              <div class="mt-4 grid grid-cols-2 gap-2">
+              <div v-if="hasCategoryData" class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 <div v-for="category in categoryBreakdown" :key="category.name" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                   <div class="flex items-center">
-                    <div :class="category.color" class="w-3 h-3 rounded-full mr-2"></div>
-                    <span class="text-sm font-medium text-gray-700">{{ category.name }}</span>
+                    <div class="w-3 h-3 rounded-full mr-2" :style="{ backgroundColor: category.hexColor }"></div>
+                    <span class="text-sm font-medium text-gray-700 truncate">{{ category.name }}</span>
                   </div>
-                  <span class="text-sm font-bold" style="color: #0b2540;">{{ category.percentage }}%</span>
+                  <span class="text-sm font-bold ml-2" style="color: #0b2540;">{{ category.percentage }}%</span>
                 </div>
               </div>
             </div>
@@ -212,11 +230,20 @@
               
               <!-- Chart Container -->
               <div class="h-64 flex items-center justify-center">
-                <canvas ref="trendsChart" class="w-full h-full"></canvas>
+                <div v-if="!hasTrendsData" class="text-center">
+                  <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                  </div>
+                  <h4 class="text-lg font-semibold text-gray-700 mb-2">No Trend Data</h4>
+                  <p class="text-sm text-gray-500">Start making transactions to see your monthly spending trends</p>
+                </div>
+                <canvas v-else ref="trendsChart" class="w-full h-full"></canvas>
               </div>
               
               <!-- Summary Stats -->
-              <div class="mt-4 grid grid-cols-2 gap-4">
+              <div v-if="hasTrendsData" class="mt-4 grid grid-cols-2 gap-4">
                 <div class="text-center p-3 bg-gray-50 rounded-lg">
                   <div class="text-sm font-medium text-gray-600">This Month</div>
                   <div :class="getAmountSize(analytics.thisMonth)" class="font-bold mt-1" style="color: #0b2540;">{{ formatCurrency(analytics.thisMonth) }}</div>
@@ -255,37 +282,16 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                   <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Payment Card</label>
-                    <div class="relative">
-                      <button
-                        @click="toggleCardDropdown"
-                        class="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white hover:bg-gray-50 text-left flex items-center justify-between"
-                      >
-                        <span class="text-gray-500">{{ getCardDisplayText() }}</span>
-                        <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': showCardDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                      </button>
-                      
-                      <!-- Custom Card Dropdown Overlay -->
-                      <div v-if="showCardDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                        <div class="p-2 space-y-1">
-                          <button
-                            @click="selectCard('')"
-                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200"
-                          >
-                            All Cards
-                          </button>
-                          <button
-                            v-for="card in cards"
-                            :key="card.id"
-                            @click="selectCard(card.id)"
-                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
-                          >
-                            <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-3"></span>
-                            <span class="text-gray-700 font-medium">{{ card.cardType }} ****{{ card.lastFour }}</span>
-                          </button>
-                        </div>
-                      </div>
+                    <CardSwitcher
+                      :cards="cards"
+                      :selected-card-id="selectedCardId"
+                      :show-all-option="true"
+                      @card-selected="selectCard"
+                    />
+                    <!-- Selected Card Info -->
+                    <div v-if="selectedCard" class="text-xs text-blue-600 font-medium mt-1">
+                      ✓ {{ selectedCard.cardType?.networkType || selectedCard.cardType || 'VISA' }} ****{{ selectedCard.lastFour || selectedCard.cardNumber?.slice(-4) || '****' }} 
+                      (₹{{ formatNumber(selectedCard.availableLimit || 0) }} available)
                     </div>
                   </div>
 
@@ -338,6 +344,27 @@
                           >
                             <span class="text-lg mr-3">🎬</span>
                             <span class="text-gray-700 font-medium">Entertainment</span>
+                          </button>
+                          <button
+                            @click="selectCategory('electronics')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="text-lg mr-3">📱</span>
+                            <span class="text-gray-700 font-medium">Electronics</span>
+                          </button>
+                          <button
+                            @click="selectCategory('healthcare')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="text-lg mr-3">🏥</span>
+                            <span class="text-gray-700 font-medium">Healthcare</span>
+                          </button>
+                          <button
+                            @click="selectCategory('education')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="text-lg mr-3">📚</span>
+                            <span class="text-gray-700 font-medium">Education</span>
                           </button>
                           <button
                             @click="selectCategory('other')"
@@ -394,6 +421,34 @@
                             <span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-3"></span>
                             <span class="text-red-700 font-medium">Failed</span>
                           </button>
+                          <button
+                            @click="selectStatus('refunded')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-3"></span>
+                            <span class="text-blue-700 font-medium">Refunded</span>
+                          </button>
+                          <button
+                            @click="selectStatus('BNPL_ACTIVE')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="inline-block w-3 h-3 rounded-full bg-purple-500 mr-3"></span>
+                            <span class="text-purple-700 font-medium">BNPL Active</span>
+                          </button>
+                          <button
+                            @click="selectStatus('BNPL_COMPLETED')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-3"></span>
+                            <span class="text-green-700 font-medium">BNPL Completed</span>
+                          </button>
+                          <button
+                            @click="selectStatus('BNPL_DEFAULTED')"
+                            class="w-full px-3 py-2 text-sm text-left hover:bg-yellow-500 hover:text-white rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-3"></span>
+                            <span class="text-red-700 font-medium">BNPL Defaulted</span>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -446,6 +501,43 @@
       </div>
     </div>
 
+    <!-- Payment Amount Input Modal -->
+    <div v-if="showPaymentInput" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Payment Amount</h3>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Amount Due: {{ formatCurrency(billSummary.amountDue) }}
+          </label>
+          <input
+            v-model.number="customPaymentAmount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            :max="billSummary.amountDue"
+            placeholder="Enter payment amount"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        
+        <div class="flex space-x-3">
+          <button
+            @click="cancelPayment"
+            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          >
+            Cancel
+          </button>
+          <button
+            @click="confirmPaymentAmount"
+            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Proceed to Pay
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Payment Flow Modal -->
     <PaymentFlow 
       :show-payment="showPayment"
@@ -458,13 +550,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useStore } from 'vuex'
 // @ts-ignore
 import { useRouter } from 'vue-router'
 import TransactionTable from '../../components/TransactionTable.vue'
 import BnplSection from '../../components/BnplSection.vue'
 import PaymentFlow from '../../components/PaymentFlow.vue'
+import CardSwitcher from '../../components/CardSwitcher.vue'
 import { Chart, registerables } from 'chart.js'
 import jsPDF from 'jspdf'
 
@@ -477,6 +570,7 @@ interface Transaction {
   transactionId?: string
   serialNo?: number
   merchant: string
+  merchantName?: string
   category: string
   cardId: number
   cardType: string
@@ -485,6 +579,49 @@ interface Transaction {
   status: string
   isBnpl: boolean
   createdAt: string
+  transactionDate?: string
+}
+
+interface Statement {
+  id: number
+  cardId: number
+  statementDate: string
+  dueDate: string
+  statementAmount: string
+  paidAmount: string
+  amountDue: string
+  status: string
+  isPaid: boolean
+  isOverdue: boolean
+}
+
+interface BnplPlan {
+  id: string
+  merchant: string
+  status: string
+  tenureMonths: number
+  totalAmount: number
+  paidAmount: number
+  remainingAmount: number
+  monthlyEmi: number
+  paidInstallments: number
+  startDate: string
+  nextDueDate: string
+  // Additional fields from API
+  transactionId?: number
+  merchantName?: string
+  progressPercentage?: number
+  totalInstallments?: number
+  remainingInstallments?: number
+}
+
+interface BnplOverview {
+  outstandingAmount: number
+  totalPaidAmount: number
+  totalAmount: number
+  progressPercentage: number
+  activePlansCount: number
+  activePlans: BnplPlan[]
 }
 
 const store = useStore()
@@ -498,6 +635,12 @@ const showPayment = ref(false)
 const paymentAmount = ref(0)
 const paymentType = ref('')
 const dueDate = ref('')
+// Statement data from API
+const currentStatement = ref<Statement | null>(null)
+const paidAmount = ref(0)
+const customPaymentAmount = ref(0) // For custom payment input
+const showPaymentInput = ref(false) // Show payment amount input
+const currentPlanId = ref('') // Store current BNPL plan ID for payment
 
 // Filters
 const filters = ref({
@@ -511,89 +654,244 @@ const filters = ref({
 })
 
 const showStatusDropdown = ref(false)
-const showCardDropdown = ref(false)
 const showCategoryDropdown = ref(false)
 
 // Computed properties
 const transactions = computed(() => store.state?.transactions?.transactions || [])
 const cards = computed(() => store.state?.cards?.cards || [])
-const bnplPlans = computed(() => store.state?.bnpl?.plans || [
-  {
-    id: '1',
-    merchant: 'Amazon',
-    status: 'ACTIVE',
-    tenureMonths: 6,
-    totalAmount: 2045000, 
-    paidAmount: 1022500,  
-    remainingAmount: 1022500,
-    monthlyEmi: 340833,  
-    paidInstallments: 3,
-    startDate: '2023-11-15',
-    nextDueDate: '2024-02-15'
-  },
-  {
-    id: '2',
-    merchant: 'Flipkart',
-    status: 'ACTIVE',
-    tenureMonths: 12,
-    totalAmount: 899000, 
-    paidAmount: 180000,   
-    remainingAmount: 719000, 
-    monthlyEmi: 75000,   
-    paidInstallments: 2,
-    startDate: '2023-11-20',
-    nextDueDate: '2024-01-20'
-  },
-  {
-    id: '3',
-    merchant: 'Myntra',
-    status: 'ACTIVE',
-    tenureMonths: 9,
-    totalAmount: 1250000,
-    paidAmount: 416667,
-    remainingAmount: 833333,
-    monthlyEmi: 138889,
-    paidInstallments: 3,
-    startDate: '2023-12-01',
-    nextDueDate: '2024-03-01'
-  },
-  {
-    id: '4',
-    merchant: 'Croma',
-    status: 'ACTIVE',
-    tenureMonths: 18,
-    totalAmount: 3500000,
-    paidAmount: 583333,
-    remainingAmount: 2916667,
-    monthlyEmi: 194444,
-    paidInstallments: 3,
-    startDate: '2023-10-15',
-    nextDueDate: '2024-01-15'
-  }
-])
-const analytics = computed(() => store.state?.analytics?.data || {
-  thisMonth: 1250000,
-  lastMonth: 980000,
-  change: 27.6,
-  categoryBreakdown: [],
-  topMerchants: []
+
+// Selected card state
+const selectedCardId = ref<number | null>(null)
+
+// Computed property for selected card
+const selectedCard = computed(() => {
+  if (!selectedCardId.value) return null
+  return cards.value.find((card: any) => card.id === selectedCardId.value) || null
 })
 
-const categoryBreakdown = computed(() => [
-  { name: 'Shopping', percentage: 45, color: 'bg-yellow-500' },
-  { name: 'Food', percentage: 30, color: 'bg-orange-500' },
-  { name: 'Travel', percentage: 25, color: 'bg-blue-900' }
-])
+// BNPL data from API
+const bnplOverview = ref<BnplOverview | null>(null)
+const bnplPlans = computed(() => {
+  if (!bnplOverview.value?.activePlans) return []
+  
+  return bnplOverview.value.activePlans.map(plan => ({
+    id: `bnpl-${plan.transactionId}`,
+    merchant: plan.merchantName || 'Unknown Merchant',
+    status: plan.status,
+    tenureMonths: plan.totalInstallments || 6,
+    totalAmount: plan.totalAmount,
+    paidAmount: plan.paidAmount,
+    remainingAmount: plan.remainingAmount,
+    monthlyEmi: plan.monthlyEmi,
+    paidInstallments: plan.paidInstallments,
+    startDate: plan.startDate,
+    nextDueDate: plan.nextDueDate,
+    // Keep additional fields for compatibility
+    transactionId: plan.transactionId,
+    merchantName: plan.merchantName,
+    progressPercentage: plan.progressPercentage,
+    totalInstallments: plan.totalInstallments,
+    remainingInstallments: plan.remainingInstallments
+  }))
+})
+const analytics = computed(() => {
+  const totalSpent = transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  const now = new Date()
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+  
+  // Calculate current month spending
+  const currentMonthTransactions = transactions.value.filter((t: Transaction) => {
+    const transactionDate = new Date(t.transactionDate || t.createdAt)
+    return transactionDate >= currentMonth
+  })
+  
+  // Calculate last month spending
+  const lastMonthTransactions = transactions.value.filter((t: Transaction) => {
+    const transactionDate = new Date(t.transactionDate || t.createdAt)
+    return transactionDate >= lastMonth && transactionDate <= lastDayOfLastMonth
+  })
+  
+  const thisMonthSpent = currentMonthTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  const lastMonthSpent = lastMonthTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  const change = lastMonthSpent > 0 ? ((thisMonthSpent - lastMonthSpent) / lastMonthSpent) * 100 : 0
+  
+  return {
+    thisMonth: thisMonthSpent,
+    lastMonth: lastMonthSpent,
+    change: Math.round(change * 10) / 10,
+    categoryBreakdown: [],
+    topMerchants: []
+  }
+})
+
+const categoryBreakdown = computed(() => {
+  // Calculate actual category breakdown from transactions
+  const categoryTotals: Record<string, number> = {}
+  const totalSpent = transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  
+  transactions.value.forEach((t: Transaction) => {
+    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount
+  })
+  
+  // Predefined beautiful color palette for better visual appeal
+  const predefinedColors = [
+    '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57',
+    '#ff9ff3', '#54a0ff', '#5f27cd', '#00d2d3', '#ff9f43',
+    '#10ac84', '#ee5a24', '#0984e3', '#6c5ce7', '#a29bfe',
+    '#fd79a8', '#fdcb6e', '#e17055', '#00b894', '#00cec9',
+    '#6c5ce7', '#a29bfe', '#fd79a8', '#fdcb6e', '#e17055'
+  ]
+
+  // Generate dynamic colors based on category name for consistency
+  const generateColor = (categoryName: string, index: number) => {
+    // First try predefined colors for better visual appeal
+    if (index < predefinedColors.length) {
+      return {
+        bg: `bg-[${predefinedColors[index]}]`,
+        hex: predefinedColors[index]
+      }
+    }
+    
+    // For additional categories, generate colors using hash
+    let hash = 0
+    for (let i = 0; i < categoryName.length; i++) {
+      hash = categoryName.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    
+    // Use hash to generate consistent colors
+    const hue = Math.abs(hash) % 360
+    const saturation = 70 + (Math.abs(hash) % 20) // 70-90% saturation
+    const lightness = 45 + (Math.abs(hash) % 20) // 45-65% lightness
+    
+    // Convert HSL to hex for better Chart.js compatibility
+    const hslToHex = (h: number, s: number, l: number) => {
+      l /= 100
+      const a = s * Math.min(l, 1 - l) / 100
+      const f = (n: number) => {
+        const k = (n + h / 30) % 12
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)
+        return Math.round(255 * color).toString(16).padStart(2, '0')
+      }
+      return `#${f(0)}${f(8)}${f(4)}`
+    }
+    
+    const hexColor = hslToHex(hue, saturation, lightness)
+    
+    return {
+      bg: `bg-[${hexColor}]`,
+      hex: hexColor
+    }
+  }
+  
+  return Object.entries(categoryTotals)
+    .map(([category, amount], index) => {
+      const colorData = generateColor(category, index)
+      return {
+        name: category.charAt(0).toUpperCase() + category.slice(1),
+        percentage: totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0,
+        color: colorData.bg,
+        hexColor: colorData.hex,
+        colorIndex: index
+      }
+    })
+    .sort((a, b) => b.percentage - a.percentage)
+    .slice(0, 10) // Show top 10 categories instead of 5
+})
+
+// Check if there's data for charts
+const hasCategoryData = computed(() => {
+  const totalSpent = transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  return totalSpent > 0
+})
+
+const hasTrendsData = computed(() => {
+  const totalSpent = transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  return totalSpent > 0
+})
 
 
-const summary = computed(() => ({
-  totalTransactions: transactions.value.length || 5,
-  totalSpent: transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 25000000,
-  bnplTransactions: transactions.value.filter((t: Transaction) => t.isBnpl).length || 2,
-  avgTransaction: transactions.value.length > 0 
-    ? transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0) / transactions.value.length 
-    : 5000000
-}))
+const summary = computed(() => {
+  const totalTransactions = transactions.value.length
+  const totalSpent = transactions.value.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  const bnplTransactions = transactions.value.filter((t: Transaction) => t.isBnpl).length
+  const avgTransaction = totalTransactions > 0 ? totalSpent / totalTransactions : 0
+  
+  return {
+    totalTransactions,
+    totalSpent,
+    bnplTransactions,
+    avgTransaction
+  }
+})
+
+// Bill summary computed property
+const billSummary = computed(() => {
+  const currentCard = cards.value[0] // Get the first card
+  
+  if (!currentCard || !currentStatement.value) {
+    // Fallback values if no card or statement data
+    return {
+      totalStatementAmount: 0,
+      amountDue: 0,
+      availableCredit: 0,
+      creditLimit: 0,
+      usedAmount: 0,
+      usagePercentage: 0,
+      statementDate: 'N/A',
+      dueDate: 'N/A',
+      spendingComparison: 'No statement data available',
+      paidAmount: 0
+    }
+  }
+  
+  const creditLimit = currentCard.creditLimit || 0
+  const statement = currentStatement.value
+  
+  // Use the actual available limit from the card data
+  const totalSpent = parseFloat(statement.statementAmount) || 0
+  const availableLimit = currentCard.availableLimit || 0
+  
+  // Calculate spending comparison with previous month
+  const now = new Date()
+  const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const lastDayOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+  
+  const previousMonthTransactions = transactions.value.filter((t: Transaction) => {
+    const transactionDate = new Date(t.transactionDate || t.createdAt)
+    return transactionDate >= previousMonth && transactionDate <= lastDayOfPreviousMonth
+  })
+  
+  const previousMonthSpent = previousMonthTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+  const spendingChange = previousMonthSpent > 0 ? Math.round(((totalSpent - previousMonthSpent) / previousMonthSpent) * 100) : 0
+  
+  // Calculate amount due (statement amount - paid amount)
+  const paidAmount = parseFloat(statement.paidAmount) || 0
+  const amountDue = Math.max(0, totalSpent - paidAmount)
+  
+  return {
+    totalStatementAmount: totalSpent,
+    amountDue: amountDue,
+    availableCredit: availableLimit,
+    creditLimit: creditLimit,
+    usedAmount: creditLimit - availableLimit,
+    usagePercentage: creditLimit > 0 ? Math.round(((creditLimit - availableLimit) / creditLimit) * 100) : 0,
+    statementDate: new Date(statement.statementDate).toLocaleDateString('en-IN', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    }),
+    dueDate: new Date(statement.dueDate).toLocaleDateString('en-IN', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    }),
+    spendingComparison: `You spent ${Math.abs(spendingChange)}% ${spendingChange >= 0 ? 'more' : 'less'} than last month`,
+    paidAmount: paidAmount,
+    monthlyTransactions: transactions.value.length
+  }
+})
 
 const filteredTransactions = computed(() => {
   let filtered = transactions.value
@@ -601,9 +899,10 @@ const filteredTransactions = computed(() => {
   if (filters.value.search) {
     const search = filters.value.search.toLowerCase()
     filtered = filtered.filter((t: Transaction) => 
-      t.merchant.toLowerCase().includes(search) ||
+      (t.merchantName || t.merchant || '').toLowerCase().includes(search) ||
       (t.transactionId && t.transactionId.toLowerCase().includes(search)) ||
-      t.amount.toString().includes(search)
+      t.amount.toString().includes(search) ||
+      t.category.toLowerCase().includes(search)
     )
   }
 
@@ -632,15 +931,8 @@ const formatNumber = (num: number) => {
 }
 
 const formatCurrency = (amount: number) => {
-  if (amount >= 10000000) { // 1 Crore
-    return `₹${(amount / 10000000).toFixed(1)}Cr`
-  } else if (amount >= 100000) { // 1 Lakh
-    return `₹${(amount / 100000).toFixed(1)}L`
-  } else if (amount >= 1000) { // 1 Thousand
-    return `₹${(amount / 1000).toFixed(1)}K`
-  } else {
-    return `₹${amount.toFixed(0)}`
-  }
+  // Always show full amount with proper formatting
+  return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 const getAmountSize = (amount: number) => {
@@ -665,13 +957,11 @@ const clearAllFilters = () => {
     dateRangeTo: ''
   }
   showStatusDropdown.value = false
-  showCardDropdown.value = false
   showCategoryDropdown.value = false
 }
 
 const toggleStatusDropdown = () => {
   showStatusDropdown.value = !showStatusDropdown.value
-  showCardDropdown.value = false
   showCategoryDropdown.value = false
 }
 
@@ -685,7 +975,19 @@ const getStatusDisplayText = () => {
   const statusMap: Record<string, string> = {
     completed: 'Completed',
     pending: 'Pending',
-    failed: 'Failed'
+    failed: 'Failed',
+    refunded: 'Refunded',
+    bnpl_active: 'BNPL Active',
+    bnpl_completed: 'BNPL Completed',
+    bnpl_defaulted: 'BNPL Defaulted',
+    // Backend enum values
+    COMPLETED: 'Completed',
+    PENDING: 'Pending',
+    FAILED: 'Failed',
+    REFUNDED: 'Refunded',
+    BNPL_ACTIVE: 'BNPL Active',
+    BNPL_COMPLETED: 'BNPL Completed',
+    BNPL_DEFAULTED: 'BNPL Defaulted'
   }
   return statusMap[filters.value.status] || 'Select status'
 }
@@ -694,21 +996,31 @@ const toggleBnpl = () => {
   filters.value.bnplOnly = !filters.value.bnplOnly
 }
 
-const toggleCardDropdown = () => {
-  showCardDropdown.value = !showCardDropdown.value
-  showCategoryDropdown.value = false
-  showStatusDropdown.value = false
-}
+// Removed toggleCardDropdown - now handled by CardSwitcher component
 
 const toggleCategoryDropdown = () => {
   showCategoryDropdown.value = !showCategoryDropdown.value
-  showCardDropdown.value = false
   showStatusDropdown.value = false
 }
 
-const selectCard = (cardId: string) => {
-  filters.value.cardId = cardId
-  showCardDropdown.value = false
+const selectCard = async (cardId: string) => {
+  if (cardId === '') {
+    // Show all cards - fetch data for first card as default
+    filters.value.cardId = ''
+    selectedCardId.value = null
+    const userCards = await store.dispatch('cards/fetchCards')
+    if (userCards && userCards.length > 0) {
+      await fetchTransactions(userCards[0].id)
+    }
+  } else {
+    // Select specific card
+    const cardIdNum = parseInt(cardId)
+    selectedCardId.value = cardIdNum
+    filters.value.cardId = cardId
+    
+    // Fetch data for selected card
+    await fetchTransactions(cardIdNum)
+  }
 }
 
 const selectCategory = (category: string) => {
@@ -716,11 +1028,7 @@ const selectCategory = (category: string) => {
   showCategoryDropdown.value = false
 }
 
-const getCardDisplayText = () => {
-  if (!filters.value.cardId) return 'Select card'
-  const selectedCard = cards.value.find((card: any) => card.id === filters.value.cardId)
-  return selectedCard ? `${selectedCard.cardType} ****${selectedCard.lastFour}` : 'Select card'
-}
+// Removed getCardDisplayText - now handled by CardSwitcher component
 
 const getCategoryDisplayText = () => {
   if (!filters.value.category) return 'Select category'
@@ -729,6 +1037,9 @@ const getCategoryDisplayText = () => {
     food: '🍔 Food & Dining',
     travel: '✈️ Travel',
     entertainment: '🎬 Entertainment',
+    electronics: '📱 Electronics',
+    healthcare: '🏥 Healthcare',
+    education: '📚 Education',
     other: '📦 Other'
   }
   return categoryMap[filters.value.category] || 'Select category'
@@ -836,7 +1147,10 @@ const exportTransactionsPDF = () => {
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(0, 0, 0)
   
-  filteredTransactions.value.forEach((transaction: Transaction, index: number) => {
+  // Safety check for filteredTransactions
+  const transactionsToExport = filteredTransactions.value || []
+  
+  transactionsToExport.forEach((transaction: Transaction, index: number) => {
     // Check if we need a new page
     if (yPosition > doc.internal.pageSize.height - 20) {
       doc.addPage()
@@ -854,13 +1168,48 @@ const exportTransactionsPDF = () => {
     const formattedAmount = `Rs. ${amount.toLocaleString('en-IN')}`
     
     
+    // Safely get merchant name
+    const merchantName = transaction.merchantName || transaction.merchant || 'Unknown Merchant'
+    const truncatedMerchant = merchantName.length > 15 ? merchantName.substring(0, 15) + '...' : merchantName
+    
+    // Safely get category
+    const category = transaction.category || 'Other'
+    const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1)
+    
+    // Safely get status
+    const status = transaction.status || 'Unknown'
+    const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1)
+    
+    // Safely get card info
+    const cardType = transaction.cardType || 'Card'
+    const lastFour = transaction.lastFour
+    
+    // Try to get card info from cards data if lastFour is not available
+    let cardDisplay = cardType
+    if (lastFour && lastFour !== '0000' && lastFour.length === 4) {
+      cardDisplay = `${cardType} ****${lastFour}`
+    } else {
+      // Try to find the card from cards data
+      const userCard = cards.value.find((card: any) => card.id === transaction.cardId)
+      if (userCard && userCard.cardNumber) {
+        const cardNumber = userCard.cardNumber.toString()
+        const lastFourDigits = cardNumber.slice(-4)
+        cardDisplay = `${cardType} ****${lastFourDigits}`
+      } else if (lastFour && lastFour !== '0000') {
+        cardDisplay = `${cardType} ****${lastFour}`
+      } else {
+        // If no valid lastFour, just show card type
+        cardDisplay = cardType
+      }
+    }
+    
     const rowData = [
-      new Date(transaction.createdAt).toLocaleDateString('en-IN'),
-      transaction.merchant.length > 15 ? transaction.merchant.substring(0, 15) + '...' : transaction.merchant,
+      new Date(transaction.createdAt || transaction.transactionDate || new Date()).toLocaleDateString('en-IN'),
+      truncatedMerchant,
       formattedAmount,
-      transaction.category.charAt(0).toUpperCase() + transaction.category.slice(1),
-      transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1),
-      `${transaction.cardType} ****${transaction.lastFour}`,
+      formattedCategory,
+      formattedStatus,
+      cardDisplay,
       transaction.isBnpl ? 'BNPL' : 'Regular'
     ]
     
@@ -901,10 +1250,10 @@ const exportTransactionsPDF = () => {
   yPosition += 10
   doc.setFontSize(10)
   doc.setTextColor(11, 37, 64)
-  doc.text(`Total Transactions: ${filteredTransactions.value.length}`, margin, yPosition)
+  doc.text(`Total Transactions: ${transactionsToExport.length}`, margin, yPosition)
   
   // Add total amount
-  const totalAmount = filteredTransactions.value.reduce((sum: number, transaction: Transaction) => sum + Number(transaction.amount), 0)
+  const totalAmount = transactionsToExport.reduce((sum: number, transaction: Transaction) => sum + Number(transaction.amount || 0), 0)
   doc.text(`Total Amount: Rs. ${totalAmount.toLocaleString('en-IN')}`, margin, yPosition + 10)
   
   // Add footer
@@ -921,30 +1270,256 @@ const handleEmiPayment = (planId: string, amount: number) => {
   paymentType.value = 'BNPL EMI Payment'
   dueDate.value = new Date().toISOString()
   showPayment.value = true
+  
+  // Store the plan ID for later use in payment success
+  currentPlanId.value = planId
 }
 
 const handleBillPayment = () => {
-  paymentAmount.value = 34948
+  if (billSummary.value.amountDue <= 0) {
+    alert('No amount due to pay!')
+    return
+  }
+  
+  // Show payment amount input first
+  showPaymentInput.value = true
+  customPaymentAmount.value = billSummary.value.amountDue // Default to full amount
+}
+
+const confirmPaymentAmount = () => {
+  if (customPaymentAmount.value <= 0) {
+    alert('Please enter a valid payment amount!')
+    return
+  }
+  
+  if (customPaymentAmount.value > billSummary.value.amountDue) {
+    alert('Payment amount cannot exceed amount due!')
+    return
+  }
+  
+  // Proceed with payment
+  paymentAmount.value = customPaymentAmount.value
   paymentType.value = 'Credit Card Bill Payment'
-  dueDate.value = '2024-11-08'
+  dueDate.value = billSummary.value.dueDate
+  showPaymentInput.value = false
   showPayment.value = true
+}
+
+const cancelPayment = () => {
+  showPaymentInput.value = false
+  customPaymentAmount.value = 0
+}
+
+// Function to reset payments (for testing)
+const resetPayments = () => {
+  paidAmount.value = 0
+  currentStatement.value = null
+  alert('Payments reset successfully! Please refresh the page to reload statement data.')
 }
 
 const closePayment = () => {
   showPayment.value = false
 }
 
-const onPaymentSuccess = (transactionId: string, amount: number) => {
+const onPaymentSuccess = async (transactionId: string, amount: number) => {
   console.log('Payment successful:', transactionId, amount)
+  
+  // Check if this is a BNPL payment or regular statement payment
+  const isBnplPayment = paymentType.value === 'BNPL EMI Payment'
+  
+  if (isBnplPayment && bnplOverview.value?.activePlans && bnplOverview.value.activePlans.length > 0) {
+    // Handle BNPL payment - find the plan that matches the current plan ID
+    const selectedPlan = bnplOverview.value.activePlans.find(plan => 
+      plan.transactionId === parseInt(currentPlanId.value)
+    ) || bnplOverview.value.activePlans[0] // Fallback to first plan
+    
+    const success = await makeBnplPayment(selectedPlan.transactionId || 0, amount)
+    if (success) {
+      // Refresh all data for the currently selected card
+      if (selectedCardId.value) {
+        await Promise.all([
+          fetchBnplOverview(selectedCardId.value),
+          fetchCurrentStatement(selectedCardId.value),
+          store.dispatch('transactions/fetchTransactions', { cardId: selectedCardId.value })
+        ])
+      }
+      alert(`BNPL payment of ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} successful!`)
+    } else {
+      alert('BNPL payment failed. Please try again.')
+      return
+    }
+  } else {
+    // Handle regular statement payment
+    if (currentStatement.value) {
+      const success = await makePayment(currentStatement.value.id, amount)
+      if (success) {
+        // Refresh statement data for the currently selected card
+        if (selectedCardId.value) {
+          await fetchCurrentStatement(selectedCardId.value)
+        }
+        alert(`Payment of ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} successful!`)
+      } else {
+        alert('Payment failed. Please try again.')
+        return
+      }
+    }
+  }
+  
+  // Refresh the current view after payment
+  await refreshCurrentView()
+  
   setTimeout(() => {
     showPayment.value = false
   }, 2000) 
 }
 
-const fetchTransactions = async () => {
+// Method to refresh the current view
+const refreshCurrentView = async () => {
+  if (selectedCardId.value) {
+    await fetchTransactions(selectedCardId.value)
+  } else {
+    const userCards = await store.dispatch('cards/fetchCards')
+    if (userCards && userCards.length > 0) {
+      await fetchTransactions(userCards[0].id)
+    }
+  }
+}
+
+// API functions for statement management
+const fetchCurrentStatement = async (cardId: number) => {
+  try {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`http://localhost:8080/api/statements/card/${cardId}/current`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (response.ok) {
+      const statement = await response.json()
+      currentStatement.value = statement
+      paidAmount.value = parseFloat(statement.paidAmount) || 0
+    } else {
+      console.error('Failed to fetch statement:', response.statusText)
+    }
+  } catch (error) {
+    console.error('Error fetching statement:', error)
+  }
+}
+
+const makePayment = async (statementId: number, paymentAmount: number) => {
+  try {
+    const token = localStorage.getItem('token')
+    const response = await fetch('http://localhost:8080/api/statements/payment', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        statementId: statementId,
+        paymentAmount: paymentAmount,
+        paymentMethod: 'CARD',
+        notes: 'Online payment'
+      })
+    })
+    
+    if (response.ok) {
+      const updatedStatement = await response.json()
+      currentStatement.value = updatedStatement
+      paidAmount.value = parseFloat(updatedStatement.paidAmount) || 0
+      return true
+    } else {
+      console.error('Payment failed:', response.statusText)
+      return false
+    }
+  } catch (error) {
+    console.error('Error making payment:', error)
+    return false
+  }
+}
+
+// BNPL API functions
+const fetchBnplOverview = async (cardId: number) => {
+  try {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`http://localhost:8080/api/bnpl/overview/card/${cardId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (response.ok) {
+      bnplOverview.value = await response.json()
+    } else {
+      console.error('Failed to fetch BNPL overview:', response.statusText)
+    }
+  } catch (error) {
+    console.error('Error fetching BNPL overview:', error)
+  }
+}
+
+const makeBnplPayment = async (transactionId: number, paymentAmount: number) => {
+  try {
+    console.log('Making BNPL payment:', { transactionId, paymentAmount })
+    const token = localStorage.getItem('token')
+    const response = await fetch('http://localhost:8080/api/bnpl/payment', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        transactionId: transactionId,
+        paymentAmount: paymentAmount,
+        paymentMethod: 'CARD',
+        notes: 'BNPL installment payment'
+      })
+    })
+    
+    if (response.ok) {
+      console.log('BNPL payment successful')
+      return true
+    } else {
+      const errorText = await response.text()
+      console.error('BNPL payment failed:', response.status, errorText)
+      return false
+    }
+  } catch (error) {
+    console.error('Error making BNPL payment:', error)
+    return false
+  }
+}
+
+const fetchTransactions = async (cardId?: number) => {
   loading.value = true
   try {
-    await store.dispatch('transactions/fetchTransactions', 1) 
+    // First get user's cards
+    const userCards = await store.dispatch('cards/fetchCards')
+    
+    if (userCards && userCards.length > 0) {
+      if (cardId) {
+        // Fetch data for specific card
+        await store.dispatch('transactions/fetchTransactions', { cardId })
+        await fetchCurrentStatement(cardId)
+        await fetchBnplOverview(cardId)
+      } else if (selectedCardId.value) {
+        // Fetch data for selected card
+        await store.dispatch('transactions/fetchTransactions', { cardId: selectedCardId.value })
+        await fetchCurrentStatement(selectedCardId.value)
+        await fetchBnplOverview(selectedCardId.value)
+      } else {
+        // Show all cards - fetch data for first card as default
+        selectedCardId.value = userCards[0].id
+        await store.dispatch('transactions/fetchTransactions', { cardId: userCards[0].id })
+        await fetchCurrentStatement(userCards[0].id)
+        await fetchBnplOverview(userCards[0].id)
+      }
+    } else {
+      console.warn('No cards found for user')
+    }
   } catch (error) {
     console.error('Error fetching transactions:', error)
   } finally {
@@ -954,7 +1529,7 @@ const fetchTransactions = async () => {
 
 // Chart initialization methods
 const initCategoryChart = () => {
-  if (!categoryChart.value) return
+  if (!categoryChart.value || !hasCategoryData.value) return
   
   const ctx = categoryChart.value.getContext('2d')
   if (!ctx) return
@@ -965,13 +1540,7 @@ const initCategoryChart = () => {
       labels: categoryBreakdown.value.map(cat => cat.name),
       datasets: [{
         data: categoryBreakdown.value.map(cat => cat.percentage),
-        backgroundColor: [
-          '#ffd60a',
-          '#f97316', 
-          '#0b2540', 
-          '#111827', 
-          '#6b7280' 
-        ],
+        backgroundColor: categoryBreakdown.value.map(cat => cat.hexColor),
         borderWidth: 0
       }]
     },
@@ -989,7 +1558,7 @@ const initCategoryChart = () => {
 }
 
 const initTrendsChart = () => {
-  if (!trendsChart.value) return
+  if (!trendsChart.value || !hasTrendsData.value) return
   
   const ctx = trendsChart.value.getContext('2d')
   if (!ctx) return
@@ -998,13 +1567,29 @@ const initTrendsChart = () => {
   const currentMonth = new Date().getMonth()
   const last6Months = months.slice(currentMonth - 5, currentMonth + 1)
   
+  // Calculate actual spending for each month
+  const monthlyData = last6Months.map((month, index) => {
+    const monthIndex = currentMonth - 5 + index
+    const year = new Date().getFullYear()
+    const monthStart = new Date(year, monthIndex, 1)
+    const monthEnd = new Date(year, monthIndex + 1, 0)
+    
+    const monthTransactions = transactions.value.filter((t: Transaction) => {
+      const transactionDate = new Date(t.transactionDate || t.createdAt)
+      return transactionDate >= monthStart && transactionDate <= monthEnd
+    })
+    
+    const monthSpent = monthTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+    return Math.round(monthSpent / 1000) // Convert to thousands
+  })
+  
   new Chart(ctx, {
     type: 'line',
     data: {
       labels: last6Months,
       datasets: [{
         label: 'Spending',
-        data: [45000, 52000, 48000, 61000, 55000, analytics.value.thisMonth / 1000],
+        data: monthlyData,
         borderColor: '#ffd60a',
         backgroundColor: 'rgba(255, 214, 10, 0.1)',
         borderWidth: 3,
@@ -1048,15 +1633,24 @@ const initTrendsChart = () => {
 
 onMounted(async () => {
   await fetchTransactions()
-  store.dispatch('cards/fetchCards', 1)
-  store.dispatch('merchants/fetchMerchants')
-  store.dispatch('bnpl/fetchActivePlans')
-  store.dispatch('analytics/fetchAnalytics')
+  // Note: These endpoints may not exist in the backend yet
+  // store.dispatch('cards/fetchCards', 1)
+  // store.dispatch('merchants/fetchMerchants')
+  // store.dispatch('bnpl/fetchActivePlans')
+  // store.dispatch('analytics/fetchAnalytics')
   
   // Initialize charts after DOM is ready
   await nextTick()
   initCategoryChart()
   initTrendsChart()
 })
+
+// Watch for transaction changes to update charts
+watch([transactions, analytics], () => {
+  nextTick(() => {
+    initTrendsChart()
+    initCategoryChart()
+  })
+}, { deep: true })
 </script>
 

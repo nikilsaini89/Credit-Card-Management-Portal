@@ -108,6 +108,7 @@
 </template>
 
 <script>
+console.log("Dashboard check ");
 import Card from "../../components/Card.vue";
 import { getDashboard } from "../../services/dashboardService";
 import { getCards } from "../../services/cards-service";
