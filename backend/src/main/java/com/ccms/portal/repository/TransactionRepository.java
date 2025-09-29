@@ -104,4 +104,34 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         @Query("SELECT t FROM Transaction t WHERE t.card.id = :cardId " +
                         "ORDER BY t.transactionDate DESC, t.createdAt DESC")
         List<Transaction> findTopNByCardIdOrderByTransactionDateDesc(@Param("cardId") Long cardId, Pageable pageable);
+
+        /**
+         * Find normal transactions by card ID, status, and date range
+         */
+        @Query("SELECT t FROM Transaction t WHERE t.card.id = :cardId " +
+                        "AND t.isBnpl = false " +
+                        "AND t.status = :status " +
+                        "AND t.transactionDate BETWEEN :startDate AND :endDate " +
+                        "ORDER BY t.transactionDate DESC")
+        List<Transaction> findByCardIdAndIsBnplFalseAndStatusAndTransactionDateBetween(
+                        @Param("cardId") Long cardId,
+                        @Param("status") TransactionStatus status,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        /**
+         * Find BNPL transactions by card ID and status list
+         */
+        @Query("SELECT t FROM Transaction t WHERE t.card.id = :cardId " +
+                        "AND t.isBnpl = true " +
+                        "AND t.status IN :statuses " +
+                        "ORDER BY t.transactionDate DESC")
+        List<Transaction> findByCardIdAndIsBnplTrueAndStatusIn(
+                        @Param("cardId") Long cardId,
+                        @Param("statuses") List<TransactionStatus> statuses);
+
+        /**
+         * Count normal transactions by card ID and status
+         */
+        Long countByCardIdAndIsBnplFalseAndStatus(Long cardId, TransactionStatus status);
 }

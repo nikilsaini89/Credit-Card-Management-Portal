@@ -102,24 +102,30 @@ public class TransactionService {
                 }
 
                 Transaction savedTransaction = transactionRepository.save(transaction);
-                log.info("Transaction created successfully with ID: {}", savedTransaction.getId());
+                log.info("Transaction created successfully with ID: {} - Amount: {}, BNPL: {}, Status: {}",
+                                savedTransaction.getId(), savedTransaction.getAmount(), savedTransaction.getIsBnpl(),
+                                savedTransaction.getStatus());
 
-                // Update available credit limit only for non-BNPL transactions
-                if (!request.getIsBnpl()) {
-                        BigDecimal newAvailableLimit = availableLimit.subtract(request.getAmount());
-                        card.setAvailableLimit(newAvailableLimit.doubleValue());
-                        creditCardRepository.save(card);
-                        log.info("Updated available limit for card {} to: {}", card.getId(), newAvailableLimit);
-                } else {
-                        log.info("BNPL transaction created - credit limit not deducted until payment is made");
-                }
-
-                // Trigger statement recalculation for current month
+                // Trigger statement recalculation for current month FIRST
                 try {
                         creditCardStatementService.createCurrentStatement(card.getId());
                         log.info("Statement recalculated for card {}", card.getId());
                 } catch (Exception e) {
                         log.warn("Failed to recalculate statement for card {}: {}", card.getId(), e.getMessage());
+                }
+
+                // THEN recalculate available limit after statement is updated
+                // This ensures normal transactions are included in the statement before
+                // calculating available limit
+                log.info("Recalculating available limit for card {} after statement update", request.getCardId());
+                creditLimitService.recalculateAvailableLimit(request.getCardId());
+
+                if (request.getIsBnpl()) {
+                        log.info("BNPL transaction blocks {} from available limit for card {}", request.getAmount(),
+                                        card.getId());
+                } else {
+                        log.info("Normal transaction blocks {} from available limit for card {}", request.getAmount(),
+                                        card.getId());
                 }
 
                 return mapToTransactionResponse(savedTransaction);
