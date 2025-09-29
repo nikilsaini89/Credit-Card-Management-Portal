@@ -44,6 +44,7 @@ public class TransactionService {
         private final CreditCardRepository creditCardRepository;
         private final CreditCardStatementService creditCardStatementService;
         private final UserProfileRepository userProfileRepository;
+        private final CreditLimitService creditLimitService;
 
         /**
          * Create a new transaction

@@ -91,8 +91,8 @@
   </div>
 </template>
 
-<script lang="ts" setup>
-import { ref, computed, onMounted } from "vue"
+<script lang="ts">
+import { defineComponent } from "vue"
 import { useStore } from 'vuex'
 import type { CardApplication } from '../types/cardApplication'
 import { 
@@ -102,91 +102,149 @@ import {
   APPLICATION_MESSAGES 
 } from '../constants/constants'
 
-const store = useStore()
+export default defineComponent({
+  name: "AdminReviewCenter",
+  data() {
+    return {
+      /*
+       * Boolean flag to indicate if an action (approve/reject) is currently being processed
+       * Used to disable buttons during async operations
+       */
+      processing: false,
 
-// Reactive data
-const processing = ref(false)
+      /*
+       * Expose constants to the template so we can access them via `this`
+       * This is necessary in Options API; without this, template cannot access imported constants
+       */
+      APPLICATION_STATUS,
+      APPLICATION_STATUS_LABELS,
+      APPLICATION_ACTIONS,
+      APPLICATION_MESSAGES
+    }
+  },
+  computed: {
+    /*
+     * Access the Vuex store instance to read getters and dispatch actions
+     */
+    store() {
+      return useStore()
+    },
+    /*
+     * Get all card applications from the Vuex getter
+     * Fallback to empty array if getter returns undefined
+     */
+    applications(): CardApplication[] {
+      const apps = this.$store.getters['applications/applications'] || []
+      return [...apps].sort((a, b) => {
+        if (a.status === this.APPLICATION_STATUS.PENDING && b.status !== this.APPLICATION_STATUS.PENDING) return -1
+        if (b.status === this.APPLICATION_STATUS.PENDING && a.status !== this.APPLICATION_STATUS.PENDING) return 1
+        return 0
+      })
+    },
+    /*
+     * Get loading state from Vuex getter
+     * True while applications are being fetched
+     */
+    loading(): boolean {
+      return this.store.getters['applications/loading']
+    },
+    /*
+     * Get current logged-in user from Vuex store
+     */
+    user() {
+      return this.store.getters['auth/user']
+    },
+    /*
+     * Compute the current admin name for display in reviewer messages
+     */
+    currentAdminName(): string {
+      if (this.user && this.user.name) return this.user.name
+      if (this.user && this.user.email) return this.user.email.split('@')[0]
+      return 'Admin'
+    }
+  },
+  methods: {
+    /*
+     * Approve a card application
+     */
+    async handleApprove(applicationId: number) {
+      try {
+        this.processing = true
+        await this.store.dispatch('applications/updateApplicationStatus', {
+          applicationId,
+          status: this.APPLICATION_ACTIONS.APPROVE
+        })
+      } catch (error) {
+        console.error('Error approving application:', error)
+      } finally {
+        this.processing = false
+      }
+    },
+    /*
+     * Reject a card application
+     * Steps similar to handleApprove but updates status to REJECT
+     */
+    async handleReject(applicationId: number) {
+      try {
+        this.processing = true
+        await this.store.dispatch('applications/updateApplicationStatus', {
+          applicationId,
+          status: this.APPLICATION_ACTIONS.REJECT
+        })
+      } catch (error) {
+        console.error('Error rejecting application:', error)
+      } finally {
+        this.processing = false
+      }
+    },
+    /*
+     * Format a date string to 'dd-mm-yyyy' format for display
+     * Uses Intl API with 'en-IN' locale
+     */
+    formatDate(dateString: string): string {
+      const date = new Date(dateString)
+      return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    },
+    /*
+     * Construct reviewer message for processed applications
+     * Includes:
+     *   - Action text (Approved/Rejected)
+     *   - Reviewer name
+     *   - Review date formatted
+     */
+    getReviewerMessage(application: CardApplication): string {
+      const isApproved = application.status === this.APPLICATION_STATUS.ACCEPTED
+      const actionText = isApproved ? this.APPLICATION_MESSAGES.APPROVED_BY : this.APPLICATION_MESSAGES.REJECTED_BY
+      const reviewerName = application.reviewerName || this.currentAdminName
+      return `${actionText} ${reviewerName} ${this.APPLICATION_MESSAGES.ON} ${this.formatDate(application.reviewDate!)}`
+    },
 
-// Computed properties
-const applications = computed(() => store.getters['applications/applications'] || [])
-const loading = computed(() => store.getters['applications/loading'])
-const user = computed(() => store.getters['auth/user'])
-
-// Get current admin name
-const currentAdminName = computed(() => {
-  if (user.value && user.value.name) {
-    return user.value.name
-  }
-  // Fallback to email or generic admin name
-  if (user.value && user.value.email) {
-    return user.value.email.split('@')[0] // Extract name from email
-  }
-  return 'Admin'
-})
-
-// Methods
-const handleApprove = async (applicationId: number) => {
-  try {
-    processing.value = true
-    await store.dispatch('applications/updateApplicationStatus', {
-      applicationId,
-      status: APPLICATION_ACTIONS.APPROVE
-    })
-  } catch (error) {
-    console.error('Error approving application:', error)
-  } finally {
-    processing.value = false
-  }
-}
-
-const handleReject = async (applicationId: number) => {
-  try {
-    processing.value = true
-    await store.dispatch('applications/updateApplicationStatus', {
-      applicationId,
-      status: APPLICATION_ACTIONS.REJECT
-    })
-  } catch (error) {
-    console.error('Error rejecting application:', error)
-  } finally {
-    processing.value = false
-  }
-}
-
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  })
-}
-
-const getStatusBadgeClass = (status: string) => {
-  switch (status) {
-    case APPLICATION_STATUS.PENDING:
-      return 'status-pending'
-    case APPLICATION_STATUS.ACCEPTED:
-      return 'status-approved'
-    case APPLICATION_STATUS.REJECTED:
-      return 'status-rejected'
-    default:
-      return 'status-pending'
-  }
-}
-
-const getReviewerMessage = (application: CardApplication) => {
-  const isApproved = application.status === APPLICATION_STATUS.ACCEPTED
-  const actionText = isApproved ? APPLICATION_MESSAGES.APPROVED_BY : APPLICATION_MESSAGES.REJECTED_BY
-  const reviewerName = application.reviewerName || currentAdminName.value
-  return `${actionText} ${reviewerName} ${APPLICATION_MESSAGES.ON} ${formatDate(application.reviewDate!)}`
-}
-
-// Load applications on component mount if not already loaded
-onMounted(() => {
-  if (applications.value.length === 0) {
-    store.dispatch('applications/fetchApplications')
-  }
+    getStatusBadgeClass(status: string): string {
+      switch (status) {
+        case this.APPLICATION_STATUS.PENDING:
+          return 'bg-gray-800 text-white'
+        case this.APPLICATION_STATUS.ACCEPTED:
+          return 'bg-green-100 text-green-800'
+        case this.APPLICATION_STATUS.REJECTED:
+          return 'bg-red-100 text-red-800'
+        default:
+          return 'bg-gray-800 text-white'
+      }
+    }
+  },
+  /*
+   * Lifecycle hook: called after component is mounted
+   * Fetches applications from Vuex store if not already loaded
+   */
+  mounted() {
+    if (this.applications.length === 0) {
+      this.store.dispatch('applications/fetchApplications')
+    }
+  },
 })
 </script>
 

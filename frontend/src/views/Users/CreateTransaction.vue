@@ -710,6 +710,7 @@ const submitTransaction = async () => {
       amount: parseFloat(form.value.amount),
       category: form.value.category,
       isBnpl: form.value.isBnpl,
+      tenureMonths: form.value.isBnpl ? parseInt(form.value.tenureMonths) : null,
       transactionDate: new Date().toISOString().split('T')[0]
     }
     
