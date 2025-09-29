@@ -123,7 +123,7 @@ async function tryGetFromCandidates<T = any>(candidates: string[]): Promise<T> {
 
 /** Fetch dashboard aggregated data (summary, cards, recent transactions). */
 export const getDashboard = async (): Promise<DashboardResponse> => {
-  const candidatePaths = ["/dashboard", "/api/dashboard", "/data/dashboard.json", "/api/v1/dashboard"];
+  const candidatePaths = ["/api/dashboard"];
 
   try {
     const raw = await tryGetFromCandidates<any>(candidatePaths);
