@@ -4,6 +4,7 @@ import com.ccms.portal.dto.request.BnplPaymentRequest;
 import com.ccms.portal.dto.response.BnplOverviewResponse;
 import com.ccms.portal.entity.BnplPayment;
 import com.ccms.portal.entity.Transaction;
+import com.ccms.portal.entity.CreditCardEntity;
 import com.ccms.portal.exception.ResourceNotFoundException;
 import com.ccms.portal.exception.UnauthorizedException;
 import com.ccms.portal.repository.BnplPaymentRepository;
@@ -29,7 +30,6 @@ public class BnplService {
   private final BnplPaymentRepository bnplPaymentRepository;
   private final TransactionRepository transactionRepository;
   private final CreditCardRepository creditCardRepository;
-  private final CreditLimitService creditLimitService;
 
   public BnplOverviewResponse getBnplOverview(Long cardId) {
     // Verify user owns the card
@@ -159,16 +159,26 @@ public class BnplService {
       transactionRepository.save(transaction);
     }
 
-    // Recalculate available limit after BNPL payment
+    // Increment available limit by EMI amount paid
     // BNPL payments only affect BNPL outstanding, not statement amount due
     try {
-      log.info("Recalculating available limit for card {} after BNPL EMI payment of {}",
+      log.info("Incrementing available limit for card {} by EMI payment amount of {}",
           transaction.getCard().getId(), request.getPaymentAmount());
-      creditLimitService.recalculateAvailableLimit(transaction.getCard().getId());
-      log.info("Updated available limit for card {} after BNPL EMI payment of {}",
-          transaction.getCard().getId(), request.getPaymentAmount());
+
+      // Get current card
+      CreditCardEntity card = transaction.getCard();
+      BigDecimal currentAvailableLimit = BigDecimal.valueOf(card.getAvailableLimit());
+      BigDecimal newAvailableLimit = currentAvailableLimit.add(request.getPaymentAmount());
+
+      // Update available limit
+      card.setAvailableLimit(newAvailableLimit.doubleValue());
+      creditCardRepository.save(card);
+
+      log.info("BNPL EMI Payment Result - Card {}: Old Available: {}, EMI Paid: {}, New Available: {}",
+          transaction.getCard().getId(), currentAvailableLimit, request.getPaymentAmount(), newAvailableLimit);
+
     } catch (Exception e) {
-      log.warn("Failed to recalculate available limit for BNPL payment: {}", e.getMessage());
+      log.warn("Failed to update available limit for BNPL payment: {}", e.getMessage());
     }
 
     log.info("BNPL payment of {} made for transaction {}", request.getPaymentAmount(), transaction.getId());

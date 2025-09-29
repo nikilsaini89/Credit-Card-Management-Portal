@@ -30,12 +30,28 @@ public class CreditLimitService {
    * Calculate current available credit limit
    */
   public BigDecimal calculateCurrentAvailableLimit(Long cardId) {
+    return calculateCurrentAvailableLimit(cardId, false);
+  }
+
+  /**
+   * Calculate current available credit limit
+   * 
+   * @param cardId        The card ID
+   * @param isBnplPayment Whether this is a BNPL payment (affects calculation
+   *                      logic)
+   */
+  public BigDecimal calculateCurrentAvailableLimit(Long cardId, boolean isBnplPayment) {
     CreditCardEntity card = creditCardRepository.findById(cardId).orElse(null);
     if (card == null) {
       log.warn("Card not found for ID: {}", cardId);
       return BigDecimal.ZERO;
     }
 
+    if (isBnplPayment) {
+      log.info("BNPL PAYMENT DEBUG - Card {}: Credit Limit: {}, BNPL Outstanding: {}", cardId, card.getCreditLimit(),
+          getBnplOutstanding(cardId));
+      return BigDecimal.valueOf(card.getCreditLimit()).subtract(getBnplOutstanding(cardId));
+    }
     // 1. Get statement amount due (includes all normal transactions)
     BigDecimal statementAmountDue = getStatementAmountDue(cardId);
 
@@ -53,20 +69,23 @@ public class CreditLimitService {
 
     // Additional debugging for the calculation
     log.info(
-        "CALCULATION DEBUG - Card {}: Credit Limit: {}, Statement Due: {}, BNPL Outstanding: {}, Total Outstanding: {}, Available: {}",
-        cardId, card.getCreditLimit(), statementAmountDue, bnplOutstanding, totalOutstanding, availableLimit);
+        "CALCULATION DEBUG - Card {}: Credit Limit: {}, Statement Due: {}, BNPL Outstanding: {}, Total Outstanding: {}, Available: {} (BNPL Payment: {})",
+        cardId, card.getCreditLimit(), statementAmountDue, bnplOutstanding, totalOutstanding, availableLimit,
+        isBnplPayment);
 
     // Validation: Check if calculation makes sense
     BigDecimal expectedAvailable = BigDecimal.valueOf(card.getCreditLimit()).subtract(statementAmountDue)
         .subtract(bnplOutstanding);
     if (!availableLimit.equals(expectedAvailable)) {
-      log.error("CALCULATION ERROR - Card {}: Expected: {}, Actual: {}, Statement Due: {}, BNPL Outstanding: {}",
-          cardId, expectedAvailable, availableLimit, statementAmountDue, bnplOutstanding);
+      log.error(
+          "CALCULATION ERROR - Card {}: Expected: {}, Actual: {}, Statement Due: {}, BNPL Outstanding: {} (BNPL Payment: {})",
+          cardId, expectedAvailable, availableLimit, statementAmountDue, bnplOutstanding, isBnplPayment);
     }
 
     log.info(
-        "Available limit calculation for card {}: Credit Limit: {}, Statement Amount Due: {}, BNPL Outstanding: {}, Total Outstanding: {}, Available: {}",
-        cardId, card.getCreditLimit(), statementAmountDue, bnplOutstanding, totalOutstanding, availableLimit);
+        "Available limit calculation for card {}: Credit Limit: {}, Statement Amount Due: {}, BNPL Outstanding: {}, Total Outstanding: {}, Available: {} (BNPL Payment: {})",
+        cardId, card.getCreditLimit(), statementAmountDue, bnplOutstanding, totalOutstanding, availableLimit,
+        isBnplPayment);
 
     return availableLimit.max(BigDecimal.ZERO); // Can't go below 0
   }
@@ -94,27 +113,56 @@ public class CreditLimitService {
    * Recalculate and update available limit for a card
    */
   public void recalculateAvailableLimit(Long cardId) {
+    recalculateAvailableLimit(cardId, false);
+  }
+
+  /**
+   * Recalculate and update available limit for a card
+   * 
+   * @param cardId        The card ID
+   * @param isBnplPayment Whether this is a BNPL payment (affects calculation
+   *                      logic)
+   */
+  public void recalculateAvailableLimit(Long cardId, boolean isBnplPayment) {
     try {
-      log.info("Starting available limit recalculation for card {}", cardId);
-      BigDecimal newAvailableLimit = calculateCurrentAvailableLimit(cardId);
+      log.info("Starting available limit recalculation for card {} (BNPL Payment: {})", cardId, isBnplPayment);
+
       CreditCardEntity card = creditCardRepository.findById(cardId).orElse(null);
 
-      if (card != null) {
-        BigDecimal oldAvailableLimit = BigDecimal.valueOf(card.getAvailableLimit());
-        BigDecimal change = newAvailableLimit.subtract(oldAvailableLimit);
-        card.setAvailableLimit(newAvailableLimit.doubleValue());
-        creditCardRepository.save(card);
-        log.info("Recalculated available limit for card {}: Old: {}, New: {}, Change: {}",
-            cardId, oldAvailableLimit, newAvailableLimit, change);
+      // Note: BNPL payments are now handled directly in BnplService
+      // This method is only used for normal transactions and statement payments
 
-        // Additional debugging for BNPL payment issue
-        if (change.compareTo(BigDecimal.ZERO) > 0) {
-          log.info("AVAILABLE LIMIT INCREASE DEBUG - Card {}: Available limit increased by {} from {} to {}",
-              cardId, change, oldAvailableLimit, newAvailableLimit);
-        }
-      } else {
+      if (card == null) {
         log.warn("Card not found for recalculation: {}", cardId);
+        return;
       }
+
+      // Get OLD available limit BEFORE calculating new one
+      BigDecimal oldAvailableLimit = BigDecimal.valueOf(card.getAvailableLimit());
+
+      // Calculate NEW available limit
+      BigDecimal newAvailableLimit = calculateCurrentAvailableLimit(cardId, isBnplPayment);
+
+      // Calculate the change
+      BigDecimal change = newAvailableLimit.subtract(oldAvailableLimit);
+      // Update the card with new available limit
+      card.setAvailableLimit(newAvailableLimit.doubleValue());
+      creditCardRepository.save(card);
+
+      log.info("Recalculated available limit for card {}: Old: {}, New: {}, Change: {} (BNPL Payment: {})",
+          cardId, oldAvailableLimit, newAvailableLimit, change, isBnplPayment);
+
+      // Additional debugging for BNPL payment issue
+      if (change.compareTo(BigDecimal.ZERO) > 0) {
+        log.info(
+            "AVAILABLE LIMIT INCREASE DEBUG - Card {}: Available limit increased by {} from {} to {} (BNPL Payment: {})",
+            cardId, change, oldAvailableLimit, newAvailableLimit, isBnplPayment);
+      } else if (change.compareTo(BigDecimal.ZERO) < 0) {
+        log.info(
+            "AVAILABLE LIMIT DECREASE DEBUG - Card {}: Available limit decreased by {} from {} to {} (BNPL Payment: {})",
+            cardId, change.abs(), oldAvailableLimit, newAvailableLimit, isBnplPayment);
+      }
+
     } catch (Exception e) {
       log.error("Failed to recalculate available limit for card {}: {}", cardId, e.getMessage(), e);
     }
