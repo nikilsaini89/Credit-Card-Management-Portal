@@ -19,7 +19,7 @@ const mockStore = createStore({
     auth: {
       namespaced: true,
       getters: {
-        user: () => ({ name: 'Admin User', email: 'admin@test.com' })
+        user: () => ({ name: 'nikil', email: 'nikil@admin.com' })
       }
     }
   }
@@ -47,7 +47,7 @@ describe('AdminDashboard Component', () => {
         plugins: [mockStore]
       }
     })
-   expect(wrapper.text()).toContain("Welcome back, Admin!")
+   expect(wrapper.text()).toContain("Welcome back")
   })
 
   // Check if loading state is shown initially
@@ -77,6 +77,6 @@ describe('AdminDashboard Component', () => {
         plugins: [mockStore]
       }
     })
-    expect(wrapper.text()).toContain("Welcome back, Admin!")
+    expect(wrapper.text()).toContain("Welcome back, nikil!")
   })
 }) 
