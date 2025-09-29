@@ -2,7 +2,7 @@
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 font-['Inter',system-ui,-apple-system,sans-serif]">
     <!-- Header Section -->
     <div class="mb-8 sm:mb-12">
-      <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">Admin Dashboard</h1>
+      <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">Admin Dashboard </h1>
       <p class="text-base sm:text-lg text-gray-600">Welcome back, Admin! Manage credit card applications and user accounts.</p>
     </div>
 
