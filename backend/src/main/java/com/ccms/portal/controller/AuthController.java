@@ -48,19 +48,38 @@ public class AuthController {
         log.debug("Login successful, refresh token cookie set for user ID: {}", authResponse.getUser().getId());
         return authResponse;
     }
-
     @PostMapping("/logout")
-    public String logout(HttpServletRequest request) {
+    public String logout(HttpServletRequest request,
+                         HttpServletResponse response,
+                         @CookieValue(value = "refreshToken", required = false) String refreshToken) {
+
+        // Blacklist access token if present
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             tokenBlacklist.blacklist(token);
-            log.info("Access token blacklisted: {}", token);
-            return "Successfully logged out.";
         }
-        log.warn("Logout attempted without Authorization header");
-        return "No token provided.";
+
+        // Blacklist refresh token if present
+        if (refreshToken != null) {
+            tokenBlacklist.blacklist(refreshToken);
+        }
+
+        // Delete the refresh cookie
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0) // delete cookie
+                .sameSite("Strict")
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        return "Successfully logged out.";
     }
+
+
+
 
     @PostMapping("/refresh")
     public AuthResponse refreshToken(@CookieValue(value = "refreshToken", required = false) String refreshToken,
@@ -95,3 +114,4 @@ public class AuthController {
         return "Welcome to home page, ";
     }
 }
+ 
