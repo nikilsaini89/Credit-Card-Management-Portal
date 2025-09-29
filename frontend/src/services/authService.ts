@@ -1,11 +1,37 @@
-import { BASE_URL } from '../constants/constants';
-import axios from 'axios';
-import type { User } from '../types/User';
+import { api } from "./api";
+import type { AuthResponse } from "../types/auth";
 
-export const login = async (email: string, password: string) => {
-  return axios.post(`${BASE_URL}/auth/login`, { email, password });
+export const login = async (email: string, password: string): Promise<AuthResponse> => {
+  const response = await api.post<AuthResponse>("/auth/login", { email, password });
+  console.log(response.data," = response data");
+  const { token, user } = response.data;
+
+  localStorage.setItem("token", token);
+  localStorage.setItem("user", JSON.stringify(user));
+
+  return response.data;
 };
 
-export const register = async (user: Omit<User, 'id'> & { password: string }) => {
-  return axios.post(`${BASE_URL}/auth/register`, user);
+export const register = async (user: Omit<AuthResponse["user"], "id"> & { password: string }): Promise<AuthResponse> => {
+  const response = await api.post<AuthResponse>("/auth/register", user);
+  return response.data;
+};
+
+export const refreshToken = async (): Promise<string> => {
+  const response = await api.post<AuthResponse>("/auth/refresh");
+  const { token, user } = response.data;
+
+  localStorage.setItem("token", token);
+  localStorage.setItem("user", JSON.stringify(user));
+
+  return token;
+};
+
+export const logout = async (): Promise<void> => {
+  try {
+    await api.post("/auth/logout");
+  } finally {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }
 };

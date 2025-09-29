@@ -13,18 +13,11 @@
         <div class="brand-title">CreditCard Portal</div>
       </div>
 
-      <nav class="topnav desktop-nav" role="navigation" aria-label="Primary">
-        <RouterLink
-          v-for="navLink in navLinks"
-          :key="navLink.to"
-          :to="navLink.to"
-          class="nav-item"
-          :class="{ active: isRouteActive(navLink.to) }"
-        >
-          {{ navLink.label }}
-        </RouterLink>
+      <nav class="topnav desktop-nav" role="navigation" aria-label="Primary" v-for="link in navLinks" :key="link.label">
+        <RouterLink class="nav-item" v-if="link.to" :to="link.to">{{ link.label }}</RouterLink>
+        <a class="nav-item" v-else-if="link.action === 'logout'" @click.prevent="handleLogout">{{ link.label }}</a>
       </nav>
-
+       
       <button
         class="hamburger"
         @click="toggleMobileNav"
@@ -39,7 +32,7 @@
       </button>
 
       <div class="avatar desktop-avatar">
-        <RouterLink to="/logout">{{ userInitials }}</RouterLink>
+        <RouterLink>{{ userInitials }}</RouterLink>
       </div>
     </div>
 
@@ -68,18 +61,14 @@
         </div>
 
         <nav class="mobile-links">
-          <RouterLink
-            v-for="navLink in navLinks"
-            :key="navLink.to + '-mobile'"
-            :to="navLink.to"
-            class="mobile-link"
-            :class="{ active: isRouteActive(navLink.to) }"
-            @click="closeMobileNav"
-            role="menuitem"
-          >
-            {{ navLink.label }}
-          </RouterLink>
-        </nav>
+    <ul>
+      <li v-for="link in navLinks" :key="link.label">
+        <RouterLink class="mobile-link" v-if="link.to" :to="link.to">{{ link.label }}</RouterLink>
+        <a class="mobile-link" v-else-if="link.action === 'logout'" @click.prevent="handleLogout">{{ link.label }}</a>
+      </li>
+    </ul>
+  </nav>
+
 
         <footer class="mobile-footer">
           <div class="avatar mobile-avatar">{{ userInitials }}</div>
@@ -96,6 +85,15 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute } from "vue-router";
+import { useStore } from 'vuex';
+import router from "../router";
+import { logout } from "../services/authService";
+import { toast } from "vue3-toastify"; 
+
+
+const store = useStore();
+const route = useRoute();
+const isMobileNavOpen = ref(false);
 
 const userName = "Abhay Dhek";
 
@@ -104,20 +102,49 @@ const userInitials = computed(() => {
   return nameParts.map((part) => part[0]).join("").toUpperCase();
 });
 
-const navLinks = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/cards", label: "My Cards" },
-  { to: "/apply-card", label: "Apply Card" },
-  { to: "/transactions", label: "Transactions" },
-  { to: "/profile", label: "Profile" },
-];
+// Get user role from store
+const isAdmin = computed(() => store.getters["auth/isAdmin"]);
 
-const route = useRoute();
-const isMobileNavOpen = ref(false);
+// Conditional navigation links based on user role
+const navLinks = computed(() => {
+  if (isAdmin.value) {
+    // Admin navigation
+    return [
+      { to: "/admin-dashboard", label: "Dashboard" },
+      { to: "/admin-review", label: "Applications" },
+      { action: "logout", label: "Logout" }
+    ];
+  } else {
+    // User navigation
+    return [
+      { to: "/dashboard", label: "Dashboard" },
+      { to: "/cards", label: "My Cards" },
+      { to: "/apply-card", label: "Apply Card" },
+      { to: "/transactions", label: "Transactions" },
+      { to: "/profile", label: "Profile" },
+      { action: "logout", label: "Logout" }
+    ];
+  }
+});
 
 const toggleMobileNav = () => {
   isMobileNavOpen.value = !isMobileNavOpen.value;
   setBodyScrollLocked(isMobileNavOpen.value);
+};
+
+const handleLogout = async () => {
+  try {
+    await logout();
+    toast.success("Logged out successfully! 🎉");
+    router.push('/');
+    window.location.reload();
+  } catch (err) {
+    console.error('Logout failed:', err);
+    alert('logout failed');
+    toast.err("Error logging out. 🎉");
+
+ 
+  }
 };
 
 const closeMobileNav = () => {
