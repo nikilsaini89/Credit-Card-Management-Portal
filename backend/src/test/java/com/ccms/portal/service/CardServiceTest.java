@@ -125,20 +125,21 @@ class CardServiceTest {
         when(request.getUserId()).thenReturn(99L);
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () -> cardService.createCard(request));
+        assertThrows(UserNotFoundException.class,  () -> cardService.createCard(request));
     }
 
     @Test
-    void testUpdateCardStatus_Success() {
+    void testUpdateCardStatus_Success_StatusChanged() {
         UserEntity user = new UserEntity();
         ReflectionTestUtils.setField(user, "id", 1L);
 
         CreditCardEntity card = new CreditCardEntity();
         ReflectionTestUtils.setField(card, "id", 300L);
         card.setUser(user);
+        card.setCardStatus(CardStatus.ACTIVE); // current status
 
         UpdateCardStatusRequest request = new UpdateCardStatusRequest();
-        request.setCardStatus(CardStatus.BLOCKED);
+        request.setCardStatus(CardStatus.BLOCKED); // new status (different)
 
         when(cardRepository.findById(300L)).thenReturn(Optional.of(card));
         when(cardRepository.save(any(CreditCardEntity.class))).thenReturn(card);
@@ -149,7 +150,33 @@ class CardServiceTest {
 
         assertNotNull(response);
         assertEquals(CardStatus.BLOCKED, card.getCardStatus());
+        verify(cardRepository, times(1)).save(any(CreditCardEntity.class)); // save called
     }
+
+    @Test
+    void testUpdateCardStatus_Idempotent_NoChange() {
+        UserEntity user = new UserEntity();
+        ReflectionTestUtils.setField(user, "id", 1L);
+
+        CreditCardEntity card = new CreditCardEntity();
+        ReflectionTestUtils.setField(card, "id", 301L);
+        card.setUser(user);
+        card.setCardStatus(CardStatus.BLOCKED); // already blocked
+
+        UpdateCardStatusRequest request = new UpdateCardStatusRequest();
+        request.setCardStatus(CardStatus.BLOCKED); // same status as before
+
+        when(cardRepository.findById(301L)).thenReturn(Optional.of(card));
+        when(cardHelper.buildCreditCardResponse(card))
+                .thenReturn(mock(CreditCardResponse.class));
+
+        CreditCardResponse response = cardService.updateCardStatus(request, 301L);
+
+        assertNotNull(response);
+        assertEquals(CardStatus.BLOCKED, card.getCardStatus());
+        verify(cardRepository, never()).save(any(CreditCardEntity.class)); // no save call
+    }
+
 
     @Test
     void testUpdateCardStatus_CardNotFound() {
