@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col justify-center px-3 sm:px-5 md:px-7 lg:px-8 py-5 bg-gradient-to-br from-yellow-100 via-yellow-200 to-yellow-300">
     <div class="text-center mb-5 sm:mb-7">
-      <h1 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-1.5">CreditCard Portal</h1>
+      <h1 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-1.5">SwipeSmart</h1>
       <p class="text-xs sm:text-sm text-gray-600">
         {{ !isRegister ? "Manage your credit cards with ease" : "Create your account and get started" }}
       </p>

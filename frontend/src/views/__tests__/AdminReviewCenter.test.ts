@@ -31,7 +31,7 @@ describe('AdminReviewCenter Component', () => {
     vi.clearAllMocks()
   })
 
-  // Test 1: Check if the page title is displayed
+  // Check if the page title is displayed
   it('shows the main title', () => {
     const wrapper = mount(AdminReviewCenter, {
       global: {
@@ -41,7 +41,7 @@ describe('AdminReviewCenter Component', () => {
     expect(wrapper.text()).toContain('Admin Review Center')
   })
 
-  // Test 2: Check if subtitle is shown
+  // Check if subtitle is shown
   it('shows the subtitle text', () => {
     const wrapper = mount(AdminReviewCenter, {
       global: {
@@ -51,7 +51,7 @@ describe('AdminReviewCenter Component', () => {
     expect(wrapper.text()).toContain('Review and approve applications')
   })
 
-  // Test 3: Check if empty state is shown when no applications
+  // Check if empty state is shown when no applications
   it('shows empty state when no applications', () => {
     const wrapper = mount(AdminReviewCenter, {
       global: {
@@ -61,7 +61,7 @@ describe('AdminReviewCenter Component', () => {
     expect(wrapper.text()).toContain('No applications found')
   })
 
-  // Test 4: Check if component loads without errors
+  // Check if component loads without errors
   it('loads without crashing', () => {
     const wrapper = mount(AdminReviewCenter, {
       global: {
@@ -71,7 +71,7 @@ describe('AdminReviewCenter Component', () => {
     expect(wrapper.exists()).toBe(true)
   })
 
-  // Test 5: Check if section title is displayed
+  // Check if section title is displayed
   it('shows card applications section title', () => {
     const wrapper = mount(AdminReviewCenter, {
       global: {
