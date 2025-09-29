@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col justify-center px-100 py-12 bg-gradient-to-br from-white to-yellow-300">
+  <div class="min-h-screen flex flex-col justify-center px-50 py-12 bg-gradient-to-br from-white to-yellow-300">
   
     <div class="text-center mb-8">
       <h1 class="text-3xl font-bold text-gray-900">CreditCard Portal</h1>
