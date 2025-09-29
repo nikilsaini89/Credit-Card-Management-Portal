@@ -6,34 +6,29 @@
           <h1 class="page-title">Card Details</h1>
           <p class="page-sub">
             Manage your {{ card?.cardType?.name || card?.network || 'VISA' }} card
-            ending in <strong>{{ cardLastFour }}</strong>
+            ending with <strong>{{ cardLastFour }}</strong>
           </p>
         </div>
-
         <div class="renderBack">
           <RouterLink to="/cards" class="back">← Back to Cards</RouterLink>
         </div>
       </div>
-
       <section class="grid">
         <div class="left">
           <Card
             v-if="card"
             :key="card.id + '-' + card.creditLimit"
             :card="mergedCard"
-            :userName="card?.cardHolderName"  
+            :userName="card?.cardHolderName"
             :showMenu="false"
             :actions="cardActionsMenu"
             @action="handleCardAction"
             @block="handleCardBlock"
           />
-
           <div v-else class="notice">No card data available.</div>
-
           <div class="actions-card">
-            <h3>Card Actions</h3>
-            <p class="muted">Manage your card settings and limits</p>
-
+            <h3 class="card-title">Card Actions</h3>
+            <p class="muted">Manage your card limit</p>
             <div class="action-controls">
               <button
                 class="update-btn"
@@ -45,12 +40,9 @@
             </div>
           </div>
         </div>
-
         <div class="right">
           <div class="panel overview">
             <h3>Credit Overview</h3>
-            <p class="muted">Your current credit utilization</p>
-
             <div class="overview-grid">
               <div class="ov-left">
                 <div class="row">
@@ -59,28 +51,24 @@
                     ₹{{ formatINR(totalLimit) }}
                   </div>
                 </div>
-
                 <div class="row">
                   <div class="rlabel">Outstanding Balance</div>
                   <div class="rval danger">
                     ₹{{ formatINR(outstanding) }}
                   </div>
                 </div>
-
                 <div class="row">
                   <div class="rlabel">Available Credit</div>
                   <div class="rval success">
                     ₹{{ formatINR(availableCredit) }}
                   </div>
                 </div>
-
                 <div class="util-row">
                   <div class="rlabel">Credit Utilization</div>
                   <div class="util-value util-danger">
                     {{ utilizationPercentage }}%
                   </div>
                 </div>
-
                 <div class="progress-wrap">
                   <div
                     class="progress util-danger"
@@ -90,35 +78,41 @@
               </div>
             </div>
           </div>
-
           <div class="panel transactions">
             <h3>Recent Transactions</h3>
             <p class="muted">Latest activity on this card</p>
-
             <ul class="tx-list">
               <li v-for="tx in recentTransactionsList" :key="tx.id" class="tx">
                 <div class="tx-left">
-                  <div class="tx-merchant">{{ tx.merchant }}</div>
-                  <div class="tx-meta">
-                    {{ tx.category }} • {{ formatDateTime(tx.date) }}
+                  <div class="tx-merchant">
+                    {{ tx.merchantName || 'Unknown' }}
+                    <span v-if="tx.isBnpl" class="badge">BNPL</span>
                   </div>
-                  <div v-if="tx.mode" class="tx-processor">
-                    {{ tx.mode }}
+                  <div class="tx-meta">
+                    {{ tx.category || 'Other' }} • {{ formatDate(tx.date) }}
+                  </div>
+                  <div v-if="tx.processorName" class="tx-processor">
+                    {{ tx.processorName }}
                   </div>
                 </div>
-
                 <div class="tx-right">
                   <div :class="['tx-amount', (Number(tx.amount) < 0) ? 'neg' : 'pos']">
                     {{ formatCurrency(tx.amount) }}
                   </div>
                 </div>
               </li>
+              <li v-if="recentTransactionsList.length === 0" class="tx">
+                <div>
+                  <div class="tx-title">No recent transactions</div>
+                  <div class="tx-sub">You have no transaction history for this card</div>
+                </div>
+                <div class="tx-amount">—</div>
+              </li>
             </ul>
           </div>
         </div>
       </section>
     </main>
-
     <UpdateCreditLimitModal
       v-if="card"
       v-model="isLimitModalOpen"
@@ -130,7 +124,6 @@
     />
   </div>
 </template>
-
 <script>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -149,11 +142,9 @@ export default {
   setup () {
     const route = useRoute()
     const router = useRouter()
-
     const card = ref(null)
     const transactions = ref([])
     const loading = ref(false)
-
     const minLimit = ref(0)
     const maxLimit = ref(0)
 
@@ -185,31 +176,45 @@ export default {
       }
     })
 
+    function normalizeTx(tx = {}) {
+      const merchantName =
+        tx.merchantName ||
+        tx.merchant?.name ||
+        tx.merchant ||
+        tx.name ||
+        tx.label ||
+        (typeof tx.merchant === 'object' ? (tx.merchant.name || '') : '') ||
+        ''
+
+      const date = tx.transactionDate || tx.date || tx.timestamp || tx.createdAt || null
+
+      const isBnpl =
+        !!tx.isBnpl ||
+        String(tx.type || tx.transactionType || tx.mode || tx.paymentType || '').toLowerCase() === 'bnpl' ||
+        String(tx.category || '').toLowerCase() === 'bnpl'
+
+      const processorName =
+        tx.processorName ||
+        (tx.processor && (tx.processor.name || tx.processorName)) ||
+        tx.mode ||
+        null
+
+      return {
+        id: tx.id,
+        cardId: tx.cardId,
+        merchantName: merchantName || 'Unknown',
+        amount: tx.amount ?? tx.value ?? 0,
+        date,
+        category: tx.category || tx.subCategory || null,
+        isBnpl,
+        processorName,
+        raw: tx 
+      }
+    }
+
     const recentTransactionsList = computed(() => {
-      return (transactions.value || []).map(tx => ({
-        ...tx,
-        merchant: extractMerchantName(tx.merchant),
-        mode: extractProcessorName(tx.mode)
-      })).slice(0, 6)
+      return (transactions.value || []).slice(0, 6)
     })
-
-    function extractMerchantName (raw) {
-      if (!raw) return 'Unknown'
-      if (typeof raw === 'object' && raw.name) return raw.name
-      const m = String(raw).match(/name=([^,)\n]+)/)
-      if (m && m[1]) return m[1].trim()
-      const nested = String(raw).match(/merchant=Merchant\([^)]*name=([^,)\n]+)/)
-      if (nested && nested[1]) return nested[1].trim()
-      return String(raw)
-    }
-
-    function extractProcessorName (raw) {
-      if (!raw) return null
-      if (typeof raw === 'object' && raw.name) return raw.name
-      const m = String(raw).match(/name=([^,)\n]+)/)
-      if (m && m[1]) return m[1].trim()
-      return String(raw)
-    }
 
     function formatINR (amount) {
       return Number(amount || 0).toLocaleString('en-IN')
@@ -221,15 +226,14 @@ export default {
       return sign + '₹' + Math.abs(numericValue).toLocaleString('en-IN')
     }
 
-    function formatDateTime (timestamp) {
-      if (!timestamp) return ''
-      const dateObj = new Date(timestamp)
-      return dateObj.toLocaleString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+    function formatDate(isoString) {
+      if (!isoString) return ''
+      const dateObj = new Date(isoString)
+      return dateObj.toLocaleString('en-US', {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
       })
     }
 
@@ -318,7 +322,16 @@ export default {
 
         const dash = await getDashboard()
         if (dash?.transactions) {
-          transactions.value = dash.transactions.filter(tx => String(tx.cardId) === String(id))
+          const cardTx = dash.transactions
+            .filter(tx => String(tx.cardId) === String(id))
+            .map(normalizeTx)
+            .sort((a, b) => {
+              const ta = a.date ? new Date(a.date).getTime() : 0
+              const tb = b.date ? new Date(b.date).getTime() : 0
+              return tb - ta
+            })
+
+          transactions.value = cardTx
         } else {
           transactions.value = []
         }
@@ -347,7 +360,7 @@ export default {
       recentTransactionsList,
       formatINR,
       formatCurrency,
-      formatDateTime,
+      formatDate,
       cardActionsMenu,
       handleCardAction,
       handleCardBlock,
@@ -358,6 +371,7 @@ export default {
   }
 }
 </script>
+
 <style scoped>
 .link-btn {
   background: none;
@@ -375,6 +389,9 @@ export default {
   --muted: #6b7280;
   --green: #16a34a;
   --danger: #ef4444;
+}
+.card-title {
+  font-weight: 700;
 }
 
 *{box-sizing:border-box}
@@ -412,6 +429,16 @@ export default {
   align-items:start;
   width:100%;
 }
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #333;
+  background: #eee;
+  border-radius: 4px;
+}
 
 @media (max-width: 980px){
   .grid{ grid-template-columns: 1fr; gap:16px; }
@@ -424,7 +451,6 @@ export default {
   width:100%;
 }
 .actions-card h3{ margin:0 0 6px 0; font-size:18px; }
-.muted{ color:var(--muted); margin-bottom:12px; }
 .action-controls{ display:flex; gap:12px; margin-top:8px; flex-wrap:wrap; }
 .action-controls button{ flex:1 1 auto; min-width:0; }
 .update-btn{
@@ -443,7 +469,7 @@ export default {
   overflow:hidden;
 }
 .panel h3{ margin:0 0 8px 0; font-size:16px; font-weight:800; }
-.panel .muted{ margin:0; }
+
 
 .overview-grid{ display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
 .ov-left{ flex:1 1 240px; min-width:0 }

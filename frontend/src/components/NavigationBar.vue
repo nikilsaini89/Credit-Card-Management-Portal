@@ -240,6 +240,8 @@ onBeforeUnmount(() => {
   gap: 5px;
   background: transparent;
   border: none;
+  order: 2; 
+  margin-left: auto;
   padding: 8px;
   width: 44px;
   height: 44px;
