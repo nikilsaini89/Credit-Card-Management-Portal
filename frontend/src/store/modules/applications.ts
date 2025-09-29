@@ -83,7 +83,13 @@ const applications: Module<ApplicationsState, RootState> = {
      * Fetch all card applications from API
      * Commits setApplications, setLoading, and setError mutations
      */
-    async fetchApplications({ commit }) {
+    async fetchApplications({ state, commit }) {
+      if (state.applications.length > 0) {
+        /**
+         * Data already in store, no need to fetch
+         */
+        return state.applications
+      }
       try {
         commit('setLoading', true);
         commit('setError', null);
