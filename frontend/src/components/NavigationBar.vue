@@ -14,10 +14,10 @@
       </div>
 
       <nav class="topnav desktop-nav" role="navigation" aria-label="Primary" v-for="link in navLinks" :key="link.label">
-        <RouterLink class="nav-item" v-if="link.to" :to="link.to">{{ link.label }}</RouterLink>
+        <RouterLink class="nav-item" v-if="link.to" :to="link.to" active-class="nav-active"
+          exact-active-class="nav-exact-active" >{{ link.label }}</RouterLink>
         <a class="nav-item" v-else-if="link.action === 'logout'" @click.prevent="handleLogout">{{ link.label }}</a>
       </nav>
-       
       <button
         class="hamburger"
         @click="toggleMobileNav"
@@ -95,27 +95,16 @@ const store = useStore();
 const route = useRoute();
 const isMobileNavOpen = ref(false);
 
-const userName = "Abhay Dhek";
-
-const userInitials = computed(() => {
-  const nameParts = userName.split(" ");
-  return nameParts.map((part) => part[0]).join("").toUpperCase();
-});
-
-// Get user role from store
 const isAdmin = computed(() => store.getters["auth/isAdmin"]);
 
-// Conditional navigation links based on user role
 const navLinks = computed(() => {
   if (isAdmin.value) {
-    // Admin navigation
     return [
       { to: "/admin-dashboard", label: "Dashboard" },
       { to: "/admin-review", label: "Applications" },
       { action: "logout", label: "Logout" }
     ];
   } else {
-    // User navigation
     return [
       { to: "/dashboard", label: "Dashboard" },
       { to: "/cards", label: "My Cards" },
@@ -178,12 +167,6 @@ onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleKeydown);
   setBodyScrollLocked(false);
 });
-
-const isRouteActive = (path) => {
-  if (!route || !route.path) return false;
-  if (path === "/") return route.path === "/";
-  return route.path.startsWith(path);
-};
 </script>
 
 <style scoped>
@@ -241,33 +224,13 @@ const isRouteActive = (path) => {
   transition: background 0.15s, color 0.15s, transform 0.06s;
 }
 .topnav .nav-item:hover {
-  background: #e5cd56;
+  background: #e0c126;
   color: #0b2540;
-  transform: translateY(-1px);
 }
-.topnav .nav-item.active {
+.topnav .nav-item.nav-active {
   background: #ffd60a;
   color: #0b2540;
   box-shadow: 0 4px 12px rgba(255, 214, 10, 0.25);
-}
-.avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--accent, #0b2540);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 16px;
-  text-decoration: none;
-}
-.desktop-avatar a {
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 .hamburger {
   display: none;
@@ -425,9 +388,6 @@ const isRouteActive = (path) => {
   }
   .hamburger {
     display: inline-flex;
-  }
-  .desktop-avatar {
-    display: none;
   }
 }
 html,

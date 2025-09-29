@@ -62,7 +62,7 @@
         <aside class="right-col">
           <div class="activity">
             <div class="activity-header">
-              <h3>Latest Transactions</h3>
+              <h3 class="section-title" >Latest Transactions</h3>
               <RouterLink to="/transactions" class="view-all">View All</RouterLink>
             </div>
 
@@ -109,7 +109,6 @@
 </template>
 
 <script>
-console.log("Dashboard check ");
 import Card from "../../components/Card.vue";
 import { getDashboard } from "../../services/dashboardService";
 import { getCards } from "../../services/cards-service";
@@ -149,27 +148,13 @@ export default {
       try {
         const data = await getDashboard();
 
-        if (!data) {
-          this.error = "No dashboard data received";
-          return;
-        }
-
-        this.user.name = data.userName || (data.user && data.user.name) || this.user.name;
-
-        if (data.summary) {
-          this.summary.activeCards = data.summary.activeCards ?? this.summary.activeCards;
-          this.summary.totalCards = data.summary.totalCards ?? this.summary.totalCards;
-          this.summary.totalLimit = data.summary.totalLimit ?? this.summary.totalLimit;
-          this.summary.availableCredit = data.summary.availableCredit ?? this.summary.availableCredit;
-          this.summary.outstanding = data.summary.outstanding ?? this.summary.outstanding;
-        }
-
-        const rawTx = Array.isArray(data.transactions) ? data.transactions : [];
-        this.transactions = rawTx.map(t => this.normalizeTx(t));
+        this.user.name = data.userName;
+        this.summary = data.summary;
+        this.transactions = data.transactions.map(t => this.normalizeTx(t));
 
         await this.loadCards();
       } catch (err) {
-        console.error("Failed to load dashboard from service:", err);
+        console.error("Failed to load dashboard:", err);
         this.error = "Failed to load dashboard";
       } finally {
         this.loading = false;
@@ -179,105 +164,50 @@ export default {
     async loadCards() {
       try {
         const list = await getCards();
-        if (!Array.isArray(list)) {
-          this.cards = [];
-          return;
-        }
-
         this.cards = list.map(c => ({
-          id: c.id ?? c.cardId ?? c._id,
-          cardNumber: c.cardNumber ?? c.number ?? c.maskedNumber ?? c.masked_number,
-          cardHolderName: c.cardHolderName ?? c.name ?? c.holderName,
-          creditLimit: c.creditLimit ?? c.totalLimit ?? c.total_limit,
-          availableLimit: c.availableLimit ?? c.availableCredit ?? c.available_limit,
-          cardStatus: c.cardStatus ?? c.status,
-          expiryDate: c.expiryDate ?? c.expiry_date,
+          id: c.id,
+          cardNumber: c.cardNumber,
+          cardHolderName: c.cardHolderName,
+          creditLimit: c.creditLimit,
+          availableLimit: c.availableLimit,
+          cardStatus: c.cardStatus,
+          expiryDate: c.expiryDate,
           cvv: c.cvv,
-          cardType: c.cardType ?? c.type ?? null,
-          ...c
+          cardType: c.cardType,
         }));
 
-        this.cards.forEach(cardItem => {
-          const id = cardItem.id ?? cardItem._id ?? cardItem.cardId;
-          if (id) this.showFull[id] = false;
-        });
+        this.cards.forEach(c => { this.showFull[c.id] = false; });
       } catch (err) {
-        console.error('Dashboard.loadCards failed', err);
+        console.error("Failed to load cards:", err);
         this.cards = [];
       }
     },
 
-    normalizeTx(tx = {}) {
-      const id = tx.id ?? tx.transactionId ?? tx.txnId ?? Math.random().toString(36).slice(2,9);
-      const amount = Number(tx.amount ?? tx.value ?? 0);
-      const date = tx.date ?? tx.createdAt ?? tx.created_at ?? tx.createdAtTimestamp ?? null;
-      const category = tx.category ?? tx.modeCategory ?? tx.categoryName ?? null;
-      const isBnpl = Boolean(tx.isBnpl ?? tx.is_bnpl ?? false);
-
-      let merchantName = tx.merchantName;
-      let accountNumber = null;
-      if (tx.merchant) {
-        if (typeof tx.merchant === 'string') {
-          const nameMatch = tx.merchant.match(/merchant=.*?name=([^,\)]+)/);
-          if (nameMatch && nameMatch[1]) merchantName = nameMatch[1].trim();
-          const acctMatch = tx.merchant.match(/accountNumber=([^,\)]+)/);
-          if (acctMatch && acctMatch[1]) accountNumber = acctMatch[1].trim();
-        } else if (typeof tx.merchant === 'object') {
-          accountNumber = tx.merchant.accountNumber ?? tx.merchant.account_number ?? tx.merchant.id ?? null;
-          if (tx.merchant.merchant && tx.merchant.merchant.name) merchantName = tx.merchant.merchant.name;
-          else if (tx.merchant.name) merchantName = tx.merchant.name;
-        }
-      }
-
-      let processorName = null;
-      if (tx.mode) {
-        if (typeof tx.mode === 'string') {
-          const pMatch = tx.mode.match(/name=([^,\)]+)/);
-          if (pMatch && pMatch[1]) processorName = pMatch[1].trim();
-        } else if (typeof tx.mode === 'object') {
-          processorName = tx.mode.name ?? tx.mode.processorName ?? null;
-        }
-      } else if (tx.processor) {
-        if (typeof tx.processor === 'string') {
-          const pMatch2 = tx.processor.match(/name=([^,\)]+)/);
-          if (pMatch2 && pMatch2[1]) processorName = pMatch2[1].trim();
-        } else if (typeof tx.processor === 'object') {
-          processorName = tx.processor.name ?? null;
-        }
-      }
-
-      if ((!merchantName || merchantName === 'Merchant') && typeof tx.merchant === 'string') {
-        const fallback = tx.merchant.match(/Merchant\(.*?name=([^,\)]+)/);
-        if (fallback && fallback[1]) merchantName = fallback[1].trim();
-      }
-
+    normalizeTx(tx) {
       return {
-        id,
-        amount,
-        date,
-        category,
-        isBnpl,
-        merchantName,
-        accountNumber,
-        processorName,
-        raw: tx
+        id: tx.id,
+        cardId: tx.cardId,
+        merchantName: tx.merchantName,
+        amount: tx.amount,
+        date: tx.transactionDate,
+        category: tx.category,
+        isBnpl: tx.isBnpl,
+        status: tx.status,
       };
     },
 
     formatNumber(value) {
-      if (value == null) return "0";
       return Number(value).toLocaleString("en-IN");
     },
 
     formatDate(isoString) {
-      if (!isoString) return "";
-      try {
-        const dateObj = new Date(isoString);
-        const options = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
-        return dateObj.toLocaleString("en-US", options);
-      } catch {
-        return isoString;
-      }
+      const dateObj = new Date(isoString);
+      return dateObj.toLocaleString("en-US", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
     },
 
     toggleMenu(cardId) {
@@ -285,64 +215,38 @@ export default {
     },
 
     onToggleBlock(card) {
-      card.status = card.status === "BLOCKED" ? "ACTIVE" : "BLOCKED";
+      card.cardStatus = card.cardStatus === "BLOCKED" ? "ACTIVE" : "BLOCKED";
       this.openMenu = null;
     },
 
     globalClick(event) {
-      const clickedOutside = !event.target.closest(".card-menu");
-      if (clickedOutside) this.openMenu = null;
+      if (!event.target.closest(".card-menu")) {
+        this.openMenu = null;
+      }
     },
 
     cardActions(card) {
-      const id = card.id ?? card._id ?? card.cardId ?? "";
-      const path = id ? `/cards/${id}` : "/cards";
+      const id = card.id;
       return [
-        { label: "View Details", to: path },
-        { label: card.status === "BLOCKED" ? "Unblock" : "Block", value: { type: "toggle-block", cardId: id } }
+        { label: "View Details", to: `/cards/${id}` },
+        { label: card.cardStatus === "BLOCKED" ? "Unblock" : "Block", value: { type: "toggle-block", cardId: id } }
       ];
     },
 
     goToCard(card) {
-      const id = card?.id ?? card?._id ?? card?.cardId;
-      if (!id) return;
-
-      this.$router.push({
-        path: `/cards/${id}`,
-        state: {
-          summary: this.summary,
-          transactions: this.transactions
-        }
-      }).catch(() => (window.location.href = `/cards/${id}`));
+      const id = card.id;
+      this.$router.push(`/cards/${id}`).catch(() => (window.location.href = `/cards/${id}`));
     },
 
     async onCardAction(payload) {
-      const raw = payload?.action ?? payload;
-      if (!raw) return;
-      const to = raw.to ?? raw.action?.to;
-      if (to) {
-        if (typeof to === "string") {
-          try { if (this.$router && typeof this.$router.push === "function") { await this.$router.push(to); return; } } catch (err) {}
-          window.location.href = to;
-          return;
-        }
-        if (typeof to === "object") {
-          const id = to.params?.id ?? to.params?.cardId ?? raw.cardId ?? raw.value?.cardId;
-          if (id) { window.location.href = `/cards/${id}`; return; }
-        }
-      }
-
-      if (raw.value?.type === "toggle-block" || raw.type === "toggle-block") {
-        const cid = raw.value?.cardId ?? raw.cardId ?? payload?.card?.id;
-        if (cid) {
-          const found = this.cards.find(c => (c.id ?? c._id ?? c.cardId) === cid);
-          if (found) { found.status = found.status === "BLOCKED" ? "ACTIVE" : "BLOCKED"; }
-        }
-        return;
+      const to = payload?.to;
+      if (typeof to === "string") {
+        try { await this.$router.push(to); } catch { window.location.href = to; }
       }
     }
   }
 };
+
 </script>
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap");
@@ -478,8 +382,12 @@ export default {
   margin-top: 26px;
   align-items: start;
 }
-.left-col .section-title {
+.left-col {
   margin: 0 0 12px 6px;
+}
+.section-title {
+  margin: 0 0 12px 6px;
+  font-weight: 550;
 }
 .section-header {
   display: flex;
@@ -488,7 +396,7 @@ export default {
   margin-bottom: 12px;
 }
 .view-all {
-  background: transparent;
+  background: #ffd60a;
   border: 1px solid #eee;
   padding: 6px 10px;
   border-radius: 8px;
@@ -651,7 +559,7 @@ export default {
   padding: 14px;
   border-radius: 10px;
   border: 1px solid #eee;
-  background: #fff;
+  background:#ffd60a;
   text-decoration: none;
   color: inherit;
   display: inline-flex;
