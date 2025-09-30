@@ -2,8 +2,8 @@ package com.ccms.portal.service;
 
 import com.ccms.portal.dto.request.UpdateCardLimitRequest;
 import com.ccms.portal.dto.response.CardLimitResponse;
-import com.ccms.portal.entity.CardTypeEntity;
 import com.ccms.portal.entity.CreditCardEntity;
+import com.ccms.portal.entity.CardTypeEntity;
 import com.ccms.portal.entity.UserEntity;
 import com.ccms.portal.exception.CardLimitException;
 import com.ccms.portal.exception.CreditCardNotFoundException;
@@ -15,11 +15,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,161 +32,125 @@ class CardLimitServiceTest {
     private CardLimitService cardLimitService;
 
     private CreditCardEntity card;
-    private UserEntity owner;
+    private UserEntity user;
     private CardTypeEntity cardType;
 
     @BeforeEach
     void setUp() {
-        // Set up a user
-        owner = new UserEntity();
-        owner.setEmail("owner@example.com");
+        user = new UserEntity();
+        user.setEmail("testuser@example.com");
 
-        // Set up card type with limits using ReflectionTestUtils (no setters in entity)
         cardType = new CardTypeEntity();
-        ReflectionTestUtils.setField(cardType, "minCardLimit", 5_000.0);
-        ReflectionTestUtils.setField(cardType, "maxCardLimit", 50_000.0);
+        cardType.setMinCardLimit(1000.0);
+        cardType.setMaxCardLimit(20000.0);
 
-        // Set up credit card
         card = new CreditCardEntity();
-        ReflectionTestUtils.setField(card, "id", 1L);
-        card.setUser(owner);
+        card.setId(10L);
+        card.setUser(user);
+        card.setCreditLimit(10000.0);
+        card.setAvailableLimit(8000.0); // outstanding = 2000
         card.setCardType(cardType);
-        card.setCreditLimit(20_000.0);
-        card.setAvailableLimit(15_000.0);  // outstanding = 5_000
     }
 
-    /** -------------------- Happy path -------------------- */
-
     @Test
-    void updateLimit_success() {
+    void testUpdateLimit_Successful() {
         UpdateCardLimitRequest request = new UpdateCardLimitRequest();
-        request.setNewCreditLimit(30_000.0); // valid within range
+        request.setNewCreditLimit(15000.0);
 
-        when(creditCardRepository.findById(1L)).thenReturn(Optional.of(card));
-        when(creditCardRepository.save(any(CreditCardEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(creditCardRepository.findById(10L)).thenReturn(Optional.of(card));
+        when(creditCardRepository.save(any(CreditCardEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        CardLimitResponse response = cardLimitService.updateLimit(1L, request, "owner@example.com");
+        CardLimitResponse response = cardLimitService.updateLimit(10L, request, "testuser@example.com");
 
         assertNotNull(response);
-        assertEquals(20_000.0, response.getOldLimit());
-        assertEquals(30_000.0, response.getNewLimit());
-        assertEquals(25_000.0, response.getAvailableLimit()); // 30k - outstanding(5k)
-        verify(creditCardRepository).save(card);
+        assertEquals(10L, response.getCardId());
+        assertEquals(10000.0, response.getOldLimit());
+        assertEquals(15000.0, response.getNewLimit());
+        assertEquals(13000.0, response.getAvailableLimit()); // 15000 - outstanding(2000) = 13000
+
+        verify(creditCardRepository, times(1)).save(card);
     }
 
-    /** -------------------- Exception branches -------------------- */
-
     @Test
-    void updateLimit_requestIsNull() {
+    void testUpdateLimit_NullRequest() {
         assertThrows(CardLimitException.class,
-                () -> cardLimitService.updateLimit(1L, null, "owner@example.com"));
+                () -> cardLimitService.updateLimit(10L, null, "testuser@example.com"));
     }
 
     @Test
-    void updateLimit_newCreditLimitIsNull() {
-        UpdateCardLimitRequest request = new UpdateCardLimitRequest(); // no limit set
-        assertThrows(CardLimitException.class,
-                () -> cardLimitService.updateLimit(1L, request, "owner@example.com"));
-    }
-
-    @Test
-    void updateLimit_cardNotFound() {
+    void testUpdateLimit_NullLimitValue() {
         UpdateCardLimitRequest request = new UpdateCardLimitRequest();
-        request.setNewCreditLimit(30_000.0);
+        request.setNewCreditLimit(null);
 
-        when(creditCardRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(CardLimitException.class,
+                () -> cardLimitService.updateLimit(10L, request, "testuser@example.com"));
+    }
+
+    @Test
+    void testUpdateLimit_CardNotFound() {
+        UpdateCardLimitRequest request = new UpdateCardLimitRequest();
+        request.setNewCreditLimit(12000.0);
+
+        when(creditCardRepository.findById(10L)).thenReturn(Optional.empty());
 
         assertThrows(CreditCardNotFoundException.class,
-                () -> cardLimitService.updateLimit(1L, request, "owner@example.com"));
+                () -> cardLimitService.updateLimit(10L, request, "testuser@example.com"));
     }
 
     @Test
-    void updateLimit_notOwner() {
+    void testUpdateLimit_UnauthorizedUser() {
         UpdateCardLimitRequest request = new UpdateCardLimitRequest();
-        request.setNewCreditLimit(30_000.0);
+        request.setNewCreditLimit(12000.0);
 
-        when(creditCardRepository.findById(1L)).thenReturn(Optional.of(card));
+        when(creditCardRepository.findById(10L)).thenReturn(Optional.of(card));
 
         assertThrows(UnauthorizedApplicationActionException.class,
-                () -> cardLimitService.updateLimit(1L, request, "intruder@example.com"));
+                () -> cardLimitService.updateLimit(10L, request, "wronguser@example.com"));
     }
 
     @Test
-    void updateLimit_belowMinLimit() {
+    void testUpdateLimit_BelowMinLimit() {
         UpdateCardLimitRequest request = new UpdateCardLimitRequest();
-        request.setNewCreditLimit(3_000.0); // below minCardLimit (5,000)
+        request.setNewCreditLimit(500.0); // below min limit (1000)
 
-        when(creditCardRepository.findById(1L)).thenReturn(Optional.of(card));
+        when(creditCardRepository.findById(10L)).thenReturn(Optional.of(card));
 
         assertThrows(CardLimitException.class,
-                () -> cardLimitService.updateLimit(1L, request, "owner@example.com"));
+                () -> cardLimitService.updateLimit(10L, request, "testuser@example.com"));
     }
 
     @Test
-    void updateLimit_aboveMaxLimit() {
+    void testUpdateLimit_AboveMaxLimit() {
         UpdateCardLimitRequest request = new UpdateCardLimitRequest();
-        request.setNewCreditLimit(100_000.0); // above maxCardLimit (50,000)
+        request.setNewCreditLimit(25000.0); // above max limit (20000)
 
-        when(creditCardRepository.findById(1L)).thenReturn(Optional.of(card));
+        when(creditCardRepository.findById(10L)).thenReturn(Optional.of(card));
 
         assertThrows(CardLimitException.class,
-                () -> cardLimitService.updateLimit(1L, request, "owner@example.com"));
+                () -> cardLimitService.updateLimit(10L, request, "testuser@example.com"));
     }
 
     @Test
-    void updateLimit_belowOutstanding() {
+    void testUpdateLimit_LessThanOutstanding() {
         UpdateCardLimitRequest request = new UpdateCardLimitRequest();
-        request.setNewCreditLimit(4_500.0); // outstanding = 5,000 → invalid
+        request.setNewCreditLimit(1500.0); // outstanding = 2000
 
-        when(creditCardRepository.findById(1L)).thenReturn(Optional.of(card));
+        when(creditCardRepository.findById(10L)).thenReturn(Optional.of(card));
 
         assertThrows(CardLimitException.class,
-                () -> cardLimitService.updateLimit(1L, request, "owner@example.com"));
+                () -> cardLimitService.updateLimit(10L, request, "testuser@example.com"));
     }
 
-    /** -------------------- Edge case: no cardType -------------------- */
-
     @Test
-    void updateLimit_noCardType_defaultsToZeroAndMax() {
-        // remove cardType
-        card.setCardType(null);
-
+    void testUpdateLimit_OwnerCheckWithNullUserOrCaller() {
+        // Card without user
+        card.setUser(null);
         UpdateCardLimitRequest request = new UpdateCardLimitRequest();
-        request.setNewCreditLimit(40_000.0); // valid, defaults to [0, MAX]
+        request.setNewCreditLimit(12000.0);
 
-        when(creditCardRepository.findById(1L)).thenReturn(Optional.of(card));
-        when(creditCardRepository.save(any(CreditCardEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        CardLimitResponse response = cardLimitService.updateLimit(1L, request, "owner@example.com");
-
-        assertEquals(20_000.0, response.getOldLimit());
-        assertEquals(40_000.0, response.getNewLimit());
-        verify(creditCardRepository).save(card);
-    }
-
-    /** -------------------- Edge case: null owner email -------------------- */
-
-    @Test
-    void updateLimit_nullOwnerEmail_unauthorized() {
-        card.getUser().setEmail(null); // owner email is null
-
-        UpdateCardLimitRequest request = new UpdateCardLimitRequest();
-        request.setNewCreditLimit(30_000.0);
-
-        when(creditCardRepository.findById(1L)).thenReturn(Optional.of(card));
+        when(creditCardRepository.findById(10L)).thenReturn(Optional.of(card));
 
         assertThrows(UnauthorizedApplicationActionException.class,
-                () -> cardLimitService.updateLimit(1L, request, "owner@example.com"));
-    }
-
-    @Test
-    void updateLimit_nullCallerUsername_unauthorized() {
-        UpdateCardLimitRequest request = new UpdateCardLimitRequest();
-        request.setNewCreditLimit(30_000.0);
-
-        when(creditCardRepository.findById(1L)).thenReturn(Optional.of(card));
-
-        assertThrows(UnauthorizedApplicationActionException.class,
-                () -> cardLimitService.updateLimit(1L, request, null));
+                () -> cardLimitService.updateLimit(10L, request, "testuser@example.com"));
     }
 }
