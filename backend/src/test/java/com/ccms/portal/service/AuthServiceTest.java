@@ -184,4 +184,76 @@ class AuthServiceTest {
 
         assertThrows(RuntimeException.class, () -> authService.refreshAccessToken(token));
     }
+
+    @Test
+    void login_profileNotFound() {
+        LoginRequest request = new LoginRequest("anchal@example.com", "securePass");
+
+        UserEntity user = new UserEntity();
+        user.setPasswordHash("hashedPass");
+        user.setRole(UserRole.USER);
+
+        when(userRepository.findByEmail("anchal@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("securePass", "hashedPass")).thenReturn(true);
+        when(userProfileRepository.findByUser(user)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> authService.login(request));
+    }
+
+    @Test
+    void register_notEligibleForBnpl() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("LowIncome");
+        request.setEmail("low@example.com");
+        request.setPassword("password");
+        request.setPhoneNumber("5555555555");
+        request.setAddress("Delhi");
+        request.setAnnualIncome(50_000.0); // below threshold
+
+        when(userRepository.findByEmail("low@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("password")).thenReturn("hashedPass");
+
+        UserEntity user = new UserEntity();
+        ReflectionTestUtils.setField(user, "id", 2L);
+        when(userRepository.save(any(UserEntity.class))).thenReturn(user);
+
+        UserProfileEntity profile = new UserProfileEntity();
+        when(userProfileRepository.save(any(UserProfileEntity.class))).thenReturn(profile);
+
+        UserResponse response = authService.register(request);
+
+        assertEquals("low@example.com", response.getEmail());
+        assertFalse(response.getIsEligibleForBNPL());
+    }
+
+    @Test
+    void refreshAccessToken_userNotFound() {
+        String validRefreshToken = "valid-token";
+        when(tokenblackList.isBlacklisted(validRefreshToken)).thenReturn(false);
+        when(jwtUtil.validateRefreshToken(validRefreshToken)).thenReturn(true);
+        when(jwtUtil.extractEmail(validRefreshToken)).thenReturn("ghost@example.com");
+
+        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> authService.refreshAccessToken(validRefreshToken));
+    }
+
+    @Test
+    void refreshAccessToken_profileNotFound() {
+        String validRefreshToken = "valid-token";
+        when(tokenblackList.isBlacklisted(validRefreshToken)).thenReturn(false);
+        when(jwtUtil.validateRefreshToken(validRefreshToken)).thenReturn(true);
+        when(jwtUtil.extractEmail(validRefreshToken)).thenReturn("anchal@example.com");
+
+        UserEntity user = new UserEntity();
+        ReflectionTestUtils.setField(user, "id", 3L);
+        user.setEmail("anchal@example.com");
+        user.setRole(UserRole.USER);
+
+        when(userRepository.findByEmail("anchal@example.com")).thenReturn(Optional.of(user));
+        when(userProfileRepository.findByUser(user)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> authService.refreshAccessToken(validRefreshToken));
+    }
+
 }
