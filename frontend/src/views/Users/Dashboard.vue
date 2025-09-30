@@ -50,7 +50,7 @@
               <Card
                 :card="cardItem"
                 :userName="user.name"
-                :showMenu="true"
+                :showMenu="false"
                 :actions="cardActions(cardItem)"
                 @action.stop="onCardAction"
                 @block.stop="onToggleBlock"
@@ -160,7 +160,6 @@ export default {
         this.loading = false;
       }
     },
-
     async loadCards() {
       try {
           const list = await getCards();
