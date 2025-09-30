@@ -15,10 +15,10 @@ public interface CreditCardRepository extends JpaRepository<CreditCardEntity, Lo
     @Query("SELECT c FROM CreditCardEntity c JOIN FETCH c.cardType WHERE c.user.id = :userId")
     List<CreditCardEntity> findAllByUserIdWithCardType(@Param("userId") Long userId);
 
-    @Query("SELECT COALESCE(SUM(c.creditLimit), 0) FROM CreditCardEntity c WHERE c.user.id = :userId")
+    @Query("SELECT COALESCE(SUM(c.creditLimit), 0) FROM CreditCardEntity c WHERE c.user.id = :userId AND c.cardStatus = 'ACTIVE'")
     Double sumCreditLimitByUserId(@Param("userId") Long userId);
 
-    @Query("SELECT COALESCE(SUM(c.availableLimit), 0) FROM CreditCardEntity c WHERE c.user.id = :userId")
+    @Query("SELECT COALESCE(SUM(c.availableLimit), 0) FROM CreditCardEntity c WHERE c.user.id = :userId AND c.cardStatus = 'ACTIVE'")
     Double sumAvailableLimitByUserId(@Param("userId") Long userId);
 
     @Query("SELECT COUNT(c) FROM CreditCardEntity c WHERE c.user.id = :userId")
