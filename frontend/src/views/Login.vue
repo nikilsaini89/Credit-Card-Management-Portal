@@ -99,20 +99,10 @@
               </div>
             </div>
 
-            <div class="flex items-center justify-between">
-              <div class="flex items-center">
-                <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-yellow-500 focus:ring-yellow-400 border-gray-300 rounded">
-                <label for="remember-me" class="ml-2 block text-sm text-gray-700">Remember me</label>
-              </div>
-              <div class="text-sm">
-                <a href="#" class="font-medium text-blue-900 hover:text-yellow-600 transition-colors duration-200">Forgot password?</a>
-              </div>
-            </div>
-
             <button type="submit"
                     :disabled="isLoading"
-                    class="w-full flex justify-center py-4 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] relative overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none">
-              <span class="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                    class="w-full flex justify-center py-4 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] relative overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none !box-border">
+              <span class="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 !box-border"></span>
               <span class="relative flex items-center">
                 <svg v-if="isLoading" class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -233,17 +223,11 @@
               </div>
             </div>
 
-            <div class="flex items-center">
-              <input id="terms" name="terms" type="checkbox" class="h-4 w-4 text-yellow-500 focus:ring-yellow-400 border-gray-300 rounded">
-              <label for="terms" class="ml-2 block text-sm text-gray-700">
-                I agree to the <a href="#" class="text-blue-900 hover:text-yellow-600">Terms of Service</a> and <a href="#" class="text-blue-900 hover:text-yellow-600">Privacy Policy</a>
-              </label>
-            </div>
 
             <button type="submit"
                     :disabled="isLoading"
-                    class="w-full flex justify-center py-4 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] relative overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none">
-              <span class="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                    class="w-full flex justify-center py-4 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] relative overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none !box-border">
+              <span class="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 !box-border"></span>
               <span class="relative flex items-center">
                 <svg v-if="isLoading" class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
