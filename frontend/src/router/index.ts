@@ -10,7 +10,7 @@ const Dashboard = () => import("../views/Users/Dashboard.vue");
 const CardDetail = () => import("../views/Users/CardDetail.vue");
 const TransactionHistory = () => import("../views/Users/TransactionHistory.vue");
 const CreateTransaction = () => import("../views/Users/CreateTransaction.vue");
- 
+
 const routes = [
   {
     path: "/",
@@ -35,6 +35,7 @@ const routes = [
   },
   {
     path: "/card/:id",
+    alias: "/cards/:id",
     name: "CardDetail",
     component: CardDetail,
     props: true,
@@ -100,7 +101,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
 });
- 
+
 const getInitialRoute = () => {
   const token = localStorage.getItem("token");
   if (!token) return { name: "Login" };
@@ -122,17 +123,17 @@ router.beforeEach((to, from, next) => {
     next();
     return;
   }
- 
+
   if (to.meta.requiresAdmin && !isAdmin) {
     next({ name: "Dashboard" });
     return;
   }
- 
+
   if (to.meta.requiresUser && isAdmin) {
     next({ name: "AdminDashboard" });
     return;
   }
- 
+
   if (to.meta.requiresAuth && !isAuthenticated) {
     next({ name: "Login" });
     return;
@@ -141,5 +142,4 @@ router.beforeEach((to, from, next) => {
   next();
 });
 export default router;
- 
- 
+

@@ -55,15 +55,15 @@ public class TransactionService {
 
                 // Validate card exists
                 CreditCardEntity card = creditCardRepository.findById(request.getCardId())
-                                .orElseThrow(() -> new CreditCardNotFoundException(
-                                                "Card not found with ID: " + request.getCardId()));
+                        .orElseThrow(() -> new CreditCardNotFoundException(
+                                "Card not found with ID: " + request.getCardId()));
 
                 // Check if sufficient credit limit using proper calculation
                 if (!creditLimitService.hasSufficientCreditLimit(request.getCardId(), request.getAmount())) {
                         BigDecimal currentAvailable = creditLimitService
-                                        .calculateCurrentAvailableLimit(request.getCardId());
+                                .calculateCurrentAvailableLimit(request.getCardId());
                         throw new InsufficientLimitException("Insufficient credit limit. Available: " +
-                                        currentAvailable + ", Required: " + request.getAmount());
+                                currentAvailable + ", Required: " + request.getAmount());
                 }
 
                 // Validate transaction amount
@@ -74,11 +74,11 @@ public class TransactionService {
                 // Validate BNPL eligibility if transaction is BNPL
                 if (request.getIsBnpl()) {
                         UserProfileEntity userProfile = userProfileRepository.findByUser(card.getUser())
-                                        .orElseThrow(() -> new UserNotFoundException("User profile not found"));
+                                .orElseThrow(() -> new UserNotFoundException("User profile not found"));
 
                         if (!userProfile.isEligibleBnpl()) {
                                 throw new BnplNotEligibleException(
-                                                "You are not eligible for BNPL transactions. Please contact support to check your eligibility or try a regular transaction instead.");
+                                        "You are not eligible for BNPL transactions. Please contact support to check your eligibility or try a regular transaction instead.");
                         }
 
                         log.info("BNPL eligibility validated for user: {}", card.getUser().getId());
@@ -105,8 +105,8 @@ public class TransactionService {
 
                 Transaction savedTransaction = transactionRepository.save(transaction);
                 log.info("Transaction created successfully with ID: {} - Amount: {}, BNPL: {}, Status: {}",
-                                savedTransaction.getId(), savedTransaction.getAmount(), savedTransaction.getIsBnpl(),
-                                savedTransaction.getStatus());
+                        savedTransaction.getId(), savedTransaction.getAmount(), savedTransaction.getIsBnpl(),
+                        savedTransaction.getStatus());
 
                 // Trigger statement recalculation for current month FIRST
                 try {
@@ -124,10 +124,10 @@ public class TransactionService {
 
                 if (request.getIsBnpl()) {
                         log.info("BNPL transaction blocks {} from available limit for card {}", request.getAmount(),
-                                        card.getId());
+                                card.getId());
                 } else {
                         log.info("Normal transaction blocks {} from available limit for card {}", request.getAmount(),
-                                        card.getId());
+                                card.getId());
                 }
 
                 return mapToTransactionResponse(savedTransaction);
@@ -137,20 +137,20 @@ public class TransactionService {
          * Get transaction history for a card
          */
         public TransactionHistoryResponse getTransactionHistory(Long cardId, int page, int size,
-                        String category, Boolean isBnpl, String merchantName) {
+                                                                String category, Boolean isBnpl, String merchantName) {
                 log.info("Fetching transaction history for card: {}, page: {}, size: {}", cardId, page, size);
 
                 // Get current authenticated user
                 JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
-                                .getContext()
-                                .getAuthentication()
-                                .getPrincipal();
+                        .getContext()
+                        .getAuthentication()
+                        .getPrincipal();
                 Long userId = currentUser.getUserId();
 
                 // Validate card exists and belongs to the authenticated user
                 CreditCardEntity card = creditCardRepository.findById(cardId)
-                                .orElseThrow(() -> new CreditCardNotFoundException(
-                                                "Card not found with ID: " + cardId));
+                        .orElseThrow(() -> new CreditCardNotFoundException(
+                                "Card not found with ID: " + cardId));
 
                 if (!card.getUser().getId().equals(userId)) {
                         throw new UnauthorizedException("You are not authorized to access this card's transactions");
@@ -161,26 +161,26 @@ public class TransactionService {
 
                 if (category != null || isBnpl != null || merchantName != null) {
                         transactionPage = transactionRepository.findByCardIdWithFilters(
-                                        cardId, category, isBnpl, merchantName, pageable);
+                                cardId, category, isBnpl, merchantName, pageable);
                 } else {
                         transactionPage = transactionRepository.findByCardIdOrderByTransactionDateDesc(cardId,
-                                        pageable);
+                                pageable);
                 }
 
                 List<TransactionResponse> transactions = transactionPage.getContent()
-                                .stream()
-                                .map(this::mapToTransactionResponse)
-                                .collect(Collectors.toList());
+                        .stream()
+                        .map(this::mapToTransactionResponse)
+                        .collect(Collectors.toList());
 
                 return TransactionHistoryResponse.builder()
-                                .transactions(transactions)
-                                .currentPage(transactionPage.getNumber())
-                                .totalPages(transactionPage.getTotalPages())
-                                .totalElements(transactionPage.getTotalElements())
-                                .pageSize(transactionPage.getSize())
-                                .hasNext(transactionPage.hasNext())
-                                .hasPrevious(transactionPage.hasPrevious())
-                                .build();
+                        .transactions(transactions)
+                        .currentPage(transactionPage.getNumber())
+                        .totalPages(transactionPage.getTotalPages())
+                        .totalElements(transactionPage.getTotalElements())
+                        .pageSize(transactionPage.getSize())
+                        .hasNext(transactionPage.hasNext())
+                        .hasPrevious(transactionPage.hasPrevious())
+                        .build();
         }
 
         /**
@@ -191,15 +191,15 @@ public class TransactionService {
 
                 // Get current authenticated user
                 JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
-                                .getContext()
-                                .getAuthentication()
-                                .getPrincipal();
+                        .getContext()
+                        .getAuthentication()
+                        .getPrincipal();
                 Long userId = currentUser.getUserId();
 
                 // Validate card exists and belongs to the authenticated user
                 CreditCardEntity card = creditCardRepository.findById(cardId)
-                                .orElseThrow(() -> new CreditCardNotFoundException(
-                                                "Card not found with ID: " + cardId));
+                        .orElseThrow(() -> new CreditCardNotFoundException(
+                                "Card not found with ID: " + cardId));
 
                 if (!card.getUser().getId().equals(userId)) {
                         throw new UnauthorizedException("You are not authorized to access this card's analytics");
@@ -209,60 +209,60 @@ public class TransactionService {
                 Double totalSpent = transactionRepository.getTotalSpentByCardId(cardId);
                 Long transactionCount = transactionRepository.countByCardId(cardId);
                 Long bnplCount = (long) transactionRepository
-                                .findByCardIdAndIsBnplTrueOrderByTransactionDateDesc(cardId)
-                                .size();
+                        .findByCardIdAndIsBnplTrueOrderByTransactionDateDesc(cardId)
+                        .size();
 
                 // Get category breakdown
                 List<Object[]> categoryData = transactionRepository.getSpendingByCategory(cardId);
                 List<AnalyticsResponse.CategorySpending> categoryBreakdown = categoryData.stream()
-                                .map(data -> {
-                                        String category = (String) data[0];
-                                        BigDecimal amount = (BigDecimal) data[1];
-                                        Double percentage = totalSpent > 0 ? (amount.doubleValue() / totalSpent) * 100
-                                                        : 0.0;
+                        .map(data -> {
+                                String category = (String) data[0];
+                                BigDecimal amount = (BigDecimal) data[1];
+                                Double percentage = totalSpent > 0 ? (amount.doubleValue() / totalSpent) * 100
+                                        : 0.0;
 
-                                        return AnalyticsResponse.CategorySpending.builder()
-                                                        .category(category)
-                                                        .amount(amount)
-                                                        .percentage(percentage)
-                                                        .build();
-                                })
-                                .collect(Collectors.toList());
+                                return AnalyticsResponse.CategorySpending.builder()
+                                        .category(category)
+                                        .amount(amount)
+                                        .percentage(percentage)
+                                        .build();
+                        })
+                        .collect(Collectors.toList());
 
                 // Get monthly trends (last 24 months to include sample data)
                 LocalDate startDate = LocalDate.now().minusMonths(24);
                 List<Object[]> monthlyData = transactionRepository.getMonthlySpendingTrend(cardId, startDate);
                 List<AnalyticsResponse.MonthlySpending> monthlyTrends = monthlyData.stream()
-                                .map(data -> {
-                                        Integer year = (Integer) data[0];
-                                        Integer month = (Integer) data[1];
-                                        BigDecimal amount = (BigDecimal) data[2];
-                                        String monthName = LocalDate.of(year, month, 1)
-                                                        .getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
+                        .map(data -> {
+                                Integer year = (Integer) data[0];
+                                Integer month = (Integer) data[1];
+                                BigDecimal amount = (BigDecimal) data[2];
+                                String monthName = LocalDate.of(year, month, 1)
+                                        .getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
 
-                                        return AnalyticsResponse.MonthlySpending.builder()
-                                                        .year(year)
-                                                        .month(month)
-                                                        .amount(amount)
-                                                        .monthName(monthName)
-                                                        .build();
-                                })
-                                .collect(Collectors.toList());
+                                return AnalyticsResponse.MonthlySpending.builder()
+                                        .year(year)
+                                        .month(month)
+                                        .amount(amount)
+                                        .monthName(monthName)
+                                        .build();
+                        })
+                        .collect(Collectors.toList());
 
                 // Calculate average transaction amount
                 BigDecimal averageAmount = transactionCount > 0
-                                ? BigDecimal.valueOf(totalSpent).divide(BigDecimal.valueOf(transactionCount), 2,
-                                                java.math.RoundingMode.HALF_UP)
-                                : BigDecimal.ZERO;
+                        ? BigDecimal.valueOf(totalSpent).divide(BigDecimal.valueOf(transactionCount), 2,
+                        java.math.RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO;
 
                 return AnalyticsResponse.builder()
-                                .totalSpent(BigDecimal.valueOf(totalSpent))
-                                .transactionCount(transactionCount)
-                                .categoryBreakdown(categoryBreakdown)
-                                .monthlyTrends(monthlyTrends)
-                                .averageTransactionAmount(averageAmount)
-                                .bnplTransactionCount(bnplCount)
-                                .build();
+                        .totalSpent(BigDecimal.valueOf(totalSpent))
+                        .transactionCount(transactionCount)
+                        .categoryBreakdown(categoryBreakdown)
+                        .monthlyTrends(monthlyTrends)
+                        .averageTransactionAmount(averageAmount)
+                        .bnplTransactionCount(bnplCount)
+                        .build();
         }
 
         /**
@@ -287,9 +287,9 @@ public class TransactionService {
         public List<TransactionResponse> getBnplTransactions(Long cardId) {
                 log.info("Fetching BNPL transactions for card: {}", cardId);
                 return transactionRepository.findByCardIdAndIsBnplTrueOrderByTransactionDateDesc(cardId)
-                                .stream()
-                                .map(this::mapToTransactionResponse)
-                                .collect(Collectors.toList());
+                        .stream()
+                        .map(this::mapToTransactionResponse)
+                        .collect(Collectors.toList());
         }
 
         /**
@@ -298,8 +298,8 @@ public class TransactionService {
         public TransactionResponse getTransactionById(Long transactionId) {
                 log.info("Fetching transaction by ID: {}", transactionId);
                 Transaction transaction = transactionRepository.findById(transactionId)
-                                .orElseThrow(() -> new TransactionNotFoundException(
-                                                "Transaction not found with ID: " + transactionId));
+                        .orElseThrow(() -> new TransactionNotFoundException(
+                                "Transaction not found with ID: " + transactionId));
                 return mapToTransactionResponse(transaction);
         }
 
@@ -308,18 +308,18 @@ public class TransactionService {
          */
         private TransactionResponse mapToTransactionResponse(Transaction transaction) {
                 return TransactionResponse.builder()
-                                .id(transaction.getId())
-                                .cardId(transaction.getCard().getId())
-                                .merchantName(transaction.getMerchantName())
-                                .amount(transaction.getAmount())
-                                .transactionDate(transaction.getTransactionDate())
-                                .category(transaction.getCategory())
-                                .isBnpl(transaction.getIsBnpl())
-                                .cardType(transaction.getCardType())
-                                .lastFour(transaction.getLastFour())
-                                .status(transaction.getStatus())
-                                .createdAt(transaction.getCreatedAt())
-                                .build();
+                        .id(transaction.getId())
+                        .cardId(transaction.getCard().getId())
+                        .merchantName(transaction.getMerchantName())
+                        .amount(transaction.getAmount())
+                        .transactionDate(transaction.getTransactionDate())
+                        .category(transaction.getCategory())
+                        .isBnpl(transaction.getIsBnpl())
+                        .cardType(transaction.getCardType())
+                        .lastFour(transaction.getLastFour())
+                        .status(transaction.getStatus())
+                        .createdAt(transaction.getCreatedAt())
+                        .build();
         }
 
         /**
@@ -330,15 +330,15 @@ public class TransactionService {
 
                 // Get current authenticated user
                 JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
-                                .getContext()
-                                .getAuthentication()
-                                .getPrincipal();
+                        .getContext()
+                        .getAuthentication()
+                        .getPrincipal();
                 Long userId = currentUser.getUserId();
 
                 // Validate card exists and belongs to the authenticated user
                 CreditCardEntity card = creditCardRepository.findById(cardId)
-                                .orElseThrow(() -> new CreditCardNotFoundException(
-                                                "Card not found with ID: " + cardId));
+                        .orElseThrow(() -> new CreditCardNotFoundException(
+                                "Card not found with ID: " + cardId));
 
                 if (!card.getUser().getId().equals(userId)) {
                         throw new UnauthorizedException("You are not authorized to access this card's trends");
@@ -346,7 +346,7 @@ public class TransactionService {
 
                 List<Object[]> monthlyData = transactionRepository.getMonthlySpendingTrend(cardId, startDate);
                 return monthlyData.stream()
-                                .map(data -> new Object[] { data[0], data[1], data[2] })
-                                .collect(Collectors.toList());
+                        .map(data -> new Object[] { data[0], data[1], data[2] })
+                        .collect(Collectors.toList());
         }
 }
