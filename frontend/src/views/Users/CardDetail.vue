@@ -4,81 +4,96 @@
       <div class="page-header">
         <div class="title-block">
           <h1 class="page-title">Card Details</h1>
-          <p class="page-sub">Manage your {{ card?.network || 'VISA' }} card ending in <strong>{{ cardLastFour }}</strong></p>
+          <p class="page-sub">
+            Manage your {{ card?.cardType?.name || card?.network || 'VISA' }} card
+            ending with <strong>{{ cardLastFour }}</strong>
+          </p>
         </div>
-
         <div class="renderBack">
           <RouterLink to="/cards" class="back">← Back to Cards</RouterLink>
         </div>
       </div>
-
       <section class="grid">
         <div class="left">
           <Card
             v-if="card"
-            :card="card"
-            :userName="userName"
+            :key="card.id + '-' + card.creditLimit"
+            :card="mergedCard"
+            :userName="card?.cardHolderName"
             :showMenu="false"
             :actions="cardActionsMenu"
             @action="handleCardAction"
             @block="handleCardBlock"
           />
-
           <div v-else class="notice">No card data available.</div>
-
           <div class="actions-card">
-            <h3>Card Actions</h3>
-            <p class="muted">Manage your card settings and limits</p>
-
+            <h3 class="card-title">Card Actions</h3>
+            <p class="muted">Manage your card limit</p>
             <div class="action-controls">
-              <button class="update-btn" @click="openLimitModal">↗ Update Credit Limit</button>
+              <button
+                class="update-btn"
+                @click="openLimitModal"
+                :disabled="loading"
+              >
+                ↗ Update Credit Limit
+              </button>
             </div>
           </div>
         </div>
-
         <div class="right">
           <div class="panel overview">
             <h3>Credit Overview</h3>
-            <p class="muted">Your current credit utilization</p>
-
             <div class="overview-grid">
               <div class="ov-left">
                 <div class="row">
                   <div class="rlabel">Credit Limit</div>
-                  <div class="rval">₹{{ formatINR(card?.totalLimit || fallbackTotalLimit) }}</div>
+                  <div class="rval">
+                    ₹{{ formatINR(totalLimit) }}
+                  </div>
                 </div>
-
                 <div class="row">
                   <div class="rlabel">Outstanding Balance</div>
-                  <div class="rval danger">₹{{ formatINR(calculatedOutstanding) }}</div>
+                  <div class="rval danger">
+                    ₹{{ formatINR(outstanding) }}
+                  </div>
                 </div>
-
                 <div class="row">
                   <div class="rlabel">Available Credit</div>
-                  <div class="rval success">₹{{ formatINR(card?.availableLimit || fallbackAvailableCredit) }}</div>
+                  <div class="rval success">
+                    ₹{{ formatINR(availableCredit) }}
+                  </div>
                 </div>
-
                 <div class="util-row">
                   <div class="rlabel">Credit Utilization</div>
-                  <div class="util-value util-danger">{{ utilizationPercentage }}%</div>
+                  <div class="util-value util-danger">
+                    {{ utilizationPercentage }}%
+                  </div>
                 </div>
-
                 <div class="progress-wrap">
-                  <div class="progress util-danger" :style="{ width: utilizationPercentage + '%' }"></div>
+                  <div
+                    class="progress util-danger"
+                    :style="{ width: utilizationPercentage + '%' }"
+                  ></div>
                 </div>
               </div>
             </div>
           </div>
-
           <div class="panel transactions">
             <h3>Recent Transactions</h3>
             <p class="muted">Latest activity on this card</p>
-
             <ul class="tx-list">
               <li v-for="tx in recentTransactionsList" :key="tx.id" class="tx">
                 <div class="tx-left">
-                  <div class="tx-merchant">{{ tx.merchant }}</div>
-                  <div class="tx-meta">{{ tx.category }} • {{ formatDateTime(tx.date) }}</div>
+                  <div class="tx-merchant">
+                    {{ tx.merchantName || 'Unknown' }}
+                    <span v-if="tx.isBnpl" class="badge">BNPL</span>
+                  </div>
+                  <div class="tx-meta">
+                    {{ tx.category || 'Other' }} • {{ formatDate(tx.date) }}
+                  </div>
+                  <div v-if="tx.processorName" class="tx-processor">
+                    {{ tx.processorName }}
+                  </div>
                 </div>
                 <div class="tx-right">
                   <div :class="['tx-amount', (Number(tx.amount) < 0) ? 'neg' : 'pos']">
@@ -86,120 +101,140 @@
                   </div>
                 </div>
               </li>
+              <li v-if="recentTransactionsList.length === 0" class="tx">
+                <div>
+                  <div class="tx-title">No recent transactions</div>
+                  <div class="tx-sub">You have no transaction history for this card</div>
+                </div>
+                <div class="tx-amount">—</div>
+              </li>
             </ul>
           </div>
         </div>
-
       </section>
     </main>
-
     <UpdateCreditLimitModal
       v-if="card"
       v-model="isLimitModalOpen"
-      :currentLimit="card?.totalLimit"
-      :outstanding="calculatedOutstanding"
+      :currentLimit="Number(totalLimit)"
+      :outstanding="outstanding"
+      :min-limit="minLimit"
+      :max-limit="maxLimit"
       @next="handleLimitNext"
-    />
-
-    <ConfirmIdentityModal
-      v-if="card"
-      v-model="isConfirmModalOpen"
-      :amount="pendingLimit"
-      :serverError="confirmErrorMessage"
-      @verified="onVerifiedPassword"
     />
   </div>
 </template>
-
 <script>
-import axios from 'axios'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Card from '../../components/Card.vue'
 import UpdateCreditLimitModal from '../../components/UpdateCreditLimitModal.vue'
-import ConfirmIdentityModal from '../../components/ConfirmIdentityModal.vue'
+import {
+  getCards,
+  getCardTypes,
+  updateCardLimit as csUpdateCardLimit
+} from '../../services/cards-service'
+import { getDashboard } from '../../services/dashboardService'
 
 export default {
   name: 'CardDetail',
-  components: { Card, UpdateCreditLimitModal, ConfirmIdentityModal },
-  setup() {
+  components: { Card, UpdateCreditLimitModal },
+  setup () {
     const route = useRoute()
     const router = useRouter()
-
     const card = ref(null)
-    const userName = ref('')
-    const loading = ref(true)
-    const error = ref(null)
-    const isMasked = ref(true)
-    const fallbackTotalLimit = ref(0)
-    const fallbackAvailableCredit = ref(0)
-    const fallbackOutstanding = ref(0)
     const transactions = ref([])
+    const loading = ref(false)
+    const minLimit = ref(0)
+    const maxLimit = ref(0)
 
     const isLimitModalOpen = ref(false)
-    const isConfirmModalOpen = ref(false)
-    const pendingLimit = ref(0)
-    const confirmErrorMessage = ref(null)
+
+    const totalLimit = computed(() => Number(card.value?.creditLimit || 0))
+    const availableCredit = computed(() => Number(card.value?.availableLimit || 0))
+    const outstanding = computed(() =>
+      Math.max(0, totalLimit.value - availableCredit.value)
+    )
+    const utilizationPercentage = computed(() => {
+      return totalLimit.value
+        ? Math.round((outstanding.value / totalLimit.value) * 100)
+        : 0
+    })
 
     const cardLastFour = computed(() => {
-      if (!card.value || !card.value.number) return '1234'
-      return String(card.value.number).replace(/\s+/g,'').slice(-4)
+      if (!card.value) return '1234'
+      const num = card.value.cardNumber
+      return num ? String(num).replace(/\s+/g, '').slice(-4) : '1234'
     })
 
-    const cardLast4 = cardLastFour 
-
-    const calculatedOutstanding = computed(() => {
-      if (!card.value) return fallbackOutstanding.value || 0
-      if (card.value.outstanding !== undefined) return Number(card.value.outstanding)
-      const total = Number(card.value.totalLimit || fallbackTotalLimit.value || 0)
-      const avail = Number(card.value.availableLimit ?? fallbackAvailableCredit.value ?? 0)
-      return Math.max(0, total - avail)
+    const mergedCard = computed(() => {
+      if (!card.value) return null
+      return {
+        ...card.value,
+        fullPan: null,
+        cvv: card.value.cvv ?? null
+      }
     })
 
-    const utilizationPercentage = computed(() => {
-      const total = Number(card.value?.totalLimit || fallbackTotalLimit.value || 0)
-      const out = Number(calculatedOutstanding.value || 0)
-      if (!total) return 0
-      return Math.round((out / total) * 100)
-    })
+    function normalizeTx(tx = {}) {
+      const merchantName =
+        tx.merchantName ||
+        tx.merchant?.name ||
+        tx.merchant ||
+        tx.name ||
+        tx.label ||
+        (typeof tx.merchant === 'object' ? (tx.merchant.name || '') : '') ||
+        ''
+
+      const date = tx.transactionDate || tx.date || tx.timestamp || tx.createdAt || null
+
+      const isBnpl =
+        !!tx.isBnpl ||
+        String(tx.type || tx.transactionType || tx.mode || tx.paymentType || '').toLowerCase() === 'bnpl' ||
+        String(tx.category || '').toLowerCase() === 'bnpl'
+
+      const processorName =
+        tx.processorName ||
+        (tx.processor && (tx.processor.name || tx.processorName)) ||
+        tx.mode ||
+        null
+
+      return {
+        id: tx.id,
+        cardId: tx.cardId,
+        merchantName: merchantName || 'Unknown',
+        amount: tx.amount ?? tx.value ?? 0,
+        date,
+        category: tx.category || tx.subCategory || null,
+        isBnpl,
+        processorName,
+        raw: tx 
+      }
+    }
 
     const recentTransactionsList = computed(() => {
       return (transactions.value || []).slice(0, 6)
     })
 
-    function maskCardNumber(cardNumber) {
-      if (!cardNumber) return '**** **** **** 1234'
-      const digitsOnly = String(cardNumber).replace(/\s+/g,'')
-      return '**** **** **** ' + digitsOnly.slice(-4)
+    function formatINR (amount) {
+      return Number(amount || 0).toLocaleString('en-IN')
     }
 
-    function formatCardNumber(cardNumber) {
-      if (!cardNumber) return '1111 2222 3333 4444'
-      return String(cardNumber).replace(/\s+/g,'').replace(/(\d{4})(?=\d)/g, '$1 ')
-    }
-
-    function formatINR(amount) {
-      const numericValue = Number(amount || 0)
-      return numericValue.toLocaleString('en-IN')
-    }
-
-    function formatCurrency(amount) {
+    function formatCurrency (amount) {
       const numericValue = Number(amount || 0)
       const sign = numericValue < 0 ? '-' : ''
       return sign + '₹' + Math.abs(numericValue).toLocaleString('en-IN')
     }
 
-    function formatDateTime(timestamp) {
-      if (!timestamp) return ''
-      const dateObj = new Date(timestamp)
-      return dateObj.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    }
-
-    function toggleMask() { isMasked.value = !isMasked.value }
-
-    function toggleCardBlock(cardItem) {
-      if (!cardItem) return
-      cardItem.status = cardItem.status === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED'
+    function formatDate(isoString) {
+      if (!isoString) return ''
+      const dateObj = new Date(isoString)
+      return dateObj.toLocaleString('en-US', {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+      })
     }
 
     const cardActionsMenu = computed(() => {
@@ -207,129 +242,156 @@ export default {
       return [
         { label: 'View Details', to: id ? `/cards/${id}` : null },
         { label: 'Manage Limits', to: id ? `/cards/${id}/limits` : null },
-        { label: card.value?.status === 'BLOCKED' ? 'Unblock Card' : 'Block Card', value: { type: 'toggle-block' } }
+        {
+          label: card.value?.cardStatus === 'BLOCKED' ? 'Unblock Card' : 'Block Card',
+          value: { type: 'toggle-block' }
+        }
       ]
     })
 
-    function handleCardAction({ action }) {
-      if (!action) return
-      if (action.to) {
-        router.push(action.to)
-      } else if (action.value?.type === 'toggle-block') {
-        toggleCardBlock(card.value)
-      } else {
-        console.log('card action', action)
+    function handleCardAction ({ action }) {
+      if (action?.to) router.push(action.to)
+    }
+
+    function handleCardBlock (payload) {
+      if (payload?.card) {
+        payload.card.status = payload.newStatus
       }
     }
 
-    function handleCardBlock(payload) {
-      if (!payload?.card) return
-      payload.card.status = payload.newStatus
+    function openLimitModal () {
+      if (card.value) {
+        isLimitModalOpen.value = true
+      }
     }
 
-    function handleLimitNext(payload) {
+    async function handleLimitNext (payload) {
       const selectedNewLimit = Number(payload?.newLimit || 0)
       if (!selectedNewLimit) return
-      pendingLimit.value = selectedNewLimit
+
       isLimitModalOpen.value = false
-      confirmErrorMessage.value = null
-      setTimeout(() => isConfirmModalOpen.value = true, 160)
-    }
+      loading.value = true
 
-    async function onVerifiedPassword({ password }) {
-      confirmErrorMessage.value = null
-      try {
-        await new Promise(resolve => setTimeout(resolve, 600))
-        if (card.value) {
-          card.value.totalLimit = Number(pendingLimit.value)
-        }
-        isConfirmModalOpen.value = false
-        console.log('Limit successfully updated to', pendingLimit.value)
-      } catch (err) {
-        console.error('verification/update failed', err)
-        const msg = err?.response?.data?.message || (err.message || 'Verification failed')
-        confirmErrorMessage.value = String(msg)
-      }
-    }
-
-    function openLimitModal() {
-      if (!card.value) {
-        console.warn('No card selected to update limit for.')
+      const id = card.value?.id || route.params.id
+      if (!id) {
+        loading.value = false
+        alert('Invalid card id')
         return
       }
-      isLimitModalOpen.value = true
-    }
 
-    function closeLimitModal() {
-      isLimitModalOpen.value = false
-    }
-
-    const loadData = async () => {
       try {
-        const res = await axios.get('/data/dashboard.json')
-        const data = res.data
-        userName.value = data.user?.name || 'User'
-        fallbackTotalLimit.value = (data.totalLimit ?? data.cards?.reduce((sum, cardItem) => sum + (Number(cardItem.totalLimit) || 0), 0)) || 0
-        fallbackAvailableCredit.value = data.availableCredit ?? 0
-        fallbackOutstanding.value = data.outstanding ?? 0
-        transactions.value = data.transactions || []
+        await csUpdateCardLimit(id, selectedNewLimit)
 
-        const idToFind = route.params.id || (data.cards?.[0]?.id)
-        card.value = (data.cards || []).find(c => String(c.id) === String(idToFind)) || data.cards?.[0] || null
+        await loadCard()
+
+        if (card.value) card.value = { ...card.value }
+
+        await nextTick()
+
+        alert('Limit updated successfully')
       } catch (err) {
-        console.error(err)
-        error.value = 'Failed to load data'
+        console.error('Failed to update limit', err)
+        alert('Failed to update limit')
       } finally {
         loading.value = false
       }
     }
 
-    onMounted(loadData)
+    async function loadCard () {
+      loading.value = true
+      try {
+        const id = route.params.id
+        if (!id) return
+
+        const cardsList = await getCards()
+        const matched = (cardsList || []).find(c => String(c.id) === String(id))
+
+        if (matched) {
+          card.value = { ...matched }
+
+          const types = await getCardTypes()
+          const typeMatch = types.find(t => String(t.name).trim().toLowerCase() === String(matched.cardType?.name || '').trim().toLowerCase())
+          if (typeMatch) {
+            minLimit.value = typeMatch.minCardLimit
+            maxLimit.value = typeMatch.maxCardLimit
+          } else {
+            minLimit.value = 0
+            maxLimit.value = 0
+          }
+        }
+
+        const dash = await getDashboard()
+        if (dash?.transactions) {
+          const cardTx = dash.transactions
+            .filter(tx => String(tx.cardId) === String(id))
+            .map(normalizeTx)
+            .sort((a, b) => {
+              const ta = a.date ? new Date(a.date).getTime() : 0
+              const tb = b.date ? new Date(b.date).getTime() : 0
+              return tb - ta
+            })
+
+          transactions.value = cardTx
+        } else {
+          transactions.value = []
+        }
+      } catch (err) {
+        console.error('loadCard failed', err)
+      } finally {
+        loading.value = false
+      }
+    }
+
+    onMounted(loadCard)
 
     return {
       card,
-      userName,
+      transactions,
       loading,
-      error,
-      isMasked,
-      cardLast4,
+      isLimitModalOpen,
+      minLimit,
+      maxLimit,
       cardLastFour,
-      maskCardNumber,
-      formatCardNumber,
+      totalLimit,
+      availableCredit,
+      outstanding,
+      utilizationPercentage,
+      mergedCard,
+      recentTransactionsList,
       formatINR,
       formatCurrency,
-      formatDateTime,
-      utilizationPercentage,
-      recentTransactionsList,
-      calculatedOutstanding,
-      fallbackTotalLimit,
-      fallbackAvailableCredit,
-      toggleMask,
-      toggleCardBlock,
+      formatDate,
       cardActionsMenu,
       handleCardAction,
       handleCardBlock,
-      isLimitModalOpen,
-      handleLimitNext,
       openLimitModal,
-      closeLimitModal,
-      isConfirmModalOpen,
-      pendingLimit,
-      confirmErrorMessage,
-      onVerifiedPassword
+      handleLimitNext,
+      loadCard
     }
   }
 }
 </script>
 
-
 <style scoped>
+.link-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  margin-left: 8px;
+  font-size: 0.9rem;
+}
+.link-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 :root{
   --bg: #f6f7f9;
   --accent: #0b2540;
   --muted: #6b7280;
   --green: #16a34a;
   --danger: #ef4444;
+}
+.card-title {
+  font-weight: 700;
 }
 
 *{box-sizing:border-box}
@@ -355,7 +417,7 @@ export default {
   justify-content:space-between;
   flex-wrap:wrap;
 }
-.back{ color:var(--muted); text-decoration:none; padding:6px 8px; white-space:nowrap; }
+.back{ border: 1px solid #eee;padding: 6px 10px;border-radius: 8px;  font-size: 14px;color:var(--muted); text-decoration:none; padding:6px 8px; white-space:nowrap; background-color: #ffd60a;}
 .title-block{ display:flex; flex-direction:column; min-width:0; }
 .page-title{ margin:0; font-size:28px; font-weight:800; word-break:break-word; }
 .page-sub{ color:var(--muted); margin-top:6px; font-size:14px }
@@ -366,6 +428,16 @@ export default {
   gap:20px;
   align-items:start;
   width:100%;
+}
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #333;
+  background: #eee;
+  border-radius: 4px;
 }
 
 @media (max-width: 980px){
@@ -379,7 +451,6 @@ export default {
   width:100%;
 }
 .actions-card h3{ margin:0 0 6px 0; font-size:18px; }
-.muted{ color:var(--muted); margin-bottom:12px; }
 .action-controls{ display:flex; gap:12px; margin-top:8px; flex-wrap:wrap; }
 .action-controls button{ flex:1 1 auto; min-width:0; }
 .update-btn{
@@ -398,7 +469,7 @@ export default {
   overflow:hidden;
 }
 .panel h3{ margin:0 0 8px 0; font-size:16px; font-weight:800; }
-.panel .muted{ margin:0; }
+
 
 .overview-grid{ display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
 .ov-left{ flex:1 1 240px; min-width:0 }
@@ -470,6 +541,9 @@ export default {
 .util-row{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
 .util-value{ font-weight:800; font-size:15px; color:#0f1724; }
 .util-danger{ color:#ef4444 !important; }
+.progress.util-danger {
+  background: #ef4444 !important; 
+}
 
 button, a, input, select, textarea{ max-width:100%; }
 </style>

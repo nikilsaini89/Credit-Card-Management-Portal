@@ -9,11 +9,18 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.util.List;
+import java.time.LocalDate;
+
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+
+    @Query("SELECT t FROM Transaction t WHERE t.card.user.id = :userId ORDER BY t.createdAt DESC")
+    List<Transaction> findTop10ByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT t FROM Transaction t WHERE t.card.user.id = :userId ORDER BY t.createdAt DESC")
+    List<Transaction> findAllByUserId(@Param("userId") Long userId);
 
         /**
          * Find all transactions for a specific card ordered by transaction date
