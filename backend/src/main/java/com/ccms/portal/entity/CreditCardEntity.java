@@ -6,7 +6,6 @@ import lombok.*;
 
 import java.sql.Date;
 
-
 @Builder
 @Entity
 @Table(name = "credit_card")
@@ -35,6 +34,7 @@ public class CreditCardEntity {
     @Column(nullable = false)
     private Date expiryDate;
 
+
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;
@@ -43,4 +43,3 @@ public class CreditCardEntity {
     @JoinColumn(name = "card_type_id", nullable = false)
     private CardTypeEntity cardType;
 }
-

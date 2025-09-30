@@ -32,3 +32,15 @@ build/
 ### VS Code ###
 .vscode/
 node_modules/
+
+# Frontend build artifacts
+frontend/dist/
+frontend/build/
+frontend/*.js
+frontend/src/**/*.js
+frontend/src/**/*.js.map
+frontend/tsconfig.tsbuildinfo
+frontend/.vite/
+frontend/.vitest/
+
+logs/

@@ -1,25 +1,13 @@
-import { BASE_URL } from '../constants/constants';
-import axios from 'axios';
-import type { User } from '../types/User';
+import { api } from "./api";
+import type { User } from "../types/User";
 
-export function getUserProfile(userId: number) {
-  const token = localStorage.getItem('token');
-  return axios.get(`/api/profile/${userId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+export async function getUserProfile(userId: number) {
+  return api.get<User>(`/profile/${userId}`);
 }
 
-export const updateUserProfile = async (
+export async function updateUserProfile(
   userId: number,
-  payload: Omit<User, 'id' | 'email' | 'password'>
-) => {
-  const token = localStorage.getItem('token');
-
-  return axios.put(`${BASE_URL}/profile/${userId}`, payload,{
-     headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
-};
+  payload: Omit<User, "id" | "email" | "password">
+) {
+  return api.put(`/profile/${userId}`, payload);
+}

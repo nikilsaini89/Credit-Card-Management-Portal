@@ -29,6 +29,7 @@ public class UserProfileEntity {
     private Double annualIncome;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean isEligibleBnpl = false;
 
     @CreationTimestamp

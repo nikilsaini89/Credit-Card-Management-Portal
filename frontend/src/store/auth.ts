@@ -1,107 +1,79 @@
-import { Module } from 'vuex';
-import { User } from '../types/User';
-import { login, register } from '../services/authService';
-import { getUserProfile } from '../services/userService';
-import { RootState } from '../store';
+import { Module } from "vuex";
+import type { RootState } from "../store";
+import type { UserResponse } from "../types/auth";
+import { login, register, logout, refreshToken } from "../services/authService";
+import { getUserProfile } from "../services/userService";
+import user from "./user";
 
 export interface AuthState {
-  user: User | null;
+  user: UserResponse | null;
   token: string | null;
 }
-interface DecodedToken {
-  id: number;
-  name: string;
-  email: string;
-  phoneNumber: string;
-  address: string;
-  annualIncome: number;
-}
-
-
-function decodeToken(token: string): { id: number; email: string; role: string } | null {
-  try {
-    const jwt = token.replace(/^Bearer\s+/i, '');
-    const parts = jwt.split('.');
-    if (parts.length !== 3) return null;
-
-    const payload = JSON.parse(atob(parts[1]));
-    console.log('Decoded payload:', payload);
-
-    const id = Number(payload.userId);
-    const email = payload.sub;
-    const role = payload.role;
-
-    if (!email || !role || isNaN(id)) {
-      throw new Error('Invalid token payload');
-    }
-
-    return { id, email, role };
-  } catch (error) {
-    console.error('Failed to decode token:', error);
-    return null;
-  }
-}
-
-
 
 const auth: Module<AuthState, RootState> = {
   namespaced: true,
 
   state: (): AuthState => {
-    const token = localStorage.getItem('token');
-    const decoded = decodeToken(token || '');
-    const user = decoded ? JSON.parse(localStorage.getItem('user') || 'null') : null;
-
-    return {
-      token: decoded ? token : null,
-      user
-    };
+    const token = localStorage.getItem("token");
+    const user = token ? JSON.parse(localStorage.getItem("user") || "null") : null;
+    return { token, user };
   },
 
   mutations: {
     setToken(state, token: string) {
       state.token = token;
-      localStorage.setItem('token', token);
+      localStorage.setItem("token", token);
     },
-    setUser(state, user: User) {
+    setUser(state, user: UserResponse) {
       state.user = user;
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem("user", JSON.stringify(user));
     },
     logout(state) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
       state.token = null;
       state.user = null;
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-    }
+    },
   },
 
   actions: {
-    async login({ commit, dispatch }, credentials: { email: string; password: string }) {
+    async login({ commit }, credentials: { email: string; password: string }) {
       const res = await login(credentials.email, credentials.password);
-      commit('setToken', res.data.token);
-      await dispatch('getUserProfile');
+      commit("setToken", res.token);
+      commit("setUser", res.user);
     },
 
-    async register({ commit, dispatch }, userData: Omit<User, 'id'> & { password: string }) {
+    async register({ commit }, userData: Omit<UserResponse, "id"> & { password: string }) {
       const res = await register(userData);
-      commit('setToken', res.data.token);
-      await dispatch('getUserProfile');
+      commit("setToken", res.token);
+      commit("setUser", res.user);
+    },
+
+    async logout({ commit }) {
+      await logout();
+      commit("logout");
+    },
+
+    async refresh({ commit }) {
+      const token = await refreshToken();
+      commit("setToken", token);
     },
 
     async getUserProfile({ state, commit }) {
-      if (!state.token) return;
-      const decoded = decodeToken(state.token);
-      if (!decoded) return;
-      const res = await getUserProfile(decoded.id);
-      commit('setUser', res.data);
-      return res.data;
-    }
+      if (!state.token || !state.user) return;
+      const user = await getUserProfile(state.user.id);
+      commit("setUser", user);
+    },
   },
 
+
   getters: {
-    isAuthenticated: (state): boolean => !!state.token,
-    token: (state): string | null => state.token
-  }
+    isAuthenticated: (state) => !!state.token,
+    token: (state) => state.token,
+    user: (state) => state.user,
+    userRole: (state) => state.user?.role || null,
+    isAdmin: (state) => state.user?.role === "ADMIN",
+  },
 };
 
 export default auth;
