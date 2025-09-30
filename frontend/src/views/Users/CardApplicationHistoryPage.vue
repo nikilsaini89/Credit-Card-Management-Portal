@@ -95,7 +95,7 @@ export default {
   },
 
   created() {
-    this.fetchAll();
+    if(this.allApplications.length === 0) this.fetchAll();
   },
 
   methods: {
@@ -126,7 +126,6 @@ export default {
 <style scoped>
 .applications {
   font-family: "Inter", system-ui, Arial;
-  /* background: #f7f7f9; */
   min-height: 100vh;
 }
 

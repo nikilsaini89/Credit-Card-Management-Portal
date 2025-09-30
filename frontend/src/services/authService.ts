@@ -3,11 +3,6 @@ import type { AuthResponse } from "../types/auth";
  
 export const login = async (email: string, password: string): Promise<AuthResponse> => {
   const response = await api.post<AuthResponse>("/auth/login", { email, password });
-  const { token, user } = response.data;
- 
-  localStorage.setItem("token", token);
-  localStorage.setItem("user", JSON.stringify(user));
- 
   return response.data;
 };
  
@@ -19,10 +14,11 @@ export const register = async (user: Omit<AuthResponse["user"], "id"> & { passwo
 export const refreshToken = async (): Promise<string> => {
   const response = await api.post<AuthResponse>("/auth/refresh",{},{ withCredentials: true });
   const { token, user } = response.data;
- 
+
+  // Store tokens in localStorage
   localStorage.setItem("token", token);
   localStorage.setItem("user", JSON.stringify(user));
- 
+
   return token;
 };
  
