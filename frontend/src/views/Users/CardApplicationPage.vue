@@ -53,7 +53,7 @@
         <p class="muted">Complete your application details</p>
 
         <form @submit.prevent="submitApplication">
-          <div class="form-row">
+          <!-- <div class="form-row">
             <label>Requested Credit Limit</label>
             <input
               type="number"
@@ -65,7 +65,22 @@
             <small>
               Range: ₹{{ selectedCard.minCardLimit }} – ₹{{ selectedCard.maxCardLimit }}
             </small>
+          </div> -->
+          <div class="form-row">
+            <label>Requested Credit Limit</label>
+            <input
+              type="number"
+              v-model="form.creditLimit"
+              :min="selectedCard.minCardLimit"
+              :max="selectedCard.maxCardLimit"
+              :readonly="true"      
+              class="locked-limit"
+            />
+            <small>
+              Fixed at ₹{{ selectedCard.minCardLimit }}
+            </small>
           </div>
+
 
           <div class="form-row info" v-if="user">
             <h4>Applicant Information</h4>
@@ -125,10 +140,10 @@ export default {
     ...mapActions("cardTypes", ["fetchCardTypes"]),
     ...mapActions("userApplications", ["fetchAll"]), 
 
-    selectCard(card) {
-      this.selectedCard = card;
-      this.form.creditLimit = card.minCardLimit;
-    },
+  selectCard(card) {
+    this.selectedCard = card;
+    this.form.creditLimit = card.minCardLimit;
+  },
 
     async submitApplication() {
       const cardApplication = {
