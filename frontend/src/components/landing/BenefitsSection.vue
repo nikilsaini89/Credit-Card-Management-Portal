@@ -9,7 +9,7 @@
           class="text-3xl md:text-4xl font-bold mb-4 animate-fade-in-up"
           style="color: #0b2540;"
         >
-          Why Choose SmartSwipe?
+          Why Choose SwipeSmart?
         </h2>
         <p
           class="text-lg text-gray-600 max-w-2xl mx-auto animate-fade-in-up"

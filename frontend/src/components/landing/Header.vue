@@ -23,7 +23,7 @@
             ></path>
           </svg>
         </div>
-        <h1 class="text-2xl font-bold" style="color: #0b2540;">SmartSwipe</h1>
+        <h1 class="text-2xl font-bold" style="color: #0b2540;">SwipeSmart</h1>
       </div>
       <nav
         class="hidden md:flex space-x-8"
@@ -104,7 +104,7 @@
               </svg>
             </div>
             <h3 class="text-lg font-bold" style="color: #0b2540;">
-              SmartSwipe
+              SwipeSmart
             </h3>
           </div>
           <button

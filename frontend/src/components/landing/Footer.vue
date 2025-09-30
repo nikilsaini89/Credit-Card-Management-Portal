@@ -28,7 +28,7 @@
               </svg>
             </div>
             <h3 class="text-2xl font-bold" style="color: #ffd60a;">
-              SmartSwipe
+              SwipeSmart
             </h3>
           </div>
           <p class="text-gray-300 mb-6 max-w-md leading-relaxed">
@@ -185,7 +185,7 @@
         class="pt-8 border-t border-gray-700 flex flex-col md:flex-row justify-between items-center"
       >
         <p class="text-gray-400 text-sm mb-4 md:mb-0">
-          © 2024 SmartSwipe. All rights reserved. Built with ❤️ for smart
+          © 2024 SwipeSmart. All rights reserved. Built with ❤️ for smart
           banking.
         </p>
         <div class="flex space-x-6">

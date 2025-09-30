@@ -33,7 +33,7 @@
         >
           The ultimate platform for modern credit card management. Track
           transactions, manage BNPL payments, analyze spending patterns, and take
-          control of your financial future with SmartSwipe.
+          control of your financial future with SwipeSmart.
         </p>
         <div
           class="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up"
