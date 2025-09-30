@@ -535,7 +535,7 @@ export default {
 
 .rval.success{ color:#16a34a !important; }
 .rval.danger{ color:#ef4444 !important; }
-.tx-amount.pos{ color:#16a34a !important; }
+.tx-amount.pos{ color:#ef4444  !important; }
 .tx-amount.neg{ color:#ef4444 !important; }
 
 .util-row{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
