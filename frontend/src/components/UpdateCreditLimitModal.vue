@@ -3,9 +3,7 @@
     <div v-if="localVisible" class="backdrop-modal" @click.self="cancel">
       <div class="dialog-modal">
         <div class="dialog-header">
-          <div>
-            <h2 class="dialog-title">Update Credit Limit</h2>
-          </div>
+          <h2 class="dialog-title">Update Credit Limit</h2>
           <button class="close-button" @click="cancel">✕</button>
         </div>
 
@@ -25,27 +23,28 @@
             <input
               type="number"
               v-model.number="proposedLimit"
-              :min="currentOutstanding"
+              :min="currentOutstanding + props.minLimit"
+              :max="props.maxLimit"
               class="input-control"
             />
-            <div class="hint-text">Minimum: ₹{{ formatINR(currentOutstanding) }}</div>
-          </div>
+            <div class="hint-text">
+              Range: ₹{{ formatINR(currentOutstanding + props.minLimit) }} – ₹{{ formatINR(props.maxLimit) }}
+            </div>
 
-          <div class="info-note">
-            <strong>Note:</strong> Changes &gt; 20% require admin approval and may take 1–2 business days.
           </div>
         </div>
 
         <div class="dialog-footer">
           <button class="button button-ghost" @click="cancel">Cancel</button>
-          <button class="button button-primary" :disabled="!isSubmittable" @click="proceedToVerify">
-            Verify Password
+          <button class="button button-primary" :disabled="!isSubmittable" @click="updateLimit">
+            Update Limit
           </button>
         </div>
       </div>
     </div>
   </transition>
 </template>
+
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
@@ -54,10 +53,14 @@ const props = withDefaults(defineProps<{
   modelValue?: boolean
   currentLimit?: number
   outstanding?: number
+  minLimit?: number
+  maxLimit?: number
 }>(), {
   modelValue: false,
   currentLimit: 0,
-  outstanding: 0
+  outstanding: 0,
+  minLimit: 0,
+  maxLimit: 0,
 })
 
 const emit = defineEmits<{
@@ -68,21 +71,25 @@ const emit = defineEmits<{
 const localVisible = ref<boolean>(props.modelValue ?? false)
 const proposedLimit = ref<number>(props.currentLimit ?? 0)
 
-watch(() => props.modelValue, (newModelValue) => { localVisible.value = !!newModelValue })
-watch(localVisible, (newLocalVisible) => emit('update:modelValue', newLocalVisible))
+watch(() => props.modelValue, (newVal) => {
+  localVisible.value = !!newVal
+  emit('update:modelValue', newVal)
+})
 
 const displayCurrentLimit = props.currentLimit ?? 0
 const currentOutstanding = props.outstanding ?? 0
 
-const isSubmittable = computed(() => {
-  return !!proposedLimit.value && proposedLimit.value >= currentOutstanding
-})
+const isSubmittable = computed(() =>
+  proposedLimit.value >= (currentOutstanding + (props.minLimit ?? 0)) &&
+  proposedLimit.value <= (props.maxLimit ?? 0)
+)
 
 function cancel() {
   localVisible.value = false
+  emit('update:modelValue', false) 
 }
 
-function proceedToVerify() {
+function updateLimit() {
   if (!isSubmittable.value) return
   emit('next', { newLimit: Number(proposedLimit.value) })
   localVisible.value = false
@@ -92,6 +99,9 @@ function formatINR(value?: number) {
   return Number(value || 0).toLocaleString('en-IN')
 }
 </script>
+
+
+
 
 <style scoped>
 .backdrop-modal {
