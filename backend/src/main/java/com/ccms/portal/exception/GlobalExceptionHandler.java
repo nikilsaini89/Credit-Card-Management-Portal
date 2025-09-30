@@ -1,4 +1,6 @@
 package com.ccms.portal.exception;
+
+import com.ccms.portal.dto.response.ApiErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,101 +37,120 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", exception.getMessage()));
     }
 
-  @ExceptionHandler(CardNotFoundException.class)
-  public ResponseEntity<Map<String, Object>> handleCardNotFoundException(CardNotFoundException ex) {
-    log.error("Card not found: {}", ex.getMessage());
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserNotFound(UserNotFoundException ex) {
+        log.error("User not found: {}", ex.getMessage());
+        return buildErrorResponse("User Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
+    }
 
-    Map<String, Object> errorResponse = new HashMap<>();
-    errorResponse.put("error", "Card Not Found");
-    errorResponse.put("message", ex.getMessage());
-    errorResponse.put("timestamp", LocalDateTime.now());
-    errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+    @ExceptionHandler(CreditCardNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleCreditCardNotFound(CreditCardNotFoundException ex) {
+        log.error("Credit Card not found: {}", ex.getMessage());
+        return buildErrorResponse("Credit Card Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
+    }
 
-    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-  }
+    @ExceptionHandler(CardTypeNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleCardTypeNotFound(CardTypeNotFoundException ex) {
+        log.error("Card Type not found: {}", ex.getMessage());
+        return buildErrorResponse("Card Type Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
+    }
 
-  @ExceptionHandler(InsufficientLimitException.class)
-  public ResponseEntity<Map<String, Object>> handleInsufficientLimitException(InsufficientLimitException ex) {
-      log.error("Insufficient limit: {}", ex.getMessage());
-  
-      Map<String, Object> errorResponse = new HashMap<>();
-      errorResponse.put("error", "Insufficient Credit Limit");
-      errorResponse.put("message", ex.getMessage());
-      errorResponse.put("timestamp", LocalDateTime.now());
-      errorResponse.put("status", HttpStatus.UNPROCESSABLE_ENTITY.value());
-  
-      return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(errorResponse);
-  }
-  
+    @ExceptionHandler(CardNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleCardNotFoundException(CardNotFoundException ex) {
+        log.error("Card not found: {}", ex.getMessage());
+        return buildErrorResponse("Card Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
+    }
 
-  @ExceptionHandler(MerchantAccountNotFoundException.class)
-  public ResponseEntity<Map<String, Object>> handleMerchantAccountNotFoundException(
-      MerchantAccountNotFoundException ex) {
-    log.error("Merchant account not found: {}", ex.getMessage());
+    @ExceptionHandler(InsufficientLimitException.class)
+    public ResponseEntity<ApiErrorResponse> handleInsufficientLimit(InsufficientLimitException ex) {
+        log.error("Insufficient limit: {}", ex.getMessage());
+        return buildErrorResponse("Insufficient Credit Limit", ex.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY, null);
+    }
 
-    Map<String, Object> errorResponse = new HashMap<>();
-    errorResponse.put("error", "Merchant Account Not Found");
-    errorResponse.put("message", ex.getMessage());
-    errorResponse.put("timestamp", LocalDateTime.now());
-    errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+    @ExceptionHandler(MerchantAccountNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleMerchantAccountNotFoundException(
+            MerchantAccountNotFoundException ex) {
+        log.error("Merchant account not found: {}", ex.getMessage());
+        return buildErrorResponse("Merchant Account Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
+    }
 
-    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-  }
+    @ExceptionHandler(InvalidCardStatusException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidCardStatusException(InvalidCardStatusException ex) {
+        log.error("Invalid card status: {}", ex.getMessage());
+        return buildErrorResponse("Invalid Card Status", ex.getMessage(), HttpStatus.BAD_REQUEST, null);
+    }
 
-  @ExceptionHandler(InvalidCardStatusException.class)
-  public ResponseEntity<Map<String, Object>> handleInvalidCardStatusException(InvalidCardStatusException ex) {
-    log.error("Invalid card status: {}", ex.getMessage());
+    @ExceptionHandler(InvalidBnplRequestException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidBnplRequestException(InvalidBnplRequestException ex) {
+        log.error("Invalid BNPL request: {}", ex.getMessage());
+        return buildErrorResponse("Invalid BNPL Request", ex.getMessage(), HttpStatus.BAD_REQUEST, null);
+    }
 
-    Map<String, Object> errorResponse = new HashMap<>();
-    errorResponse.put("error", "Invalid Card Status");
-    errorResponse.put("message", ex.getMessage());
-    errorResponse.put("timestamp", LocalDateTime.now());
-    errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
+        log.error("Validation error: {}", ex.getMessage());
 
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-  }
+        Map<String, String> fieldErrors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors()
+                .forEach(error -> fieldErrors.put(error.getField(), error.getDefaultMessage()));
 
-  @ExceptionHandler(InvalidBnplRequestException.class)
-  public ResponseEntity<Map<String, Object>> handleInvalidBnplRequestException(InvalidBnplRequestException ex) {
-    log.error("Invalid BNPL request: {}", ex.getMessage());
+        return buildErrorResponse("Validation Failed", "Invalid input data", HttpStatus.BAD_REQUEST, fieldErrors);
+    }
 
-    Map<String, Object> errorResponse = new HashMap<>();
-    errorResponse.put("error", "Invalid BNPL Request");
-    errorResponse.put("message", ex.getMessage());
-    errorResponse.put("timestamp", LocalDateTime.now());
-    errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+    @ExceptionHandler(CardLimitException.class)
+    public ResponseEntity<ApiErrorResponse> handleCardLimitException(CardLimitException ex) {
+        log.error("Card limit error: {}", ex.getMessage());
+        return buildErrorResponse("Card Limit Error", ex.getMessage(), HttpStatus.BAD_REQUEST, null);
+    }
 
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-  }
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiErrorResponse> handleGenericException(Exception ex) {
+        log.error("Unexpected error: {}", ex.getMessage(), ex);
+        return buildErrorResponse("Internal Server Error", "An unexpected error occurred",
+                HttpStatus.INTERNAL_SERVER_ERROR, null);
+    }
 
-  @ExceptionHandler(MethodArgumentNotValidException.class)
-  public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException ex) {
-    log.error("Validation error: {}", ex.getMessage());
+    @ExceptionHandler(CardApplicationNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleCardApplicationNotFound(CardApplicationNotFoundException ex) {
+        log.error("Card application not found: {}", ex.getMessage());
+        return buildErrorResponse("Card Application Not Found", ex.getMessage(), HttpStatus.NOT_FOUND, null);
+    }
 
-    Map<String, Object> errorResponse = new HashMap<>();
-    errorResponse.put("error", "Validation Failed");
-    errorResponse.put("message", "Invalid input data");
-    errorResponse.put("timestamp", LocalDateTime.now());
-    errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+    @ExceptionHandler(UnauthorizedApplicationActionException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnauthorizedApplicationAction(
+            UnauthorizedApplicationActionException ex) {
+        log.error("Unauthorized application action: {}", ex.getMessage());
+        return buildErrorResponse("Unauthorized Action", ex.getMessage(), HttpStatus.FORBIDDEN, null);
+    }
 
-    Map<String, String> fieldErrors = new HashMap<>();
-    ex.getBindingResult().getFieldErrors()
-        .forEach(error -> fieldErrors.put(error.getField(), error.getDefaultMessage()));
-    errorResponse.put("fieldErrors", fieldErrors);
+    @ExceptionHandler(BnplNotEligibleException.class)
+    public ResponseEntity<ApiErrorResponse> handleBnplNotEligible(BnplNotEligibleException ex) {
+        log.error("BNPL not eligible: {}", ex.getMessage());
+        return buildErrorResponse("BNPL Not Available", ex.getMessage(), HttpStatus.FORBIDDEN, null);
+    }
+    @ExceptionHandler(DuplicateApplicationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDuplicateApp(DuplicateApplicationException ex) {
+        log.error("Duplicate application attempt: {}", ex.getMessage());
+        return buildErrorResponse(
+                "Duplicate Application",
+                ex.getMessage(),
+                HttpStatus.CONFLICT,
+                null
+        );
+    }
 
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-  }
 
-  @ExceptionHandler(Exception.class)
-  public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
-    log.error("Unexpected error: {}", ex.getMessage(), ex);
+    private ResponseEntity<ApiErrorResponse> buildErrorResponse(
+            String error, String message, HttpStatus status, Map<String, String> fieldErrors) {
 
-    Map<String, Object> errorResponse = new HashMap<>();
-    errorResponse.put("error", "Internal Server Error");
-    errorResponse.put("message", "An unexpected error occurred");
-    errorResponse.put("timestamp", LocalDateTime.now());
-    errorResponse.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        ApiErrorResponse apiError = ApiErrorResponse.builder()
+                .error(error)
+                .message(message)
+                .status(status.value())
+                .timestamp(LocalDateTime.now())
+                .fieldErrors(fieldErrors)
+                .build();
 
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-  }
+        return ResponseEntity.status(status).body(apiError);
+    }
 }

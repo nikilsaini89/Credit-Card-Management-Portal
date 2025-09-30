@@ -85,15 +85,6 @@
 			<version>3.0.0</version>
 		</dependency>
 
-		<!-- Jackson Modules -->
-		<dependency>
-			<groupId>com.fasterxml.jackson.datatype</groupId>
-			<artifactId>jackson-datatype-hibernate5-jakarta</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.datatype</groupId>
-			<artifactId>jackson-datatype-jsr310</artifactId>
-		</dependency>
 
 		<!-- Lombok -->
 		<dependency>
@@ -130,6 +121,12 @@
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-hibernate5-jakarta</artifactId>
 		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+		</dependency>
+
 
 		<!-- Jackson JSR310 Module for Java 8 Time -->
 		<dependency>

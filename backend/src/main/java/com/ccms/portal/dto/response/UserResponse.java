@@ -1,13 +1,14 @@
 package com.ccms.portal.dto.response;
 
-import lombok.*;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Getter
-@Setter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserResponse {
     private Long id;
     private String name;
@@ -15,6 +16,5 @@ public class UserResponse {
     private String phoneNumber;
     private String address;
     private Boolean isEligibleForBNPL;
-
-
+    private String role;
 }
