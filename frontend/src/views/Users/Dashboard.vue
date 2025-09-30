@@ -42,7 +42,7 @@
           <div class="card-list">
             <div
               v-for="cardItem in cards"
-              :key="cardItem.id ?? cardItem._id ?? cardItem.cardId"
+              :key=" cardItem.id"
               class="card-click-wrapper"
               @click.stop="goToCard(cardItem)"
               style="cursor: pointer;"
