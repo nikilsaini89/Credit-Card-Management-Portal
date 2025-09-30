@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard">
     <main class="container">
-      <section class="hero">
+      <section class="main">
         <h1>Welcome back, {{ user.name }}!</h1>
         <p class="subtitle">Here's your credit card overview</p>
 
@@ -40,35 +40,57 @@
           </div>
 
           <div class="card-list">
-            <Card
+            <div
               v-for="cardItem in cards"
-              :key="cardItem.id"
-              :card="cardItem"
-              :userName="user.name"
-              :showMenu="true"
-              :actions="cardActions(cardItem)"
-              @action="onCardAction"
-              @block="onToggleBlock"
-            />
+              :key=" cardItem.id"
+              class="card-click-wrapper"
+              @click.stop="goToCard(cardItem)"
+              style="cursor: pointer;"
+            >
+              <Card
+                :card="cardItem"
+                :userName="user.name"
+                :showMenu="false"
+                :actions="cardActions(cardItem)"
+                @action.stop="onCardAction"
+                @block.stop="onToggleBlock"
+              />
+            </div>
           </div>
         </div>
 
         <aside class="right-col">
           <div class="activity">
             <div class="activity-header">
-              <h3>Latest Transactions</h3>
+              <h3 class="section-title" >Latest Transactions</h3>
               <RouterLink to="/transactions" class="view-all">View All</RouterLink>
             </div>
 
             <ul class="tx-list">
               <li v-for="tx in transactions" :key="tx.id" class="tx">
                 <div>
-                  <div class="tx-title">{{ tx.merchant }} <span v-if="tx.mode" class="pill">{{ tx.mode }}</span></div>
-                  <div class="tx-sub">{{ tx.category }} • {{ formatDate(tx.date) }}</div>
+                  <div class="tx-title">
+                    {{ tx.merchantName }}
+                    <span v-if="tx.isBnpl" class="pill">BNPL</span>
+                  </div>
+                  <div class="tx-sub">
+                    {{ tx.category || 'Other' }} • {{ formatDate(tx.date) }}
+                  </div>
+                  <div v-if="tx.processorName" class="processor-badge">{{ tx.processorName }}</div>
                 </div>
-                <div :class="['tx-amount', tx.amount < 0 ? 'danger' : '']">
-                  {{ tx.amount < 0 ? '-' : '' }}₹{{ formatNumber(Math.abs(tx.amount)) }}
+
+                <div :class="['tx-amount', tx.amount > 0 ? 'danger' : '']">
+                  -₹{{ formatNumber(Math.abs(tx.amount)) }}
                 </div>
+
+              </li>
+
+              <li v-if="transactions.length === 0" class="tx">
+                <div>
+                  <div class="tx-title">No recent transactions</div>
+                  <div class="tx-sub">You have no transaction history yet</div>
+                </div>
+                <div class="tx-amount">—</div>
               </li>
             </ul>
           </div>
@@ -77,7 +99,7 @@
             <h4>Quick Actions</h4>
             <div class="actions">
               <RouterLink to="/apply-card" class="action">+ Apply Card</RouterLink>
-              <RouterLink to="/new-transaction" class="action">↗ New Transaction</RouterLink>
+              <RouterLink to="/transactions" class="action">↗ New Transaction</RouterLink>
             </div>
           </div>
         </aside>
@@ -87,12 +109,12 @@
 </template>
 
 <script>
-import axios from "axios";
 import Card from "../../components/Card.vue";
-import { useRouter } from "vue-router";
+import { getDashboard } from "../../services/dashboardService";
+import { getCards } from "../../services/cards-service";
 
 export default {
-  name: "DashboardView",
+  name: "Dashboard",
   components: { Card },
   data() {
     return {
@@ -108,6 +130,8 @@ export default {
       transactions: [],
       showFull: {},
       openMenu: null,
+      loading: false,
+      error: null,
     };
   },
   created() {
@@ -119,96 +143,109 @@ export default {
   },
   methods: {
     async loadDashboard() {
+      this.loading = true;
+      this.error = null;
       try {
-        const response = await axios.get("/data/dashboard.json");
-        const data = response.data;
+        const data = await getDashboard();
 
-        this.user = data.user || this.user;
+        this.user.name = data.userName;
+        this.summary = data.summary;
+        this.transactions = data.transactions.map(t => this.normalizeTx(t));
 
-        this.summary.activeCards = data.activeCards ?? (data.cards ? data.cards.length : 0);
-        this.summary.totalCards = data.totalCards ?? (data.cards ? data.cards.length : 0);
-        this.summary.totalLimit = data.totalLimit ?? this.sum(data.cards, "totalLimit");
-        this.summary.availableCredit = data.availableCredit ?? this.sum(data.cards, "availableLimit");
-        this.summary.outstanding = data.outstanding ?? 0;
-
-        this.cards = data.cards || [];
-        this.transactions = data.transactions || [];
-
-        this.cards.forEach((cardItem) => {
-          this.$set(this.showFull, cardItem.id, false);
-        });
+        await this.loadCards();
       } catch (err) {
-        console.error("Failed to load dashboard JSON:", err);
+        console.error("Failed to load dashboard:", err);
+        this.error = "Failed to load dashboard";
+      } finally {
+        this.loading = false;
       }
     },
-
-    maskNumber(cardNumber) {
-      if (!cardNumber) return "";
-      const onlyDigits = cardNumber.toString();
-      const lastFour = onlyDigits.slice(-4);
-      return "**** **** **** " + lastFour;
-    },
-    formatNumber(value) {
-      if (value == null) return "0";
-      return value.toLocaleString("en-IN");
-    },
-    sum(list = [], key) {
-      return list.reduce((accumulator, item) => accumulator + (Number(item[key]) || 0), 0);
-    },
-    formatDate(isoString) {
+    async loadCards() {
       try {
-        const dateObj = new Date(isoString);
-        const options = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
-        return dateObj.toLocaleString("en-US", options);
-      } catch {
-        return isoString;
+          const list = await getCards();
+          const activeList = list.filter(c => (c.cardStatus || "").toUpperCase() === "ACTIVE");
+          this.cards = activeList.map(c => ({
+          id: c.id,
+          cardNumber: c.cardNumber,
+          cardHolderName: c.cardHolderName,
+          creditLimit: c.creditLimit,
+          availableLimit: c.availableLimit,
+          cardStatus: c.cardStatus,
+          expiryDate: c.expiryDate,
+          cardType: c.cardType,
+        }));
+
+        this.cards.forEach(c => { this.showFull[c.id] = false; });
+      } catch (err) {
+        console.error("Failed to load cards:", err);
+        this.cards = [];
       }
     },
 
-    toggleCardNumber(cardId) {
-      this.$set(this.showFull, cardId, !this.showFull[cardId]);
+    normalizeTx(tx) {
+      return {
+        id: tx.id,
+        cardId: tx.cardId,
+        merchantName: tx.merchantName,
+        amount: tx.amount,
+        date: tx.transactionDate,
+        category: tx.category,
+        isBnpl: tx.isBnpl,
+        status: tx.status,
+      };
     },
+
+    formatNumber(value) {
+      return Number(value).toLocaleString("en-IN");
+    },
+
+    formatDate(isoString) {
+      const dateObj = new Date(isoString);
+      return dateObj.toLocaleString("en-US", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    },
+
     toggleMenu(cardId) {
       this.openMenu = this.openMenu === cardId ? null : cardId;
     },
+
     onToggleBlock(card) {
-      card.status = card.status === "BLOCKED" ? "ACTIVE" : "BLOCKED";
+      card.cardStatus = card.cardStatus === "BLOCKED" ? "ACTIVE" : "BLOCKED";
       this.openMenu = null;
     },
+
     globalClick(event) {
-      const clickedOutside = !event.target.closest(".card-menu");
-      if (clickedOutside) this.openMenu = null;
-    },
-    isImageString(source) {
-      return typeof source === "string" && /\.(png|jpe?g|svg|webp)$/.test(source);
+      if (!event.target.closest(".card-menu")) {
+        this.openMenu = null;
+      }
     },
 
     cardActions(card) {
+      const id = card.id;
       return [
-        { label: "View Details", to: { name: "CardDetail", params: { id: card.id } } },
-        { label: card.status === "BLOCKED" ? "Unblock" : "Block", value: { type: "toggle-block" } }
+        { label: "View Details", to: `/cards/${id}` },
+        { label: card.cardStatus === "BLOCKED" ? "Unblock" : "Block", value: { type: "toggle-block", cardId: id } }
       ];
     },
 
-    onCardAction({ action }) {
-      if (!action) return;
-      if (action.to) {
-        if (this.$router) this.$router.push(action.to);
-        else {
-          const router = useRouter ? useRouter() : null;
-          if (router) router.push(action.to);
-          else console.warn("Router not available to navigate to", action.to);
-        }
-      } else if (action.value?.type === "toggle-block") {
-        console.log("toggle-block action received; update your onCardAction to include card id if needed", action);
-      } else {
-        console.log("Unhandled card action", action);
+    goToCard(card) {
+      const id = card.id;
+      this.$router.push(`/cards/${id}`).catch(() => (window.location.href = `/cards/${id}`));
+    },
+
+    async onCardAction(payload) {
+      const to = payload?.to;
+      if (typeof to === "string") {
+        try { await this.$router.push(to); } catch { window.location.href = to; }
       }
     }
   }
 };
 </script>
-
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap");
 :root {
@@ -267,7 +304,7 @@ export default {
   font-weight: 700;
 }
 
-.hero h1 {
+.main h1 {
   font-size: 32px;
   margin: 8px 0;
 }
@@ -343,8 +380,12 @@ export default {
   margin-top: 26px;
   align-items: start;
 }
-.left-col .section-title {
+.left-col {
   margin: 0 0 12px 6px;
+}
+.section-title {
+  margin: 0 0 12px 6px;
+  font-weight: 550;
 }
 .section-header {
   display: flex;
@@ -353,7 +394,7 @@ export default {
   margin-bottom: 12px;
 }
 .view-all {
-  background: transparent;
+  background: #ffd60a;
   border: 1px solid #eee;
   padding: 6px 10px;
   border-radius: 8px;
@@ -516,7 +557,7 @@ export default {
   padding: 14px;
   border-radius: 10px;
   border: 1px solid #eee;
-  background: #fff;
+  background:#ffd60a;
   text-decoration: none;
   color: inherit;
   display: inline-flex;

@@ -2,6 +2,8 @@ export interface CardType {
   name: string;
   networkType: string;
   description: string;
+  minCardLimit: number;   
+  maxCardLimit: number;
 }
 
 export interface CreditCard {
