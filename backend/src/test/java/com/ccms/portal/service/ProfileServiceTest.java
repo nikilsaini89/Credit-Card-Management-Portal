@@ -115,4 +115,26 @@ class ProfileServiceTest {
 
         assertThrows(UserNotFoundException.class, () -> profileService.updateUserProfile(1L, request));
     }
+
+    @Test
+    void updateUserProfile_notEligibleBnpl() {
+        UpdateProfileRequest request = new UpdateProfileRequest();
+        request.setName("Name LowIncome");
+        request.setPhoneNumber("1112223333");
+        request.setAddress("Small Town");
+        request.setAnnualIncome(50_000.0);  // below eligibility threshold
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userProfileRepository.findByUser(user)).thenReturn(Optional.of(profile));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileRepository.save(profile)).thenReturn(profile);
+
+        UserResponse response = profileService.updateUserProfile(1L, request);
+
+        assertEquals("Name LowIncome", response.getName());
+        assertEquals("1112223333", response.getPhoneNumber());
+        assertEquals("Small Town", response.getAddress());
+        assertFalse(response.getIsEligibleForBNPL()); // must be false
+    }
+
 }
