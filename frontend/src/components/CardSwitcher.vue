@@ -45,6 +45,7 @@ interface Card {
   cardType?: {
     networkType?: string
   }
+  cardType?: string
   lastFour?: string
   cardNumber?: string
   availableLimit?: number
