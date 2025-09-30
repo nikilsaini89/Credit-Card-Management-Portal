@@ -7,8 +7,10 @@ import com.ccms.portal.dto.response.TransactionResponse;
 import com.ccms.portal.entity.CreditCardEntity;
 import com.ccms.portal.entity.Transaction;
 import com.ccms.portal.entity.UserProfileEntity;
+import com.ccms.portal.enums.CardStatus;
 import com.ccms.portal.enums.TransactionStatus;
 import com.ccms.portal.exception.BnplNotEligibleException;
+import com.ccms.portal.exception.CardBlockedException;
 import com.ccms.portal.exception.CreditCardNotFoundException;
 import com.ccms.portal.exception.InsufficientLimitException;
 import com.ccms.portal.exception.InvalidTransactionException;
@@ -57,6 +59,12 @@ public class TransactionService {
                 CreditCardEntity card = creditCardRepository.findById(request.getCardId())
                         .orElseThrow(() -> new CreditCardNotFoundException(
                                 "Card not found with ID: " + request.getCardId()));
+
+                // Check if card is blocked
+                if (card.getCardStatus() == CardStatus.BLOCKED) {
+                        throw new CardBlockedException(
+                                "Cannot create transaction. This card is currently blocked. Please unblock the card or use a different card to proceed with the transaction.");
+                }
 
                 // Check if sufficient credit limit using proper calculation
                 if (!creditLimitService.hasSufficientCreditLimit(request.getCardId(), request.getAmount())) {
