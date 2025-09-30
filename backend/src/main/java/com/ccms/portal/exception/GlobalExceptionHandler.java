@@ -107,6 +107,12 @@ public class GlobalExceptionHandler {
         log.error("BNPL not eligible: {}", ex.getMessage());
         return buildErrorResponse("BNPL Not Available", ex.getMessage(), HttpStatus.FORBIDDEN, null);
     }
+
+    @ExceptionHandler(CardBlockedException.class)
+    public ResponseEntity<ApiErrorResponse> handleCardBlocked(CardBlockedException ex) {
+        log.error("Card blocked: {}", ex.getMessage());
+        return buildErrorResponse("Card Blocked", ex.getMessage(), HttpStatus.FORBIDDEN, null);
+    }
     @ExceptionHandler(DuplicateApplicationException.class)
     public ResponseEntity<ApiErrorResponse> handleDuplicateApp(DuplicateApplicationException ex) {
         log.error("Duplicate application attempt: {}", ex.getMessage());

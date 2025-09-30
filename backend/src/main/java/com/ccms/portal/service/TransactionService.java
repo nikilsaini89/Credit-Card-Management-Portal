@@ -7,8 +7,10 @@ import com.ccms.portal.dto.response.TransactionResponse;
 import com.ccms.portal.entity.CreditCardEntity;
 import com.ccms.portal.entity.Transaction;
 import com.ccms.portal.entity.UserProfileEntity;
+import com.ccms.portal.enums.CardStatus;
 import com.ccms.portal.enums.TransactionStatus;
 import com.ccms.portal.exception.BnplNotEligibleException;
+import com.ccms.portal.exception.CardBlockedException;
 import com.ccms.portal.exception.CreditCardNotFoundException;
 import com.ccms.portal.exception.InsufficientLimitException;
 import com.ccms.portal.exception.InvalidTransactionException;
@@ -58,6 +60,12 @@ public class TransactionService {
                         .orElseThrow(() -> new CreditCardNotFoundException(
                                 "Card not found with ID: " + request.getCardId()));
 
+                // Check if card is blocked
+                if (card.getCardStatus() == CardStatus.BLOCKED) {
+                        throw new CardBlockedException(
+                                "Cannot create transaction. This card is currently blocked. Please unblock the card or use a different card to proceed with the transaction.");
+                }
+
                 // Check if sufficient credit limit using proper calculation
                 if (!creditLimitService.hasSufficientCreditLimit(request.getCardId(), request.getAmount())) {
                         BigDecimal currentAvailable = creditLimitService
@@ -81,7 +89,6 @@ public class TransactionService {
                                         "You are not eligible for BNPL transactions. Please contact support to check your eligibility or try a regular transaction instead.");
                         }
 
-                        log.info("BNPL eligibility validated for user: {}", card.getUser().getId());
                 }
 
                 // Create transaction
@@ -111,7 +118,6 @@ public class TransactionService {
                 // Trigger statement recalculation for current month FIRST
                 try {
                         creditCardStatementService.createCurrentStatement(card.getId());
-                        log.info("Statement recalculated for card {}", card.getId());
                 } catch (Exception e) {
                         log.warn("Failed to recalculate statement for card {}: {}", card.getId(), e.getMessage());
                 }
@@ -119,16 +125,7 @@ public class TransactionService {
                 // THEN recalculate available limit after statement is updated
                 // This ensures normal transactions are included in the statement before
                 // calculating available limit
-                log.info("Recalculating available limit for card {} after statement update", request.getCardId());
                 creditLimitService.recalculateAvailableLimit(request.getCardId());
-
-                if (request.getIsBnpl()) {
-                        log.info("BNPL transaction blocks {} from available limit for card {}", request.getAmount(),
-                                card.getId());
-                } else {
-                        log.info("Normal transaction blocks {} from available limit for card {}", request.getAmount(),
-                                card.getId());
-                }
 
                 return mapToTransactionResponse(savedTransaction);
         }
@@ -138,7 +135,6 @@ public class TransactionService {
          */
         public TransactionHistoryResponse getTransactionHistory(Long cardId, int page, int size,
                                                                 String category, Boolean isBnpl, String merchantName) {
-                log.info("Fetching transaction history for card: {}, page: {}, size: {}", cardId, page, size);
 
                 // Get current authenticated user
                 JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
@@ -187,7 +183,6 @@ public class TransactionService {
          * Get spending analytics for a card
          */
         public AnalyticsResponse getSpendingAnalytics(Long cardId) {
-                log.info("Fetching spending analytics for card: {}", cardId);
 
                 // Get current authenticated user
                 JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
@@ -269,7 +264,6 @@ public class TransactionService {
          * Get total amount spent on a card
          */
         public Double getTotalSpentByCardId(Long cardId) {
-                log.info("Fetching total spent for card: {}", cardId);
                 return transactionRepository.getTotalSpentByCardId(cardId);
         }
 
@@ -277,7 +271,6 @@ public class TransactionService {
          * Get transaction count for a card
          */
         public Long getTransactionCountByCardId(Long cardId) {
-                log.info("Fetching transaction count for card: {}", cardId);
                 return transactionRepository.countByCardId(cardId);
         }
 
@@ -285,7 +278,6 @@ public class TransactionService {
          * Get BNPL transactions for a card
          */
         public List<TransactionResponse> getBnplTransactions(Long cardId) {
-                log.info("Fetching BNPL transactions for card: {}", cardId);
                 return transactionRepository.findByCardIdAndIsBnplTrueOrderByTransactionDateDesc(cardId)
                         .stream()
                         .map(this::mapToTransactionResponse)
@@ -296,7 +288,6 @@ public class TransactionService {
          * Get transaction by ID
          */
         public TransactionResponse getTransactionById(Long transactionId) {
-                log.info("Fetching transaction by ID: {}", transactionId);
                 Transaction transaction = transactionRepository.findById(transactionId)
                         .orElseThrow(() -> new TransactionNotFoundException(
                                 "Transaction not found with ID: " + transactionId));
@@ -326,7 +317,6 @@ public class TransactionService {
          * Get monthly spending trends for a card with custom start date
          */
         public List<Object[]> getMonthlySpendingTrends(Long cardId, LocalDate startDate) {
-                log.info("Fetching monthly spending trends for card: {}, startDate: {}", cardId, startDate);
 
                 // Get current authenticated user
                 JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder

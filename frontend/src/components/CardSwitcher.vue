@@ -22,13 +22,30 @@
         v-for="card in cards"
         :key="card.id"
         @click="selectCard(card.id.toString())"
-        class="w-full px-4 py-3 text-sm text-left hover:bg-yellow-200 hover:text-gray-900 transition-colors duration-200 border-b border-gray-100 last:border-b-0"
+        :disabled="card.cardStatus === 'BLOCKED'"
+        :class="[
+          'w-full px-4 py-3 text-sm text-left transition-colors duration-200 border-b border-gray-100 last:border-b-0',
+          card.cardStatus === 'BLOCKED' 
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+            : 'hover:bg-yellow-200 hover:text-gray-900'
+        ]"
       >
         <div class="flex items-center justify-between">
-          <span class="text-gray-700 font-medium">
-            {{ card.cardType?.networkType || card.cardType || 'VISA' }} ****{{ card.lastFour || card.cardNumber?.slice(-4) || '****' }}
-          </span>
-          <span v-if="showAvailableLimit" class="text-xs text-gray-500">
+          <div class="flex items-center space-x-2">
+            <span :class="[
+              'font-medium',
+              card.cardStatus === 'BLOCKED' ? 'text-gray-400' : 'text-gray-700'
+            ]">
+              {{ card.cardType?.networkType || card.cardType || 'VISA' }} ****{{ card.lastFour || card.cardNumber?.slice(-4) || '****' }}
+            </span>
+            <span v-if="card.cardStatus === 'BLOCKED'" class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">
+              BLOCKED
+            </span>
+          </div>
+          <span v-if="showAvailableLimit" :class="[
+            'text-xs',
+            card.cardStatus === 'BLOCKED' ? 'text-gray-400' : 'text-gray-500'
+          ]">
             ₹{{ formatNumber(card.availableLimit || 0) }} available
           </span>
         </div>
@@ -49,6 +66,7 @@ interface Card {
   lastFour?: string
   cardNumber?: string
   availableLimit?: number
+  cardStatus?: string
 }
 
 interface Props {
@@ -92,6 +110,13 @@ const toggleDropdown = () => {
 }
 
 const selectCard = (cardId: string) => {
+  // Prevent selection of blocked cards
+  if (cardId) {
+    const card = props.cards.find(c => c.id.toString() === cardId)
+    if (card && card.cardStatus === 'BLOCKED') {
+      return // Don't emit selection for blocked cards
+    }
+  }
   emit('card-selected', cardId)
   showDropdown.value = false
 }
