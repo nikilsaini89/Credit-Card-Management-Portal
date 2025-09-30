@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 
 @Component
 public class CreditCardUtil {
@@ -18,24 +17,37 @@ public class CreditCardUtil {
     private static final Logger logger = LoggerFactory.getLogger(CreditCardUtil.class);
     private static final int CARD_NUMBER_LENGTH = 16;
 
+    /*
+     * Generates a random 16-digit card number.
+     * Digits are purely random and not validated
+     * against Luhn algorithm.
+     */
     public String generateCardNumber() {
         logger.debug("Generating new card number");
         StringBuilder cardNumber = new StringBuilder(CARD_NUMBER_LENGTH);
-        for (int index = 0; index < CARD_NUMBER_LENGTH; index++) {
-            int digit = new Random().nextInt(10);
-            cardNumber.append(digit);
+        for (int i = 0; i < CARD_NUMBER_LENGTH; i++) {
+            cardNumber.append(new Random().nextInt(10));
         }
         return cardNumber.toString();
     }
 
+    /*
+     * Generates an expiry date by adding the given
+     * number of years to the current date.
+     */
     public Date generateExpiryDate(int yearsFromNow) {
         logger.debug("Generating expiry date {} years from now", yearsFromNow);
         LocalDate expiry = LocalDate.now().plusYears(yearsFromNow);
         return Date.valueOf(expiry);
     }
 
+    /*
+     * Builds a CreditCardResponse DTO from a CreditCardEntity.
+     * Includes card details, limits, status, expiry date, and
+     * associated card type information.
+     */
     public CreditCardResponse buildCreditCardResponse(CreditCardEntity cardEntity){
-        logger.debug("Building credit card response for card ID: {}", cardEntity.getId());
+        logger.debug("Building response for card ID: {}", cardEntity.getId());
 
         CardTypeEntity cardType = cardEntity.getCardType();
 
@@ -45,8 +57,8 @@ public class CreditCardUtil {
                 .description(cardType.getDescription())
                 .build();
 
-        CreditCardResponse cardResponse = CreditCardResponse.builder().
-                id(cardEntity.getId())
+        return CreditCardResponse.builder()
+                .id(cardEntity.getId())
                 .cardHolderName(cardEntity.getUser().getName())
                 .cardNumber(cardEntity.getCardNumber())
                 .cardStatus(cardEntity.getCardStatus())
@@ -55,7 +67,5 @@ public class CreditCardUtil {
                 .expiryDate(cardEntity.getExpiryDate())
                 .cardType(cardTypeInfo)
                 .build();
-
-        return cardResponse;
     }
 }

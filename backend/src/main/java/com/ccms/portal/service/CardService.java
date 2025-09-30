@@ -8,6 +8,8 @@ import com.ccms.portal.exception.CardTypeNotFoundException;
 import com.ccms.portal.exception.CreditCardNotFoundException;
 import com.ccms.portal.exception.UnauthorizedApplicationActionException;
 import com.ccms.portal.exception.UserNotFoundException;
+import com.ccms.portal.service.factory.CardFactory;
+import com.ccms.portal.service.factory.DefaultCardFactory;
 import com.ccms.portal.util.CreditCardUtil;
 import com.ccms.portal.entity.CardTypeEntity;
 import com.ccms.portal.entity.CreditCardEntity;
@@ -19,6 +21,7 @@ import com.ccms.portal.util.JwtUserDetails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -40,6 +43,10 @@ public class CardService {
 
     @Autowired
     CreditCardUtil cardHelper;
+
+    @Autowired
+    @Qualifier("defaultCardFactory")
+    private CardFactory defaultCardFactory;
 
     public List<CreditCardResponse> getAllCardsByUserId(){
         JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder
@@ -67,15 +74,10 @@ public class CardService {
         CardTypeEntity cardType = cardTypeRepository.findById(cardRequest.getCardTypeId())
                 .orElseThrow(() -> new CardTypeNotFoundException("Card type not found with ID: " + cardRequest.getCardTypeId()));
 
-        CreditCardEntity entity = CreditCardEntity.builder()
-                .user(user)
-                .cardType(cardType)
-                .creditLimit(cardRequest.getCreditLimit())
-                .availableLimit(cardRequest.getCreditLimit())
-                .cardStatus(CardStatus.ACTIVE)
-                .cardNumber(cardHelper.generateCardNumber())
-                .expiryDate(cardHelper.generateExpiryDate(5))
-                .build();
+        /**
+         * Implement Factory Design Pattern
+         */
+        CreditCardEntity entity = defaultCardFactory.createCard(user, cardType, cardRequest);
 
         CreditCardEntity saved = cardRepository.save(entity);
         logger.info("Card created successfully with ID: {}", saved.getId());
