@@ -6,6 +6,7 @@ import com.ccms.portal.dto.response.CardApplicationResponse;
 import com.ccms.portal.enums.CardApplicationStatus;
 import com.ccms.portal.entity.CardApplicationEntity;
 import com.ccms.portal.exception.CardApplicationNotFoundException;
+import com.ccms.portal.exception.DuplicateApplicationException;
 import com.ccms.portal.exception.UnauthorizedApplicationActionException;
 import com.ccms.portal.repository.CardApplicationRepository;
 import com.ccms.portal.util.JwtUserDetails;
@@ -36,7 +37,14 @@ public class CardApplicationService {
     public CardApplicationResponse apply(CardApplicationRequest application) {
         JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         logger.info("User {} is applying for a card of type {}", currentUser.getUserId(), application.getCardTypeId());
+        Optional<CardApplicationEntity> existingApplication = repository
+                .findByUserIdAndCardTypeId(currentUser.getUserId(), application.getCardTypeId());
 
+
+        if (existingApplication.isPresent()) {
+            logger.warn("User {} already applied for card type {}", currentUser.getUserId(), application.getCardTypeId());
+            throw new DuplicateApplicationException("You have already applied for this credit card.");
+        }
         CardApplicationEntity applicationEntity = new CardApplicationEntity();
         applicationEntity.setStatus(CardApplicationStatus.PENDING);
         applicationEntity.setCardTypeId(application.getCardTypeId());

@@ -2,6 +2,7 @@
   <div class="apply-card">
     <main class="container">
 
+    
       <section class="hero">
         <div class="hero-header">
           <h1>Apply for Credit Card</h1>
@@ -11,34 +12,42 @@
         </div>
       </section>
 
-  
+     
       <section class="card-selection">
         <h2>Select Your Card</h2>
         <p class="muted">Choose the credit card that best fits your lifestyle</p>
 
-        <div class="card-options">
+  
+        <div v-if="isLoading">Loading card types...</div>
+        <div v-else-if="error" class="error">{{ error }}</div>
+
+
+        <div v-else class="card-options">
           <div
-            v-for="card in cards"
+            v-for="card in allCardTypes"
             :key="card.id"
             :class="['option-card', { selected: selectedCard?.id === card.id }]"
             @click="selectCard(card)"
           >
             <div class="option-header">
-              <span class="icon">{{ card.icon }}</span>
+              <span class="icon">{{ card.networkType === 'AMEX' ? '⭐' : '💳' }}</span>
               <span v-if="selectedCard?.id === card.id" class="checkmark">✔</span>
             </div>
+
             <h3>{{ card.name }}</h3>
-            <ul>
-              <li v-for="benefit in card.benefits" :key="benefit">⚡ {{ benefit }}</li>
-            </ul>
-            <p class="limit">Credit Limit ₹{{ card.limitRange }}</p>
+            <p class="muted">{{ card.description }}</p>
+            <p class="limit">
+              Credit Limit ₹{{ card.minCardLimit.toLocaleString() }}
+              – ₹{{ card.maxCardLimit.toLocaleString() }}
+            </p>
             <div class="tags">
-              <span v-for="tag in card.tags" :key="tag" class="tag">{{ tag }}</span>
+              <span class="tag">{{ card.networkType }}</span>
             </div>
           </div>
         </div>
       </section>
 
+   
       <section v-if="selectedCard" class="application-form">
         <h2>{{ selectedCard.name }} Application</h2>
         <p class="muted">Complete your application details</p>
@@ -49,14 +58,14 @@
             <input
               type="number"
               v-model="form.creditLimit"
-              :min="selectedCard.minLimit"
-              :max="selectedCard.maxLimit"
+              :min="selectedCard.minCardLimit"
+              :max="selectedCard.maxCardLimit"
               required
             />
-            <small>Range: ₹{{ selectedCard.minLimit }} – ₹{{ selectedCard.maxLimit }}</small>
+            <small>
+              Range: ₹{{ selectedCard.minCardLimit }} – ₹{{ selectedCard.maxCardLimit }}
+            </small>
           </div>
-
-
 
           <div class="form-row info" v-if="user">
             <h4>Applicant Information</h4>
@@ -73,18 +82,17 @@
 </template>
 
 <script>
-import { getCardTypes } from '../../services/cards-service';
+import { mapGetters, mapActions } from "vuex";
 import { applyForCard } from "../../services/cardApplicationService";
-import { getUserProfile } from "../../services/userService";    
-import { getUserIdFromToken } from '../../utils/getTokenData';
+import { getUserProfile } from "../../services/userService";
+import { getUserIdFromToken } from "../../utils/getTokenData";
 
 export default {
   name: "ApplyCardView",
 
   data() {
     return {
-      user: null,          // fetched from backend
-      cards: [],           // filled after fetch
+      user: null,
       selectedCard: null,
       form: {
         creditLimit: "",
@@ -92,63 +100,65 @@ export default {
     };
   },
 
+  computed: {
+    ...mapGetters("cardTypes", ["allCardTypes", "isLoading", "error"]),
+  },
+
   async created() {
     try {
-      // fetch logged-in user profile
+     
       const userId = getUserIdFromToken();
       if (userId) {
         const { data } = await getUserProfile(userId);
         this.user = data;
-        console.log("Fetched user profile:", this.user);
-      } else {
-        console.warn("No user ID found in token");
       }
 
-      // fetch cards from backend
-      const fetchedCards = await getCardTypes();
-      this.cards = fetchedCards.map(card => ({
-        id: card.id,
-        name: card.name,
-        icon: card.networkType === 'AMEX' ? '⭐' : '💳',
-        benefits: [card.description],
-        limitRange: `${card.minCardLimit.toLocaleString()} – ${card.maxCardLimit.toLocaleString()}`,
-        minLimit: card.minCardLimit,
-        maxLimit: card.maxCardLimit,
-        tags: [card.networkType],
-      }));
-
+      if (this.allCardTypes.length === 0) {
+        await this.fetchCardTypes();
+      }
     } catch (err) {
-      console.error("Error fetching data:", err);
+      console.error("Error fetching user or cards:", err);
     }
   },
 
   methods: {
+    ...mapActions("cardTypes", ["fetchCardTypes"]),
+    ...mapActions("userApplications", ["fetchAll"]), 
+
     selectCard(card) {
       this.selectedCard = card;
-      this.form.creditLimit = card.minLimit;
+      this.form.creditLimit = card.minCardLimit;
     },
 
     async submitApplication() {
-      if (!this.user) {
-        alert("User profile not loaded. Please log in again.");
-        return;
-      }
-
       const cardApplication = {
-        userId: this.user.id,                //  use real backend user id
+        userId: this.user.id,
         cardTypeId: this.selectedCard.id,
         requestLimit: this.form.creditLimit,
       };
 
       try {
         await applyForCard(cardApplication);
-        alert(`Applied for ${this.selectedCard.name} with credit limit ₹${this.form.creditLimit}`);
+        await this.fetchAll();
+
+        alert(
+          ` Applied for ${this.selectedCard.name} with credit limit ₹${this.form.creditLimit}`
+        );
+
         this.$router.push("/my-applications");
       } catch (err) {
         console.error("Application failed:", err);
-        alert("Something went wrong while submitting your application.");
+
+        const backendMessage =
+          err.response?.data?.message ||        
+          err.response?.data?.error ||           
+          err.response?.data?.message?.message || 
+          "Something went wrong while submitting your application.";
+
+        alert(`❗ ${backendMessage}`);
       }
-    },
+    }
+
   },
 };
 </script>
@@ -178,16 +188,13 @@ export default {
 
 .card-options {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); 
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   margin-top: 20px;
 }
 
-
 .option-card {
-  flex: 1;
   background: #f7f7f9;
-  
   padding: 20px;
   border-radius: 12px;
   cursor: pointer;
@@ -201,12 +208,6 @@ export default {
 
 .option-card h3 {
   margin: 10px 0;
-}
-
-.option-card ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 .limit {
@@ -296,5 +297,10 @@ export default {
 .btn-history:focus {
   outline: 2px solid rgba(31, 111, 235, 0.3);
   outline-offset: 3px;
+}
+
+.error {
+  color: red;
+  margin-top: 10px;
 }
 </style>
