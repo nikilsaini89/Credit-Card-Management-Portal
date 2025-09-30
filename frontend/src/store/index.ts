@@ -9,6 +9,7 @@ import analytics from "./modules/analytics";
 import applications from "./modules/applications";
 import userApplications from "./modules/userApplications";
 import payments from "./modules/payments";
+import cardTypes from "./modules/cardTypes";
 
 
 export interface RootState {
@@ -27,6 +28,7 @@ export default createStore({
     analytics,
     applications,
     userApplications,
+    cardTypes,
     payments,
   },
 });

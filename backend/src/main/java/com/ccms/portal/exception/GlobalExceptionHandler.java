@@ -107,6 +107,17 @@ public class GlobalExceptionHandler {
         log.error("BNPL not eligible: {}", ex.getMessage());
         return buildErrorResponse("BNPL Not Available", ex.getMessage(), HttpStatus.FORBIDDEN, null);
     }
+    @ExceptionHandler(DuplicateApplicationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDuplicateApp(DuplicateApplicationException ex) {
+        log.error("Duplicate application attempt: {}", ex.getMessage());
+        return buildErrorResponse(
+                "Duplicate Application",
+                ex.getMessage(),
+                HttpStatus.CONFLICT,
+                null
+        );
+    }
+
 
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(
             String error, String message, HttpStatus status, Map<String, String> fieldErrors) {

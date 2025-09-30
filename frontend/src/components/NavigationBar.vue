@@ -10,7 +10,7 @@
             <line x1="10" y1="15" x2="14" y2="15" />
           </svg>
         </div>
-        <div class="brand-title">CreditCard Portal</div>
+        <div class="brand-title">SwipeSmart</div>
       </div>
 
       <nav class="topnav desktop-nav" role="navigation" aria-label="Primary" v-for="link in navLinks" :key="link.label">
@@ -54,7 +54,7 @@
                 <line x1="2" y1="10" x2="22" y2="10" />
               </svg>
             </div>
-            <div class="brand-title-mini">CreditCard Portal</div>
+            <div class="brand-title-mini">SwipeSmart</div>
           </div>
 
           <button class="close-button" @click="closeMobileNav" aria-label="Close menu" type="button">✕</button>
@@ -141,7 +141,7 @@ const handleLogout = async () => {
   } catch (err) {
     console.error('Logout failed:', err);
     alert('logout failed');
-    toast.err("Error logging out. 🎉");
+    toast.error("Error logging out. 🎉");
 
  
   }
