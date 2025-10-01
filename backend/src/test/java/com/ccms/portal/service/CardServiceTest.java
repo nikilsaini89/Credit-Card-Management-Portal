@@ -14,22 +14,21 @@ import com.ccms.portal.exception.UserNotFoundException;
 import com.ccms.portal.repository.CardTypeRepository;
 import com.ccms.portal.repository.CreditCardRepository;
 import com.ccms.portal.repository.UserRepository;
+import com.ccms.portal.service.factory.CardFactory;
 import com.ccms.portal.util.CreditCardUtil;
 import com.ccms.portal.util.JwtUserDetails;
 
-import org.checkerframework.checker.units.qual.C;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.Authentication;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.Date;
-import java.sql.Ref;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,23 +37,16 @@ import static org.mockito.Mockito.*;
 
 class CardServiceTest {
 
-    @Mock
-    private CreditCardRepository cardRepository;
+    @Mock private CreditCardRepository cardRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private CardTypeRepository cardTypeRepository;
+    @Mock private CreditCardUtil cardHelper;
 
-    @Mock
-    private UserRepository userRepository;
+    // 🔴 Add this mock for the missing dependency
+    @Mock private CardFactory defaultCardFactory;
 
-    @Mock
-    private CardTypeRepository cardTypeRepository;
-
-    @Mock
-    private CreditCardUtil cardHelper;
-
-    @Mock
-    private Authentication authentication;
-
-    @Mock
-    private SecurityContext securityContext;
+    @Mock private Authentication authentication;
+    @Mock private SecurityContext securityContext;
 
     @InjectMocks
     private CardService cardService;
@@ -65,8 +57,8 @@ class CardServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        // Mock current user
-        userDetails = new JwtUserDetails(1L, "testuser", "password");
+        // Mock current user in SecurityContext
+        userDetails = new JwtUserDetails(1L, "testuser", "USER");
         when(securityContext.getAuthentication()).thenReturn(authentication);
         when(authentication.getPrincipal()).thenReturn(userDetails);
         SecurityContextHolder.setContext(securityContext);
@@ -81,14 +73,15 @@ class CardServiceTest {
         ReflectionTestUtils.setField(card, "id", 100L);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(cardRepository.findAllByUserIdWithCardType(1L)).thenReturn(List.of(card));
+        when(cardRepository.findAllByUserIdWithCardType(1L))
+                .thenReturn(List.of(card));
         when(cardHelper.buildCreditCardResponse(any(CreditCardEntity.class)))
                 .thenReturn(mock(CreditCardResponse.class));
 
         List<CreditCardResponse> responses = cardService.getAllCardsByUserId();
 
         assertEquals(1, responses.size());
-        verify(cardRepository, times(1)).findAllByUserIdWithCardType(1L);
+        verify(cardRepository).findAllByUserIdWithCardType(1L);
     }
 
     @Test
@@ -106,20 +99,27 @@ class CardServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(cardTypeRepository.findById(10L)).thenReturn(Optional.of(cardType));
+
+        // Mock factory and other utils
+        CreditCardEntity createdCard = new CreditCardEntity();
+        when(defaultCardFactory.createCard(eq(user), eq(cardType), eq(request)))
+                .thenReturn(createdCard);
+
         when(cardHelper.generateCardNumber()).thenReturn("1234567890123456");
         when(cardHelper.generateExpiryDate(anyInt()))
                 .thenReturn(new Date(System.currentTimeMillis()));
 
         CreditCardEntity savedCard = new CreditCardEntity();
         ReflectionTestUtils.setField(savedCard, "id", 200L);
-        when(cardRepository.save(any(CreditCardEntity.class))).thenReturn(savedCard);
+        when(cardRepository.save(createdCard)).thenReturn(savedCard);
         when(cardHelper.buildCreditCardResponse(savedCard))
                 .thenReturn(mock(CreditCardResponse.class));
 
         CreditCardResponse response = cardService.createCard(request);
 
         assertNotNull(response);
-        verify(cardRepository, times(1)).save(any(CreditCardEntity.class));
+        verify(defaultCardFactory).createCard(user, cardType, request);
+        verify(cardRepository).save(createdCard);
     }
 
     @Test
@@ -128,7 +128,8 @@ class CardServiceTest {
         when(request.getUserId()).thenReturn(99L);
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class,  () -> cardService.createCard(request));
+        assertThrows(UserNotFoundException.class,
+                () -> cardService.createCard(request));
     }
 
     @Test
@@ -139,10 +140,10 @@ class CardServiceTest {
         CreditCardEntity card = new CreditCardEntity();
         ReflectionTestUtils.setField(card, "id", 300L);
         card.setUser(user);
-        card.setCardStatus(CardStatus.ACTIVE); // current status
+        card.setCardStatus(CardStatus.ACTIVE);
 
         UpdateCardStatusRequest request = new UpdateCardStatusRequest();
-        request.setCardStatus(CardStatus.BLOCKED); // new status (different)
+        request.setCardStatus(CardStatus.BLOCKED);
 
         when(cardRepository.findById(300L)).thenReturn(Optional.of(card));
         when(cardRepository.save(any(CreditCardEntity.class))).thenReturn(card);
@@ -153,7 +154,7 @@ class CardServiceTest {
 
         assertNotNull(response);
         assertEquals(CardStatus.BLOCKED, card.getCardStatus());
-        verify(cardRepository, times(1)).save(any(CreditCardEntity.class)); // save called
+        verify(cardRepository).save(card);
     }
 
     @Test
@@ -164,10 +165,10 @@ class CardServiceTest {
         CreditCardEntity card = new CreditCardEntity();
         ReflectionTestUtils.setField(card, "id", 301L);
         card.setUser(user);
-        card.setCardStatus(CardStatus.BLOCKED); // already blocked
+        card.setCardStatus(CardStatus.BLOCKED);
 
         UpdateCardStatusRequest request = new UpdateCardStatusRequest();
-        request.setCardStatus(CardStatus.BLOCKED); // same status as before
+        request.setCardStatus(CardStatus.BLOCKED);
 
         when(cardRepository.findById(301L)).thenReturn(Optional.of(card));
         when(cardHelper.buildCreditCardResponse(card))
@@ -177,29 +178,27 @@ class CardServiceTest {
 
         assertNotNull(response);
         assertEquals(CardStatus.BLOCKED, card.getCardStatus());
-        verify(cardRepository, never()).save(any(CreditCardEntity.class)); // no save call
+        verify(cardRepository, never()).save(any());
     }
 
     @Test
     void testUpdateCardStatus_NotAllowed() {
-       UserEntity userEntity = new UserEntity();
-       ReflectionTestUtils.setField(userEntity, "id", 2L);
+        UserEntity otherUser = new UserEntity();
+        ReflectionTestUtils.setField(otherUser, "id", 2L);
 
-       CreditCardEntity cardEntity = new CreditCardEntity();
-       cardEntity.setUser(userEntity);
-       ReflectionTestUtils.setField(cardEntity, "id", 304L);
-       cardEntity.setCardStatus(CardStatus.BLOCKED);
+        CreditCardEntity card = new CreditCardEntity();
+        ReflectionTestUtils.setField(card, "id", 304L);
+        card.setUser(otherUser);
+        card.setCardStatus(CardStatus.BLOCKED);
 
         UpdateCardStatusRequest request = new UpdateCardStatusRequest();
         request.setCardStatus(CardStatus.ACTIVE);
 
-        when(cardRepository.findById(301L)).thenReturn(Optional.of(cardEntity));
-        when(cardHelper.buildCreditCardResponse(cardEntity))
-                .thenReturn(mock(CreditCardResponse.class));
+        when(cardRepository.findById(304L)).thenReturn(Optional.of(card));
 
-        assertThrows(UnauthorizedApplicationActionException.class,  () -> cardService.updateCardStatus(request, 301L));
+        assertThrows(UnauthorizedApplicationActionException.class,
+                () -> cardService.updateCardStatus(request, 304L));
     }
-
 
     @Test
     void testUpdateCardStatus_CardNotFound() {
@@ -211,4 +210,41 @@ class CardServiceTest {
         assertThrows(CreditCardNotFoundException.class,
                 () -> cardService.updateCardStatus(request, 123L));
     }
+
+    @Test
+    void testGetAllCardsByUserId_UserNotFound() {
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(UserNotFoundException.class,
+                () -> cardService.getAllCardsByUserId());
+    }
+
+    @Test
+    void testCreateCard_CardTypeNotFound() {
+        UserEntity user = new UserEntity();
+        ReflectionTestUtils.setField(user, "id", 1L);
+
+        CreateCardRequest request = mock(CreateCardRequest.class);
+        when(request.getUserId()).thenReturn(1L);
+        when(request.getCardTypeId()).thenReturn(99L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(cardTypeRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(CardTypeNotFoundException.class,
+                () -> cardService.createCard(request));
+    }
+
+    @Test
+    void testGetCardTypes_Success() {
+        CardTypeEntity type1 = new CardTypeEntity();
+        CardTypeEntity type2 = new CardTypeEntity();
+
+        when(cardTypeRepository.findAll()).thenReturn(List.of(type1, type2));
+
+        List<CardTypeEntity> types = cardService.getCardTypes();
+
+        assertEquals(2, types.size());
+        verify(cardTypeRepository).findAll();
+    }
+
 }

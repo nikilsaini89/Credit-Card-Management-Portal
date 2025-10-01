@@ -178,10 +178,6 @@
                 Post bill payment updated amount due will get reflected after 1-2 hours.
               </div>
               <div class="flex space-x-2">
-                <button @click="resetPayments"
-                  class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all duration-200">
-                  Reset Payments
-                </button>
                 <button @click="handleBillPayment"
                   class="px-6 py-2 text-sm font-medium text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
                   style="background: #0b2540;">
@@ -1457,12 +1453,6 @@ const cancelPayment = () => {
   customPaymentAmount.value = 0
 }
 
-// Function to reset payments (for testing)
-const resetPayments = () => {
-  paidAmount.value = 0
-  currentStatement.value = null
-  alert('Payments reset successfully! Please refresh the page to reload statement data.')
-}
 
 const closePayment = () => {
   showPayment.value = false

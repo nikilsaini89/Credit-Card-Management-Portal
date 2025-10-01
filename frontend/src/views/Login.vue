@@ -17,7 +17,7 @@
           </svg>
         </div>
         <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent mb-3">
-          SmartSwipe
+          SwipeSmart
         </h1>
         <p class="text-gray-600 text-lg">
           {{ !isRegister ? "Welcome back! Sign in to your account" : "Create your account and get started" }}

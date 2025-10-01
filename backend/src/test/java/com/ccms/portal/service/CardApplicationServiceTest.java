@@ -15,13 +15,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class CardApplicationServiceTest {
 
     @Mock
@@ -57,6 +58,8 @@ class CardApplicationServiceTest {
         SecurityContextHolder.setContext(securityContext);
     }
 
+    /** -------------------- apply() -------------------- */
+
     @Test
     void testApply() {
         // Arrange
@@ -83,6 +86,8 @@ class CardApplicationServiceTest {
         assertEquals("PENDING", result.getStatus());
         verify(repository, times(1)).save(any(CardApplicationEntity.class));
     }
+
+    /** -------------------- getApplications() -------------------- */
 
     @Test
     void testGetApplicationsForNormalUser() {
@@ -122,6 +127,32 @@ class CardApplicationServiceTest {
         assertEquals("ACCEPTED", list.get(0).getStatus());
         verify(repository).findAll();
     }
+
+    /** -------------------- getApplicationById() -------------------- */
+
+    @Test
+    void testGetApplicationByIdFound() {
+        CardApplicationEntity app = new CardApplicationEntity();
+        app.setId(55L);
+
+        when(repository.findById(55L)).thenReturn(Optional.of(app));
+
+        Optional<CardApplicationEntity> result = cardApplicationService.getApplicationById(55L);
+
+        assertTrue(result.isPresent());
+        assertEquals(55L, result.get().getId());
+    }
+
+    @Test
+    void testGetApplicationByIdNotFound() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        Optional<CardApplicationEntity> result = cardApplicationService.getApplicationById(99L);
+
+        assertTrue(result.isEmpty());
+    }
+
+    /** -------------------- updateStatus() -------------------- */
 
     @Test
     void testUpdateStatusByAdmin() {
@@ -169,13 +200,15 @@ class CardApplicationServiceTest {
                 () -> cardApplicationService.updateStatus(100L, CardApplicationStatus.ACCEPTED));
     }
 
+    /** -------------------- deleteApplication() -------------------- */
+
     @Test
     void testDeleteApplicationByOwner() {
         // Arrange
         CardApplicationEntity app = new CardApplicationEntity();
         app.setId(3L);
         app.setUserId(1L);  // same as current user
-        app.setStatus(CardApplicationStatus.PENDING); 
+        app.setStatus(CardApplicationStatus.PENDING);
 
         when(repository.findById(3L)).thenReturn(Optional.of(app));
 
@@ -193,7 +226,7 @@ class CardApplicationServiceTest {
         CardApplicationEntity app = new CardApplicationEntity();
         app.setId(4L);
         app.setUserId(99L); // different user
-        app.setStatus(CardApplicationStatus.PENDING); 
+        app.setStatus(CardApplicationStatus.PENDING);
 
         when(repository.findById(4L)).thenReturn(Optional.of(app));
 
@@ -209,4 +242,27 @@ class CardApplicationServiceTest {
         assertThrows(CardApplicationNotFoundException.class,
                 () -> cardApplicationService.deleteApplication(111L));
     }
+
+    @Test
+    void testApplyThrowsDuplicateApplicationException() {
+        // Arrange
+        CardApplicationRequest req = new CardApplicationRequest();
+        req.setCardTypeId(10L);
+        req.setRequestLimit(30_000L);
+
+        CardApplicationEntity existing = new CardApplicationEntity();
+        existing.setId(200L);
+        existing.setUserId(1L);
+        existing.setCardTypeId(10L);
+
+        when(repository.findByUserIdAndCardTypeId(1L, 10L)).thenReturn(Optional.of(existing));
+
+        // Act / Assert
+        assertThrows(com.ccms.portal.exception.DuplicateApplicationException.class,
+                () -> cardApplicationService.apply(req));
+
+        // Verify save() was never called
+        verify(repository, never()).save(any());
+    }
+
 }

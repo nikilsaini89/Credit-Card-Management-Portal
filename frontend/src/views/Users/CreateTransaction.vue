@@ -71,6 +71,19 @@
                   placeholder="Choose your card"
                   @card-selected="selectCard"
                 />
+                
+                <!-- Blocked Card Warning -->
+                <div v-if="selectedCard && selectedCard.cardStatus === 'BLOCKED'" class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div class="flex items-center">
+                    <svg class="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                    <div>
+                      <p class="text-sm font-medium text-red-800">Card is Blocked</p>
+                      <p class="text-xs text-red-600 mt-1">This card is currently blocked and cannot be used for transactions. Please unblock the card or select a different card.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- Merchant Selection -->
@@ -137,20 +150,20 @@
                     {{ amountError }}
                   </div>
                   <!-- Available limit display -->
-                  <div v-if="selectedCardInfo && !amountError" class="absolute -bottom-6 right-0 text-xs text-green-600 font-medium">
-                    Available: ₹{{ formatNumber(selectedCardInfo.availableLimit) }}
+                  <div v-if="selectedCard && !amountError" class="absolute -bottom-6 right-0 text-xs text-green-600 font-medium">
+                    Available: ₹{{ formatNumber(selectedCard.availableLimit) }}
                   </div>
                   <!-- Card selection indicator -->
-                  <div v-if="selectedCardInfo && !amountError" class="absolute -bottom-6 left-0 text-xs text-blue-600 font-medium">
-                    ✓ {{ selectedCardInfo.cardType?.networkType || selectedCardInfo.cardType || 'VISA' }} ****{{ selectedCardInfo.lastFour || selectedCardInfo.cardNumber?.slice(-4) || '****' }}
+                  <div v-if="selectedCard && !amountError" class="absolute -bottom-6 left-0 text-xs text-blue-600 font-medium">
+                    ✓ {{ selectedCard.cardType?.networkType || selectedCard.cardType || 'VISA' }} ****{{ selectedCard.lastFour || selectedCard.cardNumber?.slice(-4) || '****' }}
                   </div>
                   <!-- Card selection indicator when there's an error (positioned above error) -->
-                  <div v-if="selectedCardInfo && amountError" class="absolute -bottom-9 left-0 text-xs text-blue-600 font-medium">
-                    ✓ {{ selectedCardInfo.cardType?.networkType || selectedCardInfo.cardType || 'VISA' }} ****{{ selectedCardInfo.lastFour || selectedCardInfo.cardNumber?.slice(-4) || '****' }}
+                  <div v-if="selectedCard && amountError" class="absolute -bottom-9 left-0 text-xs text-blue-600 font-medium">
+                    ✓ {{ selectedCard.cardType?.networkType || selectedCard.cardType || 'VISA' }} ****{{ selectedCard.lastFour || selectedCard.cardNumber?.slice(-4) || '****' }}
                   </div>
                   <!-- Available limit when there's an error (positioned above error) -->
-                  <div v-if="selectedCardInfo && amountError" class="absolute -bottom-9 right-0 text-xs text-green-600 font-medium">
-                    Available: ₹{{ formatNumber(selectedCardInfo.availableLimit) }}
+                  <div v-if="selectedCard && amountError" class="absolute -bottom-9 right-0 text-xs text-green-600 font-medium">
+                    Available: ₹{{ formatNumber(selectedCard.availableLimit) }}
                   </div>
                 </div>
               </div>
@@ -369,7 +382,7 @@
                 </button>
                 <button
                   type="submit"
-                  :disabled="loading"
+                  :disabled="loading || (selectedCard && selectedCard.cardStatus === 'BLOCKED')"
                   class="flex-1 px-6 py-3 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
                   style="background: #ffd60a; color: #0b2540;"
                 >
@@ -452,6 +465,8 @@ interface Card {
   cardType: string
   lastFour: string
   cardName: string
+  cardStatus?: string
+  availableLimit?: number
 }
 
 interface Merchant {
@@ -496,7 +511,7 @@ const showTenureDropdown = ref(false)
 const cards = computed(() => store.state?.cards?.cards || [])
 const merchants = computed(() => store.state?.merchants?.merchants || [])
 
-const selectedCardInfo = computed(() => {
+const selectedCard = computed(() => {
   if (!form.value.cardId) return null
   const cardId = parseInt(form.value.cardId)
   return cards.value.find((card: any) => card.id === cardId)
@@ -531,15 +546,15 @@ const formatNumber = (value: number) => {
 
 const validateAmount = () => {
   const amount = parseFloat(form.value.amount)
-  const selectedCard = selectedCardInfo.value
+  const currentCard = selectedCard.value
   
   if (!amount || amount <= 0) {
     amountError.value = 'Please enter a valid amount'
     return false
   }
   
-  if (selectedCard && amount > selectedCard.availableLimit) {
-    amountError.value = `Amount exceeds available limit of ₹${formatNumber(selectedCard.availableLimit)}`
+  if (currentCard && amount > currentCard.availableLimit) {
+    amountError.value = `Amount exceeds available limit of ₹${formatNumber(currentCard.availableLimit)}`
     return false
   }
   
@@ -785,9 +800,8 @@ const validateForm = () => {
   }
   
   // Check if amount exceeds card limit
-  const selectedCard = cards.value.find((card: any) => card.id === form.value.cardId)
-  if (selectedCard && parseFloat(form.value.amount) > selectedCard.availableLimit) {
-    showErrorNotification(`Amount exceeds available limit of ₹${formatNumber(selectedCard.availableLimit)}`)
+  if (selectedCard.value && parseFloat(form.value.amount) > selectedCard.value.availableLimit) {
+    showErrorNotification(`Amount exceeds available limit of ₹${formatNumber(selectedCard.value.availableLimit)}`)
     return false
   }
   
